@@ -31,6 +31,7 @@ targets:
         CFBundleDisplayName: Lístkomat
         NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
         NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
