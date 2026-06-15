@@ -1,13 +1,17 @@
 import Foundation
 import CoreLocation
 
-/// Tracks coarse location to auto-pick the nearest known city. Manual override
-/// always wins in the UI; this just provides a sensible default.
+/// Tracks coarse location to auto-pick the nearest known city — but only if the
+/// user is plausibly *in* Czechia. Beyond `maxDefaultDistanceKm` we don't guess.
 @MainActor
 final class LocationManager: NSObject, ObservableObject {
+    /// Don't auto-select a city if the nearest one is farther than this. Anywhere
+    /// in CZ is within ~100 km of a supported city; abroad is obviously not.
+    static let maxDefaultDistanceKm = 100.0
+
     @Published var nearestCityKey: String?
+    @Published var nearestDistanceKm: Double?
     @Published var authorization: CLAuthorizationStatus = .notDetermined
-    @Published var hasFix = false
 
     private let manager = CLLocationManager()
     private let cities: [City]
@@ -17,10 +21,14 @@ final class LocationManager: NSObject, ObservableObject {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        authorization = manager.authorizationStatus
     }
 
-    func requestAndStart() {
+    func requestPermission() {
         manager.requestWhenInUseAuthorization()
+    }
+
+    func start() {
         manager.startUpdatingLocation()
     }
 
@@ -28,13 +36,26 @@ final class LocationManager: NSObject, ObservableObject {
         manager.stopUpdatingLocation()
     }
 
-    /// Pure, testable: nearest city to a coordinate by great-circle distance.
-    nonisolated static func nearestCity(to coordinate: CLLocationCoordinate2D, in cities: [City]) -> City? {
+    /// True once we have a fix but the nearest supported city is too far to default to.
+    var isFarFromAllCities: Bool {
+        guard let dist = nearestDistanceKm else { return false }
+        return dist > Self.maxDefaultDistanceKm
+    }
+
+    /// Pure, testable: nearest city + its distance in km.
+    nonisolated static func nearest(to coordinate: CLLocationCoordinate2D, in cities: [City]) -> (city: City, distanceKm: Double)? {
         let here = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        return cities.min { a, b in
-            here.distance(from: CLLocation(latitude: a.lat, longitude: a.lng))
-                < here.distance(from: CLLocation(latitude: b.lat, longitude: b.lng))
+        var best: (City, Double)?
+        for city in cities {
+            let km = here.distance(from: CLLocation(latitude: city.lat, longitude: city.lng)) / 1000.0
+            if best == nil || km < best!.1 { best = (city, km) }
         }
+        return best.map { ($0.0, $0.1) }
+    }
+
+    /// Convenience kept for tests / callers that only need the city.
+    nonisolated static func nearestCity(to coordinate: CLLocationCoordinate2D, in cities: [City]) -> City? {
+        nearest(to: coordinate, in: cities)?.city
     }
 }
 
@@ -43,8 +64,10 @@ extension LocationManager: CLLocationManagerDelegate {
         guard let location = locations.last else { return }
         let coordinate = location.coordinate
         Task { @MainActor in
-            self.hasFix = true
-            self.nearestCityKey = Self.nearestCity(to: coordinate, in: self.cities)?.key
+            if let result = Self.nearest(to: coordinate, in: self.cities) {
+                self.nearestCityKey = result.city.key
+                self.nearestDistanceKm = result.distanceKm
+            }
         }
     }
 

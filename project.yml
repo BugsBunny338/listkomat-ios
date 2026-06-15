@@ -13,6 +13,7 @@ settings:
     SWIFT_VERSION: "5.0"            # language mode; bump to 6.0 once it builds clean
     DEVELOPMENT_TEAM: ""           # set after Apple Developer enrollment
     CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES   # Xcode "recommended setting" (no run-script phases anyway)
 
 targets:
   Listkomat:

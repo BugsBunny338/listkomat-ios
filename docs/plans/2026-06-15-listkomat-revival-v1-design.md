@@ -225,8 +225,11 @@ Stack** (iOS 18+).
 5. **M4 — Branding** ✅ app icon (2016 ticket-machine art), brand teal `#56C4CF`,
    Alte Haas Grotesk on titles/headlines, and a city-icon grid picker using the original
    landmark SVGs (incl. a hand-drawn Olomouc Holy Trinity Column matching the set). Verified
-   on iPhone 17 sim. Residual polish (later): permission pre-prompt UX + offline
-   "naposledy aktualizováno" note.
+   on iPhone 17 sim. **Location pre-prompt** (priming screen before the system dialog) and the
+   **far-from-any-city** state (don't auto-default beyond 100 km — show "Žádné město v okolí"
+   with the nearest city + distance and a manual-pick button) are DONE (verified on sim from a
+   US coordinate: ~8597 km → no default). Residual (later): offline indicator + the Ústí
+   double-24h data clarification.
 6. **M5 — Catalog hosting** ✅ Public repo `BugsBunny338/listkomat-catalog` serves
    `tickets.json` via raw URL. App fetches on launch (`CatalogStore.refresh`), adopts it if
    it decodes / is non-empty / not a downgrade, caches to Application Support; source chain is

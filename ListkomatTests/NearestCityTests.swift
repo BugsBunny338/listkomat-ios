@@ -21,4 +21,19 @@ final class NearestCityTests: XCTestCase {
         let here = CLLocationCoordinate2D(latitude: 50, longitude: 14)
         XCTAssertNil(LocationManager.nearestCity(to: here, in: []))
     }
+
+    func testFarLocationExceedsDefaultThreshold() {
+        // Salt Lake City — thousands of km from any CZ city, so we must NOT auto-default.
+        let saltLakeCity = CLLocationCoordinate2D(latitude: 40.7608, longitude: -111.8910)
+        let result = LocationManager.nearest(to: saltLakeCity, in: cities)
+        XCTAssertNotNil(result)
+        XCTAssertGreaterThan(result!.distanceKm, LocationManager.maxDefaultDistanceKm)
+    }
+
+    func testInCityIsWithinThreshold() {
+        let inBrno = CLLocationCoordinate2D(latitude: 49.195, longitude: 16.606)
+        let result = LocationManager.nearest(to: inBrno, in: cities)
+        XCTAssertEqual(result?.city.key, "brno")
+        XCTAssertLessThan(result!.distanceKm, LocationManager.maxDefaultDistanceKm)
+    }
 }
