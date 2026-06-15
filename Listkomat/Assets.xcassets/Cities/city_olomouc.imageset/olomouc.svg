@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 162">
+  <defs><style>.cls-1{fill:none;stroke:#fff;stroke-linecap:round;stroke-linejoin:round;stroke-width:4px;}</style></defs>
+  <title>olomouc icon</title>
+  <!-- stepped base -->
+  <rect class="cls-1" x="10" y="150" width="70" height="9"/>
+  <rect class="cls-1" x="18" y="140" width="54" height="10"/>
+  <!-- plinth / chapel with arched niche -->
+  <rect class="cls-1" x="27" y="114" width="36" height="26"/>
+  <path class="cls-1" d="M40 140 L40 126 A5 5 0 0 1 50 126 L50 140"/>
+  <!-- tapering tiered column -->
+  <path class="cls-1" d="M33 114 L40 62 L50 62 L57 114"/>
+  <line class="cls-1" x1="31" y1="100" x2="59" y2="100"/>
+  <line class="cls-1" x1="33" y1="88" x2="57" y2="88"/>
+  <line class="cls-1" x1="36" y1="76" x2="54" y2="76"/>
+  <circle class="cls-1" cx="45" cy="94" r="2.5"/>
+  <circle class="cls-1" cx="45" cy="82" r="2.5"/>
+  <!-- gilded sphere + cross finial -->
+  <circle class="cls-1" cx="45" cy="56" r="4"/>
+  <line class="cls-1" x1="45" y1="52" x2="45" y2="43"/>
+  <line class="cls-1" x1="40" y1="47" x2="50" y2="47"/>
+</svg>

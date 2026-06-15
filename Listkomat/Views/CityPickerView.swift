@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Manual city override. (City-icon grid with the original SVG art comes in M4.)
+/// Manual city override — a grid of the original 2016 city landmark icons
+/// (white line art, tinted to the brand teal; white on teal when selected).
 struct CityPickerView: View {
     let cities: [City]
     let selectedKey: String?
@@ -8,24 +9,18 @@ struct CityPickerView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    private let columns = [GridItem(.adaptive(minimum: 96, maximum: 150), spacing: 16)]
+
     var body: some View {
         NavigationStack {
-            List(cities) { city in
-                Button {
-                    onSelect(city)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text(city.name)
-                        Spacer()
-                        if city.key == selectedKey {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.tint)
-                        }
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(cities) { city in
+                        Button { onSelect(city); dismiss() } label: { tile(city) }
+                            .buttonStyle(.plain)
                     }
-                    .contentShape(Rectangle())
                 }
-                .foregroundStyle(.primary)
+                .padding()
             }
             .navigationTitle("Vyberte město")
             .toolbar {
@@ -33,6 +28,30 @@ struct CityPickerView: View {
                     Button("Zavřít") { dismiss() }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func tile(_ city: City) -> some View {
+        let selected = city.key == selectedKey
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(selected ? Color.brandTeal : Color.brandTeal.opacity(0.12))
+                Image("city_\(city.key)")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(18)
+                    .foregroundStyle(selected ? Color.white : Color.brandTeal)
+            }
+            .aspectRatio(1, contentMode: .fit)
+            Text(city.name)
+                .font(.brandBold(13, relativeTo: .caption))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
     }
 }

@@ -217,7 +217,11 @@ Stack** (iOS 18+).
 4. **M3 — Time-left Live Activity:** ActivityKit countdown on `.sent`, Dynamic Island /
    lock-screen / Always-On; "re-anchor on confirmation" tap. (Long-ticket WidgetKit fallback
    can trail.)
-5. **M4 — Polish:** original branding/font/icons, copy, permission UX, offline note.
+5. **M4 — Branding** ✅ app icon (2016 ticket-machine art), brand teal `#56C4CF`,
+   Alte Haas Grotesk on titles/headlines, and a city-icon grid picker using the original
+   landmark SVGs (incl. a hand-drawn Olomouc Holy Trinity Column matching the set). Verified
+   on iPhone 17 sim. Residual polish (later): permission pre-prompt UX + offline
+   "naposledy aktualizováno" note.
 6. **M5 — Catalog hosting:** publish JSON, wire remote fetch + cache + fallback.
 7. **M6 — Ship prep:** App Store assets, privacy nutrition labels, premium-SMS cost
    disclosure, Small Business Program enrollment, submit.
