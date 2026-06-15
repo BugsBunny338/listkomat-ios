@@ -241,7 +241,14 @@ Stack** (iOS 18+).
    remote v2 (2026-06-16) over bundled v1 and cached it.
 7. **M6 — Ship prep:** App Store assets, privacy nutrition labels, premium-SMS cost
    disclosure, Small Business Program enrollment, submit.
-8. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode.
+8. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode. Works for
+   everyone regardless of SIM — the tourist-friendly feature.
+9. **v3 — Foreigner purchase path + storefront expansion.** Premium SMS only works on a Czech SIM,
+   so v1 ships to the **Czechia storefront only**. A later version adds a way for foreign-carrier
+   users to buy (options to explore: deep-link to the operator's official app, redirect to the
+   official web purchase, or in-app card payment — real-world transit service, so IAP doesn't
+   apply). **Only then** do we unblock other App Store storefronts. (Pairs naturally with the v2
+   map, which already serves all visitors.)
 
 ## Android — deferred (Apple-only for now)
 

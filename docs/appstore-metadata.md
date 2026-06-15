@@ -1,7 +1,9 @@
 # App Store listing — Lístkomat (draft)
 
 Category: **Travel** · Price: **Free** · Age rating: **4+**
-Availability: **all storefronts** (downloadable worldwide; SMS purchase needs a Czech SIM — disclosed below)
+Availability: **Czechia storefront only (v1)** — SMS purchase requires a Czech SIM, so foreign-carrier
+users can't transact; we don't surface the app to them until a foreigner-friendly purchase path exists.
+Expand to other storefronts in a later version (see Roadmap below).
 
 ## Czech localization (primary)
 
@@ -57,4 +59,11 @@ Availability: **all storefronts** (downloadable worldwide; SMS purchase needs a 
 
 ## Assets
 - App icon 1024×1024 ✅ (in Assets.xcassets / source in iCloud)
-- Screenshots 6.9" (1320×2868): `fastlane/screenshots/` — 01-main ✅; add city grid + (optional) Live Activity / offline
+- Screenshots 6.9" (1320×2868): `fastlane/screenshots/` — 01-main ✅, 02-grid ✅; optional: Live Activity / offline
+
+## Roadmap (post-v1)
+- **Foreigner purchase path** — premium SMS needs a Czech SIM, so foreign-carrier visitors can't buy.
+  A later version adds an alternative: deep-link to the operator's official app, redirect to the
+  official web purchase, or in-app card payment (real-world transit service → no IAP required).
+- **Storefront expansion** — only once the above exists do we open availability beyond Czechia.
+- **v2 live map** — works for all visitors regardless of SIM; the tourist-facing feature.
