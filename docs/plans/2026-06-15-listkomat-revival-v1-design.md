@@ -119,8 +119,11 @@ Rychnov nad Kněžnou (folded into IREDO, no SMS product).
 
 ## Device support & accessibility
 
-- **Minimum: iOS 16.1.** Reaches iPhone 8 / X (2017) and newer — the cheap secondhand models
-  the older-user audience is most likely to own — while keeping Live Activities on the baseline.
+- **Minimum: iOS 16.1 — a SOFT floor.** Reaches iPhone 8 / X (2017) and newer — the cheap
+  secondhand models the older-user audience is most likely to own — while keeping Live
+  Activities on the baseline. **This is a preference, not a constraint:** if holding 16.1 would
+  mean compromising any feature or notably complicating the code, we bump the floor back up
+  (e.g. to 17) rather than degrade the app. Reach serves the app; the app doesn't serve reach.
 - **Graceful degradation:** the core SMS flow works on every supported device; the time-left
   Live Activity lights up on 16.1+; Dynamic Island + Always-On are bonuses on iPhone 14 Pro+.
   No device is excluded from the core feature.
