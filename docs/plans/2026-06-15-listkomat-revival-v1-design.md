@@ -1,0 +1,168 @@
+# Lístkomat Revival — v1 Design
+
+*Date: 2026-06-15 · Status: draft for review*
+
+## What this is
+
+A clean-slate rebuild of **Lístkomat** (originally "TicketBuyer"), a Czech iOS app from
+~2016 that let you buy a city public-transport ticket by premium SMS — without
+remembering the phone number or the cryptic ticket code for your chosen duration. The
+original was React Native; the surviving copy is archived at
+`github.com/BugsBunny338/listkomat-archive` (private). This rebuild is native SwiftUI.
+
+## Goals & non-goals
+
+**Goals (in priority order)**
+1. **Fun & nostalgia** — enjoy rebuilding it; ship something that feels like itself.
+2. **Portfolio piece** — a clean, modern, demoable showcase of SwiftUI + AI-assisted dev.
+3. **Real users** — it would be lovely if the same kind of person who once phoned about it
+   finds it useful again.
+
+**Non-goals**
+- Making money. Paid price / ads are out of scope as a *financial* goal. (A symbolic
+  price or "tip jar" could be a fun experiment later, but v1 is free.)
+- Replacing the official city apps. We serve people who want *one simple app* across
+  cities and don't want to remember SMS codes.
+
+## Scope
+
+**v1 — SMS tickets only, polished.** 10 cities (the 2 discontinued ones dropped).
+**v2 — live vehicle map** (Prague + Brno first). Deliberately deferred.
+
+## Architecture
+
+- **Platform:** iOS 17+, iPhone-first. Swift 6 + SwiftUI, MVVM.
+- **No backend.** The ticket catalog is a small static JSON ("remote config") hosted free
+  (GitHub Pages or a raw GitHub URL). App fetches on launch, caches locally, falls back to
+  a bundled copy when offline. → wrong/stale codes can be fixed in seconds without an App
+  Store release.
+- **SMS send:** `MFMessageComposeViewController` wrapped in a `UIViewControllerRepresentable`.
+  iOS will not auto-send; the user taps Send. This preserves the whole value prop (no
+  remembering numbers/codes) within Apple's rules. (Direct port of the original's
+  `react-native-message-composer`, which was the same native API.)
+- **Location:** CoreLocation, when-in-use, to auto-select the nearest known city. Manual
+  city picker always available. (Ports the original haversine nearest-city logic.)
+- **Dependencies:** essentially none. Pure SwiftUI + Foundation.
+
+## Data model
+
+### Ticket catalog (remote JSON) — proposed schema
+
+```json
+{
+  "version": 1,
+  "updatedAt": "2026-06-15",
+  "cities": [
+    {
+      "key": "praha",
+      "name": "Praha",
+      "lat": 50.075538,
+      "lng": 14.437800,
+      "smsNumber": "90206",
+      "tickets": [
+        { "code": "DPT42",  "duration": "30 min", "priceKc": 42,  "note": "" },
+        { "code": "DPT55",  "duration": "90 min", "priceKc": 55,  "note": "" },
+        { "code": "DPT150", "duration": "24 h",   "priceKc": 150, "note": "" },
+        { "code": "DPT350", "duration": "72 h",   "priceKc": 350, "note": "" }
+      ]
+    }
+  ]
+}
+```
+
+### Verified v1 catalog (2026-06-15)
+
+Numbers in use: **90206** (most) and **90230** (Hradec Králové only). Coordinates carry
+over unchanged from the recovered 2016 `constants.js`.
+
+| City | Number | Code | Duration | Price | Note |
+|------|--------|------|----------|------:|------|
+| **Praha** | 90206 | DPT42 | 30 min | 42 | |
+| | | DPT55 | 90 min | 55 | |
+| | | DPT150 | 24 h | 150 | |
+| | | DPT350 | 72 h | 350 | |
+| **Brno** *(unchanged since 2016)* | 90206 | BRNO20 | 20 min | 20 | |
+| | | BRNO | 75 min | 29 | |
+| | | BRNOD | 24 h | 99 | |
+| **Ostrava** | 90206 | DPO70 | 70 min (90 min wknd/hol) | 38 | |
+| | | DPO70Z | 70 min | 19 | zlevněný |
+| | | DPO24 | 24 h | 100 | |
+| | | DPO24Z | 24 h | 50 | zlevněný |
+| **Plzeň** | 90206 | PMDP35M | 35 min | 28 | vnitřní zóna |
+| | | PMDP24H | 24 h | 99 | vnitřní zóna |
+| **Liberec** ⚠︎ | 90206 | LIB | 60 min | 38 | verify price |
+| | | LIB45 | 90 min | 45 | tram L11 do Jablonce; verify |
+| **Olomouc** | 90206 | DPMO | 50 min (70 min víkend) | 27 | |
+| **Ústí n.L.** ⚠︎ | 90206 | MDJ | 60 min | 26 | verify (23 vs 26) |
+| | | MDJ106 | 24 h | 106 | |
+| | | MDJ60 | 24 h | 60 | |
+| | | MDJZD | 24 h | 53 | zlevněný |
+| **Hradec Králové** | 90230 | HK | 60 min | 30 | |
+| | | HKZ | 60 min | 15 | zlevněný (6–15 / 65+) |
+| | | HK24 | 24 h | 100 | |
+| **České Budějovice** | 90206 | BUD | 60 min | 30 | |
+| | | BUD24 | 24 h | 115 | |
+| **Pardubice** *(unchanged since 2016)* | 90206 | DPMP | 45 min (60 min víkend/svátek) | 25 | pásma I+II |
+| | | DPMP24 | 24 h | 65 | |
+
+**Dropped vs 2016:** Karlovy Vary (SMS discontinued 1 Jan 2025 → Vary Virtual app);
+Rychnov nad Kněžnou (folded into IREDO, no SMS product).
+
+⚠︎ = re-verify against the operator's current ceník before shipping.
+
+## Screens & flow (v1)
+
+1. **Main screen (portrait).**
+   - Header: app identity (original logo + Alte Haas Grotesk font from the iCloud assets).
+   - Context line: "Nyní se nacházíte ve městě:" / "Nejbližší známé město…" / "Vybrané město:"
+     (ported copy), with the city name.
+   - List of ticket buttons for the current city: "Lístek na 30 min (42 Kč)" + optional note.
+     Tap → SMS composer pre-filled with the code + number → user taps Send.
+   - City picker (grid of the original city icons) to override GPS.
+2. **Permissions:** friendly location pre-prompt (ported Czech copy), graceful manual
+   fallback if denied.
+3. **Offline:** uses cached/bundled catalog; shows a subtle "naposledy aktualizováno" note.
+
+## Error handling
+
+- No network on launch → bundled catalog, silent.
+- Device can't send SMS (iPad/no SIM) → disable buttons with explanation.
+- Catalog fetch fails → keep last good cache; never block the core flow.
+- Unknown location / GPS off → land on manual picker.
+
+## Testing
+
+- Unit: nearest-city (haversine), catalog decoding, fallback logic, SMS body/recipient
+  construction.
+- Snapshot/UI: main screen per city, picker, permission-denied state (Xcode 26 preview
+  screenshots).
+- Manual: real send on a device for 1–2 cities (verify the composer pre-fills correctly).
+
+## Milestones
+
+1. **M0 — Backup** ✅ (archive repo created).
+2. **M1 — Project skeleton:** SwiftUI app, catalog model + bundled JSON, city picker, nearest-city.
+3. **M2 — SMS flow:** composer integration, ticket buttons, end-to-end real send test.
+4. **M3 — Polish:** original branding/font/icons, copy, permission UX, offline note.
+5. **M4 — Catalog hosting:** publish JSON, wire remote fetch + cache + fallback.
+6. **M5 — Ship prep:** App Store assets, privacy nutrition labels, Small Business Program
+   enrollment, submit.
+7. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode.
+
+## Costs
+
+- Apple Developer Program: ~$99/yr (~2,400 Kč).
+- Hosting: $0 (static JSON on GitHub Pages / raw).
+- Commission (only if ever paid): 15% via Small Business Program.
+
+## Risks / open questions
+
+- **Ticket-data accuracy** is the real ongoing burden — codes/prices drift. Mitigated by
+  remote config + a periodic re-verify habit. Consider a "report a wrong ticket" link.
+- **Premium-SMS longevity** — Karlovy Vary already dropped it; more cities may follow. The
+  app degrades gracefully (just fewer cities) and remote config lets us remove a city fast.
+- **App Store review** — an app that triggers premium SMS should clearly disclose costs in
+  UI + description to avoid rejection. Worth confirming current guidelines before submit.
+- **New app's repo/name** — decide where the rebuild lives (`listkomat` name is free on
+  GitHub again now). Local path proposed: `~/prj/listkomat`.
+- **Branding** — reuse the 2016 identity as-is, or refresh it? (Assets are all in iCloud.)
