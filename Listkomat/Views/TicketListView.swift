@@ -6,6 +6,7 @@ import MessageUI
 struct TicketListView: View {
     let city: City
     let updatedAt: String
+    let isOffline: Bool
 
     @State private var pending: Ticket?
     @State private var cannotSend = false
@@ -30,7 +31,12 @@ struct TicketListView: View {
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
-                        Text("Ceník platný k \(formattedDate)")
+                        if isOffline {
+                            Label("Offline – zobrazen uložený ceník (k \(formattedDate))", systemImage: "wifi.slash")
+                                .foregroundStyle(.orange)
+                        } else {
+                            Text("Ceník platný k \(formattedDate)")
+                        }
                     }
                 }
             }

@@ -28,7 +28,7 @@ struct ContentView: View {
         NavigationStack {
             Group {
                 if let city = currentCity {
-                    TicketListView(city: city, updatedAt: store.catalog.updatedAt)
+                    TicketListView(city: city, updatedAt: store.catalog.updatedAt, isOffline: store.refreshFailed)
                 } else {
                     emptyState
                 }

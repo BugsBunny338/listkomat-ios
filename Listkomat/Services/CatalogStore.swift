@@ -7,6 +7,9 @@ import Foundation
 @MainActor
 final class CatalogStore: ObservableObject {
     @Published private(set) var catalog: TicketCatalog
+    /// True when the last remote refresh failed (offline / unreachable) — we're
+    /// then showing cached or bundled prices.
+    @Published private(set) var refreshFailed = false
 
     private let remoteURL = URL(string:
         "https://raw.githubusercontent.com/BugsBunny338/listkomat-catalog/main/tickets.json")!
@@ -29,13 +32,18 @@ final class CatalogStore: ObservableObject {
             request.cachePolicy = .reloadIgnoringLocalCacheData
             request.timeoutInterval = 10
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return }
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                refreshFailed = true
+                return
+            }
             let fetched = try JSONDecoder().decode(TicketCatalog.self, from: data)
+            refreshFailed = false   // server reachable & valid
             guard !fetched.cities.isEmpty, fetched.version >= catalog.version else { return }
             catalog = fetched
             Self.writeCache(data)
         } catch {
             // Offline or bad response — keep the cached/bundled catalog.
+            refreshFailed = true
         }
     }
 
