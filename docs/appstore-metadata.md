@@ -15,7 +15,7 @@ Expand to other storefronts in a later version (see Roadmap below).
 `jízdenka,MHD,SMS jízdenka,jízdné,doprava,tramvaj,autobus,trolejbus,metro,Praha,Brno,Ostrava,Plzeň`
 
 **Description:**
-> Lístkomat vám koupí jízdenku městské hromadné dopravy jedinou SMS — bez toho, abyste si pamatovali telefonní číslo a kód lístku. Vyberte město, zvolte délku jízdenky a appka předvyplní správnou SMS. Lístek koupíte jejím odesláním.
+> Lístkomat vám koupí jízdenku městské hromadné dopravy jedinou SMS — bez toho, abyste si pamatovali telefonní číslo a kód lístku. Vyberte město, zvolte dobu platnosti a appka předvyplní správnou SMS. Lístek koupíte jejím odesláním.
 >
 > Podporovaná města: Praha, Brno, Ostrava, Plzeň, Liberec, Olomouc, Ústí nad Labem, Hradec Králové, České Budějovice, Pardubice.
 >
