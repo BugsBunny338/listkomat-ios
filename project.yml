@@ -2,7 +2,7 @@ name: Listkomat
 options:
   bundleIdPrefix: cz.flipcom
   deploymentTarget:
-    iOS: "16.1"
+    iOS: "16.2"
   developmentLanguage: cs
   createIntermediateGroups: true
 
@@ -18,14 +18,18 @@ targets:
   Listkomat:
     type: application
     platform: iOS
-    deploymentTarget: "16.1"
+    deploymentTarget: "16.2"
     sources:
       - Listkomat
+      - Shared
+    dependencies:
+      - target: ListkomatWidgets
     info:
       path: Listkomat/Info.plist
       properties:
         CFBundleDisplayName: Lístkomat
         NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
+        NSSupportsLiveActivities: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -37,10 +41,27 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat
         TARGETED_DEVICE_FAMILY: "1"
 
+  ListkomatWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.2"
+    sources:
+      - ListkomatWidgets
+      - Shared
+    info:
+      path: ListkomatWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Lístkomat
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat.widgets
+
   ListkomatTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "16.1"
+    deploymentTarget: "16.2"
     sources:
       - ListkomatTests
     dependencies:

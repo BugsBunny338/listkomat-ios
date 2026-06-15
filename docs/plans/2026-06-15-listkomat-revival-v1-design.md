@@ -214,9 +214,12 @@ Stack** (iOS 18+).
    GPS auto-selecting the city (verified Praha→Brno). Toolchain: XcodeGen + XcodeBuildMCP.
 3. **M2 — SMS flow:** composer wired (done); remaining: ticket-button polish + end-to-end
    real-send test on a physical device.
-4. **M3 — Time-left Live Activity:** ActivityKit countdown on `.sent`, Dynamic Island /
-   lock-screen / Always-On; "re-anchor on confirmation" tap. (Long-ticket WidgetKit fallback
-   can trail.)
+4. **M3 — Time-left Live Activity** ✅ ActivityKit countdown started on `.sent` (+ simulator
+   hook for demo), rendered in a Widget Extension: lock-screen banner + Dynamic Island
+   (compact/expanded/minimal), on-device `Text(timerInterval:)`. Floor bumped 16.1→**16.2**
+   (same devices; Live Activities matured there). Verified on iPhone 17 sim — Dynamic Island
+   shows tram + live countdown. Deferred: long-ticket (24h/72h) WidgetKit fallback + the
+   "re-anchor on confirmation SMS" tap.
 5. **M4 — Branding** ✅ app icon (2016 ticket-machine art), brand teal `#56C4CF`,
    Alte Haas Grotesk on titles/headlines, and a city-icon grid picker using the original
    landmark SVGs (incl. a hand-drawn Olomouc Holy Trinity Column matching the set). Verified

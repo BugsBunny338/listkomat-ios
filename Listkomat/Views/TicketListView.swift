@@ -1,4 +1,5 @@
 import SwiftUI
+import MessageUI
 
 /// The list of tickets for the current city, headed by the city's landmark icon
 /// (teal, no tile). Tapping a ticket opens a pre-filled SMS to that city's number.
@@ -24,8 +25,16 @@ struct TicketListView: View {
         }
         .background(Color(.systemGroupedBackground))
         .sheet(item: $pending) { ticket in
-            MessageComposeView(recipient: city.smsNumber, body: ticket.code) { _ in
+            MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
                 pending = nil
+                if case .sent = result {
+                    TicketActivityController.start(city: city, ticket: ticket)
+                }
+                #if targetEnvironment(simulator)
+                // The simulator can't actually send SMS, so start the Live
+                // Activity regardless — lets us demo the time-left countdown.
+                TicketActivityController.start(city: city, ticket: ticket)
+                #endif
             }
         }
         .alert("SMS nelze odeslat", isPresented: $cannotSend) {

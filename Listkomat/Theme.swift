@@ -1,14 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// Lístkomat brand: the original teal + Alte Haas Grotesk (freeware, license
-/// bundled in Resources/Fonts). Font used for titles & headlines only; body
-/// stays the system font for legibility and Dynamic Type.
-extension Color {
-    /// #56C4CF — sampled from the original 2016 app icon.
-    static let brandTeal = Color(red: 86 / 255, green: 196 / 255, blue: 207 / 255)
-}
-
+/// Lístkomat brand: the original teal (see Shared/BrandColor.swift) + Alte Haas
+/// Grotesk (freeware, license bundled in Resources/Fonts). Font used for titles
+/// & headlines only; body stays the system font for legibility and Dynamic Type.
 enum Brand {
     static let regular = "AlteHaasGrotesk"        // PostScript name
     static let bold = "AlteHaasGrotesk_Bold"
