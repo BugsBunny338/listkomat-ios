@@ -9,7 +9,7 @@ Expand to other storefronts in a later version (see Roadmap below).
 
 **Name:** Lístkomat
 **Subtitle (≤30):** Jízdenky MHD přes SMS
-**Promotional text (≤170):** Kup si jízdenku MHD jednou SMS — bez hledání čísla a kódu. Stačí vybrat město a délku jízdenky.
+**Promotional text (≤170):** Kup si jízdenku MHD jednou SMS — bez hledání čísla a kódu. Stačí vybrat město a dobu platnosti.
 
 **Keywords (≤100, comma, no spaces after comma):**
 `jízdenka,MHD,SMS jízdenka,jízdné,doprava,tramvaj,autobus,trolejbus,metro,Praha,Brno,Ostrava,Plzeň`

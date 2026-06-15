@@ -13,7 +13,7 @@ Jízdenky MHD přes SMS
 
 
 --- Promotional Text (max 170) ---------------------------------
-Kup si jízdenku MHD jednou SMS — bez hledání čísla a kódu. Stačí vybrat město a délku jízdenky.
+Kup si jízdenku MHD jednou SMS — bez hledání čísla a kódu. Stačí vybrat město a dobu platnosti.
 
 
 --- Description ------------------------------------------------
