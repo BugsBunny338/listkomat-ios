@@ -209,6 +209,16 @@ If Android ever happens:
 - Hosting: $0 (static JSON on GitHub Pages / raw).
 - Commission (only if ever paid): 15% via Small Business Program.
 
+## App Store account
+
+- Enroll as a **CZ Individual** using the **CZ Apple ID** (seller = personal name; no D-U-N-S).
+- Storefront availability is chosen per-country at publish time and is **independent of the
+  account's country** — so the CZ account ships to the Czech App Store (and anywhere else we
+  pick). A US account would also reach CZ; CZ is chosen to match the market/address and avoid
+  US tax-form overhead if a price is ever added.
+- The app is **free**, so only Apple's free-app agreement is needed — **no banking or tax
+  forms**. (Dev has both CZ and US Apple IDs / billing / residency; CZ chosen deliberately.)
+
 ## Risks / open questions
 
 - **Ticket-data accuracy** is the real ongoing burden — codes/prices drift. Mitigated by
