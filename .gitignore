@@ -3,6 +3,9 @@
 
 # Xcode
 build/
+
+# XcodeGen-generated project — regenerate with `xcodegen generate`
+*.xcodeproj
 DerivedData/
 *.xcuserstate
 *.xcscmblueprint

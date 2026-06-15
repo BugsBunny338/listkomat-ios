@@ -1,0 +1,54 @@
+name: Listkomat
+options:
+  bundleIdPrefix: cz.flipcom
+  deploymentTarget:
+    iOS: "16.1"
+  developmentLanguage: cs
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"            # language mode; bump to 6.0 once it builds clean
+    DEVELOPMENT_TEAM: ""           # set after Apple Developer enrollment
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Listkomat:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.1"
+    sources:
+      - Listkomat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Lístkomat
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
+
+  ListkomatTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.1"
+    sources:
+      - ListkomatTests
+    dependencies:
+      - target: Listkomat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomatTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Listkomat:
+    build:
+      targets:
+        Listkomat: all
+    test:
+      targets:
+        - ListkomatTests

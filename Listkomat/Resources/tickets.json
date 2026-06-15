@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-15",
+  "cities": [
+    {
+      "key": "praha", "name": "Praha", "lat": 50.075538, "lng": 14.437800, "smsNumber": "90206",
+      "tickets": [
+        { "code": "DPT42", "duration": "30 min", "durationMinutes": 30, "priceKc": 42 },
+        { "code": "DPT55", "duration": "90 min", "durationMinutes": 90, "priceKc": 55 },
+        { "code": "DPT150", "duration": "24 h", "durationMinutes": 1440, "priceKc": 150 },
+        { "code": "DPT350", "duration": "72 h", "durationMinutes": 4320, "priceKc": 350 }
+      ]
+    },
+    {
+      "key": "brno", "name": "Brno", "lat": 49.195060, "lng": 16.606837, "smsNumber": "90206",
+      "tickets": [
+        { "code": "BRNO20", "duration": "20 min", "durationMinutes": 20, "priceKc": 20 },
+        { "code": "BRNO", "duration": "75 min", "durationMinutes": 75, "priceKc": 29 },
+        { "code": "BRNOD", "duration": "24 h", "durationMinutes": 1440, "priceKc": 99 }
+      ]
+    },
+    {
+      "key": "ostrava", "name": "Ostrava", "lat": 49.820923, "lng": 18.262524, "smsNumber": "90206",
+      "tickets": [
+        { "code": "DPO70", "duration": "70 min", "durationMinutes": 70, "priceKc": 38, "note": "o víkendu a svátcích 90 min" },
+        { "code": "DPO70Z", "duration": "70 min", "durationMinutes": 70, "priceKc": 19, "note": "zlevněný" },
+        { "code": "DPO24", "duration": "24 h", "durationMinutes": 1440, "priceKc": 100 },
+        { "code": "DPO24Z", "duration": "24 h", "durationMinutes": 1440, "priceKc": 50, "note": "zlevněný" }
+      ]
+    },
+    {
+      "key": "plzen", "name": "Plzeň", "lat": 49.738431, "lng": 13.373637, "smsNumber": "90206",
+      "tickets": [
+        { "code": "PMDP35M", "duration": "35 min", "durationMinutes": 35, "priceKc": 28, "note": "vnitřní zóna" },
+        { "code": "PMDP24H", "duration": "24 h", "durationMinutes": 1440, "priceKc": 99, "note": "vnitřní zóna" }
+      ]
+    },
+    {
+      "key": "liberec", "name": "Liberec", "lat": 50.766280, "lng": 15.054339, "smsNumber": "90206",
+      "tickets": [
+        { "code": "LIB", "duration": "60 min", "durationMinutes": 60, "priceKc": 38 },
+        { "code": "LIB45", "duration": "90 min", "durationMinutes": 90, "priceKc": 45, "note": "vč. tramvaje do Jablonce" }
+      ]
+    },
+    {
+      "key": "olomouc", "name": "Olomouc", "lat": 49.593778, "lng": 17.250879, "smsNumber": "90206",
+      "tickets": [
+        { "code": "DPMO", "duration": "50 min", "durationMinutes": 50, "priceKc": 27, "note": "o víkendu a svátcích 70 min" }
+      ]
+    },
+    {
+      "key": "ustinadlabem", "name": "Ústí nad Labem", "lat": 50.661116, "lng": 14.053146, "smsNumber": "90206",
+      "tickets": [
+        { "code": "MDJ", "duration": "60 min", "durationMinutes": 60, "priceKc": 26 },
+        { "code": "MDJ106", "duration": "24 h", "durationMinutes": 1440, "priceKc": 106 },
+        { "code": "MDJ60", "duration": "24 h", "durationMinutes": 1440, "priceKc": 60 },
+        { "code": "MDJZD", "duration": "24 h", "durationMinutes": 1440, "priceKc": 53, "note": "zlevněný" }
+      ]
+    },
+    {
+      "key": "hradeckralove", "name": "Hradec Králové", "lat": 50.210361, "lng": 15.825211, "smsNumber": "90230",
+      "tickets": [
+        { "code": "HK", "duration": "60 min", "durationMinutes": 60, "priceKc": 30 },
+        { "code": "HKZ", "duration": "60 min", "durationMinutes": 60, "priceKc": 15, "note": "zlevněný (6–15 let / 65+)" },
+        { "code": "HK24", "duration": "24 h", "durationMinutes": 1440, "priceKc": 100 }
+      ]
+    },
+    {
+      "key": "ceskebudejovice", "name": "České Budějovice", "lat": 48.975658, "lng": 14.480255, "smsNumber": "90206",
+      "tickets": [
+        { "code": "BUD", "duration": "60 min", "durationMinutes": 60, "priceKc": 30 },
+        { "code": "BUD24", "duration": "24 h", "durationMinutes": 1440, "priceKc": 115 }
+      ]
+    },
+    {
+      "key": "pardubice", "name": "Pardubice", "lat": 50.034309, "lng": 15.781199, "smsNumber": "90206",
+      "tickets": [
+        { "code": "DPMP", "duration": "45 min", "durationMinutes": 45, "priceKc": 25, "note": "o víkendu a svátcích 60 min" },
+        { "code": "DPMP24", "duration": "24 h", "durationMinutes": 1440, "priceKc": 65 }
+      ]
+    }
+  ]
+}
