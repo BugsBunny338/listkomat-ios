@@ -49,10 +49,10 @@ Expand to other storefronts in a later version (see Roadmap below).
 - **Location** — used for App Functionality (suggest nearest city). NOT linked to identity, NOT used for tracking, NOT collected/sent off device.
 - No other data collected. No analytics, no accounts, no third-party SDKs.
 
-## URLs (TODO — need to provide/host)
-- **Support URL:** e.g. https://listkomat.flipcom.cz or a GitHub Pages page
-- **Privacy Policy URL:** required — short page; can host on GitHub Pages (claude can generate)
-- **Marketing URL (optional)**
+## URLs (live — GitHub Pages, repo BugsBunny338/listkomat-web)
+- **Support URL:** https://bugsbunny338.github.io/listkomat-web/
+- **Privacy Policy URL:** https://bugsbunny338.github.io/listkomat-web/privacy.html
+- **Marketing URL (optional):** same as support
 
 ## Review notes (App Review → "Notes")
 > The app pre-fills an SMS to a Czech premium short-code so the user can buy a real public-transport ticket (a real-world transit service, billed by the carrier — not digital content, so no IAP applies). Costs are disclosed in-app and in the description. A Czech SIM is required; reviewers outside CZ won't be able to complete a purchase, which is expected.

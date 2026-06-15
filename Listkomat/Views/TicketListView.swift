@@ -32,6 +32,7 @@ struct TicketListView: View {
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
+                        Text("Funguje s českou SIM kartou.")
                         if isOffline {
                             Label("Offline – zobrazen uložený ceník (k \(formattedDate))", systemImage: "wifi.slash")
                                 .foregroundStyle(.orange)
