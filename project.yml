@@ -21,14 +21,20 @@ targets:
     deploymentTarget: "16.1"
     sources:
       - Listkomat
+    info:
+      path: Listkomat/Info.plist
+      properties:
+        CFBundleDisplayName: Lístkomat
+        NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIAppFonts:
+          - AlteHaasGroteskRegular.ttf
+          - AlteHaasGroteskBold.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Lístkomat
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "1"
 
   ListkomatTests:

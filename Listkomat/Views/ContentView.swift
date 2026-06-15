@@ -56,6 +56,7 @@ struct ContentView: View {
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
             Text("Zjišťuji nejbližší město…")
+                .font(.brand(17, relativeTo: .body))
                 .foregroundStyle(.secondary)
             Button("Vybrat město ručně") { showingPicker = true }
                 .buttonStyle(.borderedProminent)

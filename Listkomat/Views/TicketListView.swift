@@ -17,6 +17,8 @@ struct TicketListView: View {
                 }
             } header: {
                 Text("Lístky – \(city.name)")
+                    .font(.brandBold(15, relativeTo: .subheadline))
+                    .textCase(nil)
             } footer: {
                 Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
             }
@@ -46,11 +48,11 @@ struct TicketListView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Lístek na \(ticket.duration)")
-                    .font(.headline)
+                    .font(.brandBold(18, relativeTo: .headline))
                 Spacer()
                 Text("\(ticket.priceKc) Kč")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+                    .font(.brandBold(18, relativeTo: .headline))
+                    .foregroundStyle(Color.brandTeal)
             }
             if let note = ticket.note, !note.isEmpty {
                 Text(note)

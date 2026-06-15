@@ -6,6 +6,7 @@ build/
 
 # XcodeGen-generated project — regenerate with `xcodegen generate`
 *.xcodeproj
+Listkomat/Info.plist
 DerivedData/
 *.xcuserstate
 *.xcscmblueprint
