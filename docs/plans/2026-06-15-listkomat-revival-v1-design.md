@@ -209,8 +209,11 @@ Stack** (iOS 18+).
 ## Milestones
 
 1. **M0 — Backup** ✅ (archive repo + new `listkomat-ios` repo created).
-2. **M1 — Project skeleton:** SwiftUI app, catalog model + bundled JSON, city picker, nearest-city.
-3. **M2 — SMS flow:** composer integration, ticket buttons, end-to-end real send test.
+2. **M1 — Project skeleton** ✅ SwiftUI app, catalog model + bundled JSON, city picker,
+   nearest-city. Builds clean on Xcode 26.5; 3/3 unit tests pass; runs on iPhone 17 sim with
+   GPS auto-selecting the city (verified Praha→Brno). Toolchain: XcodeGen + XcodeBuildMCP.
+3. **M2 — SMS flow:** composer wired (done); remaining: ticket-button polish + end-to-end
+   real-send test on a physical device.
 4. **M3 — Time-left Live Activity:** ActivityKit countdown on `.sent`, Dynamic Island /
    lock-screen / Always-On; "re-anchor on confirmation" tap. (Long-ticket WidgetKit fallback
    can trail.)
