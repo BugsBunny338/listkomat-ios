@@ -26,7 +26,9 @@ original was React Native; the surviving copy is archived at
 
 ## Scope
 
-**v1 — SMS tickets only, polished.** 10 cities (the 2 discontinued ones dropped).
+**v1 — SMS tickets + "time-left" Live Activity, polished.** 10 cities (the 2 discontinued
+ones dropped). After a ticket is sent, a glanceable countdown of remaining validity on the
+lock screen / Dynamic Island / Always-On display.
 **v2 — live vehicle map** (Prague + Brno first). Deliberately deferred.
 
 ## Architecture
@@ -39,7 +41,10 @@ original was React Native; the surviving copy is archived at
 - **SMS send:** `MFMessageComposeViewController` wrapped in a `UIViewControllerRepresentable`.
   iOS will not auto-send; the user taps Send. This preserves the whole value prop (no
   remembering numbers/codes) within Apple's rules. (Direct port of the original's
-  `react-native-message-composer`, which was the same native API.)
+  `react-native-message-composer`, which was the same native API.) Its delegate result
+  (`.sent` / `.cancelled` / `.failed`) is the trigger for the time-left countdown below.
+- **Live Activity:** ActivityKit (iOS 16.1+) for the ticket time-left countdown, with a
+  WidgetKit Lock/Home-Screen widget fallback for long (24h/72h) tickets. See dedicated section.
 - **Location:** CoreLocation, when-in-use, to auto-select the nearest known city. Manual
   city picker always available. (Ports the original haversine nearest-city logic.)
 - **Dependencies:** essentially none. Pure SwiftUI + Foundation.
@@ -123,6 +128,35 @@ Rychnov nad Kněžnou (folded into IREDO, no SMS product).
    fallback if denied.
 3. **Offline:** uses cached/bundled catalog; shows a subtle "naposledy aktualizováno" note.
 
+## Ticket time-left — Live Activity (v1)
+
+A glanceable countdown of how much validity remains on the ticket just bought, shown on the
+**lock screen, Dynamic Island, Always-On display** (iPhone 14 Pro+), and **Apple Watch Smart
+Stack** (iOS 18+).
+
+**What we can and can't know**
+- iOS reports the compose result via the `MFMessageComposeViewController` delegate: `.sent`
+  means the user tapped Send and the message was handed off. That is our trigger.
+- We **cannot** read the operator's confirmation SMS (iOS has no inbox API), so we don't get
+  the exact "platí od–do" window. The countdown is therefore an **estimate**: anchored to the
+  `.sent` timestamp + the chosen ticket's known duration.
+- The real ticket activates when the reply arrives (often a minute or two later), so the
+  estimate runs slightly optimistic. Mitigation: when the confirmation pings, offer a one-tap
+  **"Mám lístek — spustit odpočet"** to re-anchor the timer to the real activation moment.
+
+**Mechanism**
+- ActivityKit `Activity` started on `.sent`; the UI uses `Text(timerInterval:)` so the
+  countdown ticks **on-device, no push/server needed**.
+- **Lifetime limit:** a Live Activity lasts ~8h (≤~12h incl. its ended state). Perfect for
+  20/30/60/90-min tickets. For **24h / 72h** tickets it would expire before the ticket → fall
+  back to a **WidgetKit** Lock/Home-Screen widget (and/or Watch complication) for the long
+  ones. v1 ships the Live Activity for short tickets; the long-ticket widget can follow.
+
+**Honesty / legal framing (must-have)**
+- The countdown is a **convenience, not the legal ticket** — a revízor checks the operator's
+  SMS. The UI must state this clearly (and the App Store description should too), so it never
+  misleads.
+
 ## Error handling
 
 - No network on launch → bundled catalog, silent.
@@ -140,14 +174,34 @@ Rychnov nad Kněžnou (folded into IREDO, no SMS product).
 
 ## Milestones
 
-1. **M0 — Backup** ✅ (archive repo created).
+1. **M0 — Backup** ✅ (archive repo + new `listkomat-ios` repo created).
 2. **M1 — Project skeleton:** SwiftUI app, catalog model + bundled JSON, city picker, nearest-city.
 3. **M2 — SMS flow:** composer integration, ticket buttons, end-to-end real send test.
-4. **M3 — Polish:** original branding/font/icons, copy, permission UX, offline note.
-5. **M4 — Catalog hosting:** publish JSON, wire remote fetch + cache + fallback.
-6. **M5 — Ship prep:** App Store assets, privacy nutrition labels, Small Business Program
-   enrollment, submit.
-7. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode.
+4. **M3 — Time-left Live Activity:** ActivityKit countdown on `.sent`, Dynamic Island /
+   lock-screen / Always-On; "re-anchor on confirmation" tap. (Long-ticket WidgetKit fallback
+   can trail.)
+5. **M4 — Polish:** original branding/font/icons, copy, permission UX, offline note.
+6. **M5 — Catalog hosting:** publish JSON, wire remote fetch + cache + fallback.
+7. **M6 — Ship prep:** App Store assets, privacy nutrition labels, premium-SMS cost
+   disclosure, Small Business Program enrollment, submit.
+8. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode.
+
+## Android — deferred (Apple-only for now)
+
+Intentionally Apple-only. The standout feature (Live Activity / Dynamic Island / Always-On)
+is deeply iOS-specific; a cross-platform layer would dilute exactly what makes this special,
+and it fits the goal of building for love on the platform of choice.
+
+If Android ever happens:
+- It would be **native Kotlin + Jetpack Compose** (Java is legacy now), as a *separate* app —
+  not React Native (what the 2016 original used).
+- **No code-sharing needed:** the remote-config **ticket-catalog JSON is already the
+  cross-platform contract.** Both apps just read the same JSON. The app's real logic (catalog
+  + nearest-city haversine + building an SMS string) is tiny — re-implementing in Kotlin is
+  trivial, so Kotlin Multiplatform's toolchain overhead isn't worth it at this size.
+- Android bonus (someday file): Android *can* read incoming SMS with permission, enabling
+  exact validity from the confirmation reply — but Google Play restricts that to default-SMS
+  apps, so it's hard to ship. Sending via intent is unrestricted.
 
 ## Costs
 
