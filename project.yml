@@ -40,7 +40,7 @@ targets:
           - AlteHaasGroteskBold.ttf
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomatapp
         TARGETED_DEVICE_FAMILY: "1"
 
   ListkomatWidgets:
@@ -58,7 +58,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomat.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomatapp.widgets
 
   ListkomatTests:
     type: bundle.unit-test
@@ -70,7 +70,7 @@ targets:
       - target: Listkomat
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomatTests
+        PRODUCT_BUNDLE_IDENTIFIER: cz.flipcom.listkomatappTests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
