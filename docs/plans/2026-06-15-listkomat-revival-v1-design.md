@@ -228,8 +228,12 @@ Stack** (iOS 18+).
    on iPhone 17 sim. **Location pre-prompt** (priming screen before the system dialog) and the
    **far-from-any-city** state (don't auto-default beyond 100 km — show "Žádné město v okolí"
    with the nearest city + distance and a manual-pick button) are DONE (verified on sim from a
-   US coordinate: ~8597 km → no default). Residual (later): offline indicator + the Ústí
-   double-24h data clarification.
+   US coordinate: ~8597 km → no default). **Offline indicator** DONE (orange "Offline – zobrazen
+   uložený ceník" hint when the remote refresh fails; verified via unreachable host → bundled
+   fallback). **Ústí double-24h data:** could NOT be auto-verified (operator SMS page returns
+   corrupted bytes, 2026 ceník PDF 404s, a third source quotes a different 1-day price) — NOT
+   guessing transit fares; needs Jiří to confirm what MDJ60 vs MDJ106 each buy, then a one-line
+   remote-catalog edit.
 6. **M5 — Catalog hosting** ✅ Public repo `BugsBunny338/listkomat-catalog` serves
    `tickets.json` via raw URL. App fetches on launch (`CatalogStore.refresh`), adopts it if
    it decodes / is non-empty / not a downgrade, caches to Application Support; source chain is
