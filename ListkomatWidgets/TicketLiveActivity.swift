@@ -50,24 +50,32 @@ private struct LockScreenView: View {
     let context: ActivityViewContext<TicketActivityAttributes>
 
     var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Label(context.attributes.cityName, systemImage: "tram.fill")
+        // City name + countdown use the default (primary) colour so they stay
+        // legible on the dimmed Always-On display; teal is only the icon accent.
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "tram.fill")
+                .font(.title3)
+                .foregroundStyle(Color.brandTeal)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(context.attributes.cityName)
                     .font(.headline)
-                    .foregroundStyle(Color.brandTeal)
                 Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 1) {
                 Text("zbývá")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                    .font(.title2)
+                    .font(.title2.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Color.brandTeal)
+                    .multilineTextAlignment(.trailing)
+                    .frame(minWidth: 74, alignment: .trailing)
             }
         }
     }

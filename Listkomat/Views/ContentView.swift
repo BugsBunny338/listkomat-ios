@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var store: CatalogStore
     @StateObject private var location: LocationManager
+    @StateObject private var liveActivity = LiveActivityController()
 
     @State private var selectedCityKey: String?
     @State private var showingPicker = false
@@ -26,9 +27,17 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            VStack(spacing: 0) {
+                if let active = liveActivity.active {
+                    activeTicketBanner(active)
+                }
                 if let city = currentCity {
-                    TicketListView(city: city, updatedAt: store.catalog.updatedAt, isOffline: store.refreshFailed)
+                    TicketListView(
+                        city: city,
+                        updatedAt: store.catalog.updatedAt,
+                        isOffline: store.refreshFailed,
+                        liveActivity: liveActivity
+                    )
                 } else {
                     emptyState
                 }
@@ -86,6 +95,30 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Active ticket banner (manual end)
+
+    private func activeTicketBanner(_ active: LiveActivityController.ActiveTicket) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "tram.fill")
+                .foregroundStyle(Color.brandTeal)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Aktivní lístek")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text("\(active.cityName) · \(active.ticketLabel)")
+                    .font(.brandBold(15, relativeTo: .subheadline))
+            }
+            Spacer()
+            Button("Ukončit") { liveActivity.stop() }
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.bordered)
+                .tint(.red)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.brandTeal.opacity(0.12))
+    }
+
     // MARK: - Empty state (no city to show)
 
     @ViewBuilder
@@ -106,6 +139,7 @@ struct ContentView: View {
             Button("Vybrat město") { showingPicker = true }
                 .buttonStyle(.borderedProminent)
         }
+        .frame(maxHeight: .infinity)
         .padding(32)
     }
 

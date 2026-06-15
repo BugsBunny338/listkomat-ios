@@ -7,6 +7,7 @@ struct TicketListView: View {
     let city: City
     let updatedAt: String
     let isOffline: Bool
+    let liveActivity: LiveActivityController
 
     @State private var pending: Ticket?
     @State private var cannotSend = false
@@ -46,12 +47,12 @@ struct TicketListView: View {
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
                 pending = nil
                 if case .sent = result {
-                    TicketActivityController.start(city: city, ticket: ticket)
+                    liveActivity.start(city: city, ticket: ticket)
                 }
                 #if targetEnvironment(simulator)
                 // The simulator can't actually send SMS, so start the Live
                 // Activity regardless — lets us demo the time-left countdown.
-                TicketActivityController.start(city: city, ticket: ticket)
+                liveActivity.start(city: city, ticket: ticket)
                 #endif
             }
         }
