@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The list of tickets for the current city. Tapping a ticket opens a
-/// pre-filled SMS to that city's number with the ticket code as the body.
+/// The list of tickets for the current city, headed by the city's landmark icon
+/// (teal, no tile). Tapping a ticket opens a pre-filled SMS to that city's number.
 struct TicketListView: View {
     let city: City
 
@@ -9,20 +9,20 @@ struct TicketListView: View {
     @State private var cannotSend = false
 
     var body: some View {
-        List {
-            Section {
-                ForEach(city.tickets) { ticket in
-                    Button { tap(ticket) } label: { row(ticket) }
-                        .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            header
+            List {
+                Section {
+                    ForEach(city.tickets) { ticket in
+                        Button { tap(ticket) } label: { row(ticket) }
+                            .buttonStyle(.plain)
+                    }
+                } footer: {
+                    Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
                 }
-            } header: {
-                Text("Lístky – \(city.name)")
-                    .font(.brandBold(15, relativeTo: .subheadline))
-                    .textCase(nil)
-            } footer: {
-                Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
             }
         }
+        .background(Color(.systemGroupedBackground))
         .sheet(item: $pending) { ticket in
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { _ in
                 pending = nil
@@ -33,6 +33,24 @@ struct TicketListView: View {
         } message: {
             Text("Toto zařízení neumí posílat SMS (např. iPad bez SIM).")
         }
+    }
+
+    private var header: some View {
+        VStack(spacing: 6) {
+            Image("city_\(city.key)")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 92)
+                .foregroundStyle(Color.brandTeal)
+            Text(city.name)
+                .font(.brandBold(22, relativeTo: .title2))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+        .padding(.bottom, 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(city.name)
     }
 
     private func tap(_ ticket: Ticket) {
