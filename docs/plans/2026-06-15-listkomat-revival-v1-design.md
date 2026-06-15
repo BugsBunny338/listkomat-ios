@@ -212,8 +212,10 @@ Stack** (iOS 18+).
 2. **M1 — Project skeleton** ✅ SwiftUI app, catalog model + bundled JSON, city picker,
    nearest-city. Builds clean on Xcode 26.5; 3/3 unit tests pass; runs on iPhone 17 sim with
    GPS auto-selecting the city (verified Praha→Brno). Toolchain: XcodeGen + XcodeBuildMCP.
-3. **M2 — SMS flow:** composer wired (done); remaining: ticket-button polish + end-to-end
-   real-send test on a physical device.
+3. **M2 — SMS flow** ~✅ Runs on a physical iPhone (free personal-team signing); light + dark
+   both look right. **Compose pre-fill verified on device** — correct number + code. Remaining:
+   the one real premium send via CZ eSIM (mindful, ~20 Kč) to confirm the actual purchase +
+   the `.sent`→Live-Activity path on real hardware (only seen in the simulator so far).
 4. **M3 — Time-left Live Activity** ✅ ActivityKit countdown started on `.sent` (+ simulator
    hook for demo), rendered in a Widget Extension: lock-screen banner + Dynamic Island
    (compact/expanded/minimal), on-device `Text(timerInterval:)`. Floor bumped 16.1→**16.2**
