@@ -225,7 +225,11 @@ Stack** (iOS 18+).
    landmark SVGs (incl. a hand-drawn Olomouc Holy Trinity Column matching the set). Verified
    on iPhone 17 sim. Residual polish (later): permission pre-prompt UX + offline
    "naposledy aktualizováno" note.
-6. **M5 — Catalog hosting:** publish JSON, wire remote fetch + cache + fallback.
+6. **M5 — Catalog hosting** ✅ Public repo `BugsBunny338/listkomat-catalog` serves
+   `tickets.json` via raw URL. App fetches on launch (`CatalogStore.refresh`), adopts it if
+   it decodes / is non-empty / not a downgrade, caches to Application Support; source chain is
+   remote → cache → bundled. Footer shows "Ceník platný k <date>". Verified: app fetched
+   remote v2 (2026-06-16) over bundled v1 and cached it.
 7. **M6 — Ship prep:** App Store assets, privacy nutrition labels, premium-SMS cost
    disclosure, Small Business Program enrollment, submit.
 8. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode.

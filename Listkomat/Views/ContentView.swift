@@ -23,7 +23,7 @@ struct ContentView: View {
         NavigationStack {
             Group {
                 if let city = currentCity {
-                    TicketListView(city: city)
+                    TicketListView(city: city, updatedAt: store.catalog.updatedAt)
                 } else {
                     emptyState
                 }
@@ -47,6 +47,7 @@ struct ContentView: View {
                 }
             }
             .onAppear { location.requestAndStart() }
+            .task { await store.refresh() }
         }
     }
 

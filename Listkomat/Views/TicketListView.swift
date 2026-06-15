@@ -5,9 +5,18 @@ import MessageUI
 /// (teal, no tile). Tapping a ticket opens a pre-filled SMS to that city's number.
 struct TicketListView: View {
     let city: City
+    let updatedAt: String
 
     @State private var pending: Ticket?
     @State private var cannotSend = false
+
+    private var formattedDate: String {
+        let parts = updatedAt.split(separator: "-")
+        guard parts.count == 3, let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else {
+            return updatedAt
+        }
+        return "\(d). \(m). \(y)"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +28,10 @@ struct TicketListView: View {
                             .buttonStyle(.plain)
                     }
                 } footer: {
-                    Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
+                        Text("Ceník platný k \(formattedDate)")
+                    }
                 }
             }
         }
