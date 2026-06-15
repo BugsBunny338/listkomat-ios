@@ -45,6 +45,7 @@ struct TicketListView: View {
                 .foregroundStyle(Color.brandTeal)
             Text(city.name)
                 .font(.brandBold(22, relativeTo: .title2))
+                .foregroundStyle(Color.brandTeal)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 6)
