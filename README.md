@@ -6,7 +6,7 @@ phone number or the ticket code for your chosen duration.
 
 The original (React Native, ~2016) is archived privately at `BugsBunny338/listkomat-archive`.
 
-- **v1:** SMS tickets, 10 Czech cities, polished SwiftUI (iOS 17+).
+- **v1:** SMS tickets, 10 Czech cities, polished SwiftUI (iOS 16.1+).
 - **v2:** live transit-vehicle map (Prague + Brno).
 
 ## Docs

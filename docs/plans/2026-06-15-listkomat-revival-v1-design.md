@@ -33,7 +33,9 @@ lock screen / Dynamic Island / Always-On display.
 
 ## Architecture
 
-- **Platform:** iOS 17+, iPhone-first. Swift 6 + SwiftUI, MVVM.
+- **Platform:** **iOS 16.1+**, iPhone-first. Swift 6 + SwiftUI, MVVM. (16.1 is the Live
+  Activity floor and reaches iPhone 8/X-and-newer — see Device support. Uses `ObservableObject`
+  rather than the iOS 17 `@Observable` macro; trivial at this size.)
 - **No backend.** The ticket catalog is a small static JSON ("remote config") hosted free
   (GitHub Pages or a raw GitHub URL). App fetches on launch, caches locally, falls back to
   a bundled copy when offline. → wrong/stale codes can be fixed in seconds without an App
@@ -114,6 +116,35 @@ over unchanged from the recovered 2016 `constants.js`.
 Rychnov nad Kněžnou (folded into IREDO, no SMS product).
 
 ⚠︎ = re-verify against the operator's current ceník before shipping.
+
+## Device support & accessibility
+
+- **Minimum: iOS 16.1.** Reaches iPhone 8 / X (2017) and newer — the cheap secondhand models
+  the older-user audience is most likely to own — while keeping Live Activities on the baseline.
+- **Graceful degradation:** the core SMS flow works on every supported device; the time-left
+  Live Activity lights up on 16.1+; Dynamic Island + Always-On are bonuses on iPhone 14 Pro+.
+  No device is excluded from the core feature.
+- **Design for the smallest screen first:** iPhone SE (375pt wide); scales up to Pro Max
+  automatically via SwiftUI layout.
+- **Accessibility:** full Dynamic Type support; vector assets imported with "Preserve Vector
+  Data" so icons stay crisp at large accessibility text sizes. (Audience skews older — many
+  CZ cities give 65+/70+ free transit, so the paying older cohort is ~60–70.)
+
+## Graphics & assets
+
+All from the recovered iCloud assets (`~/Library/Mobile Documents/.../Lístkomat`). Audited
+2026-06-15:
+- **City icons — true vector SVGs** (path/shape data, no embedded raster). Scale infinitely.
+  Import into the Asset Catalog with **Preserve Vector Data**. (`Praha.svg` uses shape
+  elements rather than `<path>` — still vector; eyeball on import.) Note: catalog covers 11
+  cities; **Olomouc has no icon** (it was in code but not the icon set) — needs one made (from
+  the editable sources) or an SF Symbol fallback.
+- **Logo — vector SVG** (+ editable `.ai` / `.sketch` / `.psd`). Regenerate at any size.
+- **App icon — `1024×1024` PNG exists** (exact App Store size); Xcode auto-generates the rest.
+- **Transit-mode icons (bus/metro/tram/trolejbus) — `375×375` PNG (raster).** Plenty for
+  on-screen icon use; not infinitely scalable. Optional later swap to SF Symbols
+  (`bus.fill`, `tram.fill`, `cablecar`, …). Mostly a v2-map concern.
+- **Verdict:** graphics are in good shape; no redesign needed for v1 (only an Olomouc icon).
 
 ## Screens & flow (v1)
 
