@@ -1,0 +1,19 @@
+REPLY TO APP REVIEW — Guideline 2.1 (Information Needed)
+Submission ID: 582e9744-0637-4623-b100-89e40330b6a4
+(Send via App Store Connect → App Review → this submission → Reply)
+================================================================
+
+Hello, and thank you for reviewing Lístkomat.
+
+Lístkomat processes no payment inside the app and uses no in-app purchases. The user buys a real public-transport ticket directly from the city's transit operator by sending a premium-rate SMS through their own mobile carrier:
+
+1. The user picks a city and a ticket type.
+2. The app pre-fills a standard SMS — the operator's short code as the recipient and the ticket keyword as the body (for example: recipient 90206, message "BRNO20").
+3. The user taps Send in the iOS Messages composer. Their mobile carrier delivers the SMS and bills the ticket price (e.g. 20 CZK) to the user's normal phone bill, and the operator sends the ticket back as a reply SMS.
+
+The app only pre-fills the message so the user doesn't have to remember the operator's number and code — it never collects, processes, or transmits any payment or card data. Because this is a real-world public-transport service billed by the mobile carrier (not digital content), In-App Purchase does not apply (Guidelines 3.1.3 / 3.1.1).
+
+Important for testing: completing a purchase requires an iPhone with an active Czech SIM, because the short code is Czech and is billed by a Czech mobile carrier. On a device without SMS capability — such as the iPad Air used for this review, or any Wi-Fi-only iPad — the Messages composer is unavailable and the purchase cannot be completed; the app shows a notice that the device cannot send SMS. To see the full flow, please use an iPhone with a Czech SIM and tap any ticket — the pre-filled SMS will open.
+
+Thank you very much.
+Jiří
