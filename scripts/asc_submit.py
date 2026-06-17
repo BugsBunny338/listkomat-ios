@@ -4,8 +4,14 @@ Attach the latest processed build to the current App Store version and submit it
 for review — the App Store Connect REST steps that `altool` can't do.
 
 Usage:
-    python3 scripts/asc_submit.py            # do it: attach latest build + submit
-    python3 scripts/asc_submit.py --dry-run  # just print current state, change nothing
+    python3 scripts/asc_submit.py                 # attach latest build + submit
+    python3 scripts/asc_submit.py --dry-run       # print current state, change nothing
+    python3 scripts/asc_submit.py --notes FILE    # also set App Review notes from FILE
+    python3 scripts/asc_submit.py --notes 'text'  # ...or inline text
+
+The notes go in the App Store version's "App Review > Notes" field — the only
+reviewer-facing message channel the ASC API exposes (there is no API for the
+Resolution Center reply thread). Use it to tell the reviewer what changed.
 
 Prerequisites (one-time):
     - App Store Connect API key (.p8) at ~/.appstoreconnect/private_keys/AuthKey_<KEYID>.p8
@@ -96,8 +102,38 @@ def open_submissions():
     return [sub for sub in r.get("data", []) if sub["attributes"]["state"] not in SUB_CLOSED]
 
 
+def set_notes(ver_id, notes):
+    s, r = call("GET", f"/v1/appStoreVersions/{ver_id}/appStoreReviewDetail")
+    detail = r.get("data")
+    if detail:
+        did = detail["id"]
+        s, r = call("PATCH", f"/v1/appStoreReviewDetails/{did}",
+                    {"data": {"type": "appStoreReviewDetails", "id": did,
+                              "attributes": {"notes": notes}}})
+    else:  # no review detail yet — create one
+        s, r = call("POST", "/v1/appStoreReviewDetails",
+                    {"data": {"type": "appStoreReviewDetails", "attributes": {"notes": notes},
+                              "relationships": {"appStoreVersion": {"data": {
+                                  "type": "appStoreVersions", "id": ver_id}}}}})
+    if s not in (200, 201):
+        die("failed to set App Review notes", r)
+
+
+def _read_notes(arg):
+    if os.path.isfile(arg):
+        with open(arg) as f:
+            return f.read().strip()
+    return arg
+
+
 def main():
     dry = "--dry-run" in sys.argv
+    notes = None
+    if "--notes" in sys.argv:
+        i = sys.argv.index("--notes")
+        if i + 1 >= len(sys.argv):
+            die("--notes needs a file path or text argument")
+        notes = _read_notes(sys.argv[i + 1])
 
     ver_id, ver_str, ver_state = latest_version()
     build_id, build_num = latest_valid_build()
@@ -114,6 +150,11 @@ def main():
 
     if ver_state not in EDITABLE:
         die(f"version state {ver_state!r} is not editable; nothing to do")
+
+    if notes is not None:
+        print(f"\n-> setting App Review notes ({len(notes)} chars)")
+        set_notes(ver_id, notes)
+        print("   ok")
 
     # 1. attach the build
     print(f"\n-> attaching build {build_num} to version {ver_str}")

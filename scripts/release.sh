@@ -10,6 +10,9 @@
 #   scripts/release.sh            # full pipeline incl. submit for review
 #   scripts/release.sh --no-submit  # archive+export+upload only (submit later)
 #
+# To include a reviewer message, set ASC_NOTES to a file path or text, e.g.:
+#   ASC_NOTES=docs/appstore-review-reply-5.1.1.txt scripts/release.sh
+#
 # Requires: xcodegen, Xcode CLT, an App Store Connect API key (.p8) in
 # ~/.appstoreconnect/private_keys/ — see scripts/asc_submit.py.
 set -euo pipefail
@@ -65,4 +68,8 @@ else:
     sys.exit(1)
 PY
 
-python3 scripts/asc_submit.py
+if [[ -n "${ASC_NOTES:-}" ]]; then
+  python3 scripts/asc_submit.py --notes "$ASC_NOTES"
+else
+  python3 scripts/asc_submit.py
+fi
