@@ -50,22 +50,37 @@ Curated combos (not a free picker) so every choice looks intentional. Colors are
 starting values — easy to tune. Two presets are named after people (a little
 signature), two after places that matter to the dev.
 
-| id     | Name  | Band / accent color | Text/icons | Mascot |
-|--------|-------|---------------------|------------|--------|
-| `black`| Černá | pure `#000000` | white | — (clean; Island vanishes) |
-| `teal` | Teal (default) | `#56C4CF` (brand) | dark | 🚊 |
-| `pink` | Růžová | `#FF7EB6` | dark | 🦄 |
-| `zajic`| Zajíc | `#AFA79E` warm grey | dark | 🐰 (dev's surname = "hare") |
-| `zaba` | Žába  | `#4CC76A` spring green | dark | 🐸 (dev's wife) |
-| `meda` | Méďa  | `#8B5E3C` warm brown | white | 🐻 (dev's son) |
-| `slim` | Slim  | `#74B84A` leaf green | dark | 🐌 (Štěpán "slimák"/snail) |
-| `brno` | Brno  | `#C8102E` heraldic red | white | 🐉 (Brněnský drak) |
-| `usa`  | USA   | `#3C3B6E` flag navy | white | 🇺🇸 (dev now lives in the US) |
+| id     | Name  | Band color | Accent | Mascot |
+|--------|-------|------------|--------|--------|
+| `clean`| Čistý (default) | none — plain system bar | teal | — |
+| `black`| Černá | pure `#000000` | teal | — (Island vanishes) |
+| `pink` | Růžová | `#FF7EB6` | band | 🦄 |
+| `zajic`| Zajíc | `#AFA79E` warm grey | band | 🐰 (dev's surname = "hare") |
+| `zaba` | Žába  | `#4CC76A` spring green | band | 🐸 (dev's wife) |
+| `meda` | Méďa  | `#8B5E3C` warm brown | band | 🐻 (dev's son) |
+| `slim` | Slim  | `#74B84A` leaf green | band | 🐌 (Štěpán "slimák"/snail) |
+| `brno` | Brno  | `#C8102E` heraldic red | band | 🐉 (Brněnský drak) |
+| `usa`  | USA   | `#3C3B6E` flag navy | band | 🇺🇸 (dev now lives in the US) |
 
-`Černá` is listed first and uses **pure black** so the bar matches the page's
-system-black text/icons exactly (no two-shades-of-black mismatch). The default at
-first launch stays **Teal** regardless of list order. The band color doubles as
-the app-wide accent.
+**Model B — clean by default.** The default `Čistý` paints **no color band**: the
+plain system nav bar (large title) plus teal accents — i.e. exactly how the app
+looked before theming (and what the live App Store screenshots show). Painting
+the whole top bar is now a deliberate opt-in. There is no standalone teal band
+theme — the clean default already carries the teal accent.
+
+`Čistý` and `Černá` both use the **teal** accent (pure black on the light page is
+dull and blends with system-black labels). `Černá` uses pure `#000000` so the bar
+matches the page's black and the Dynamic Island disappears. For every other
+theme, the band color doubles as the app-wide accent.
+
+### Mascot rain (easter egg)
+
+The mascot on the leading edge of the bar is a button: tapping it rains that emoji
+down the whole screen, and rapid repeat taps pile up for a heavier downpour
+(burst size scales with recent taps, capped). A non-interactive full-screen
+overlay (`EmojiRainOverlay`) animates each `RainDrop` from above the top edge to
+below the bottom with random x / size / spin / duration; drops self-remove after
+they fall. `Čistý` and `Černá` have no mascot, so no rain there.
 
 The "keep it to ~5" guideline is intentionally and happily relaxed: these named,
 personal themes *are* the charm of the feature — the dev (Zajíc 🐰), his wife

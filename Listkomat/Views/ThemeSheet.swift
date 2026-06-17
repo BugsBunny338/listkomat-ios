@@ -45,11 +45,12 @@ struct ThemeSheet: View {
         HStack(spacing: 14) {
             // Miniature of the bar: band color with its mascot / contrast hint.
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(theme.band)
+                RoundedRectangle(cornerRadius: 8).fill(theme.band ?? Color(.systemBackground))
                 if let mascot = theme.mascot {
                     Text(mascot).font(.system(size: 18))
                 } else {
-                    Text("Aa").font(.caption.bold()).foregroundStyle(theme.onBand)
+                    // Clean / Černá: preview the accent color with "Aa".
+                    Text("Aa").font(.caption.bold()).foregroundStyle(theme.accent)
                 }
             }
             .frame(width: 56, height: 34)

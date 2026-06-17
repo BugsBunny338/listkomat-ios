@@ -9,9 +9,14 @@ struct ContentView: View {
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
+    @State private var drops: [RainDrop] = []
+    @State private var rainTaps = 0
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     private var theme: AppTheme { AppTheme.resolve(themeId) }
+
+    /// Bar buttons: contrast color on a colored band, the accent on the plain bar.
+    private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.accent }
 
     init() {
         let store = CatalogStore()
@@ -48,15 +53,15 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Lístkomat")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(theme.band, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(theme.barScheme, for: .navigationBar)
+            .modifier(ThemedBar(theme: theme))
             .tint(theme.accent)
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Text(mascot).font(.system(size: 20))
+                        Button { rain(mascot) } label: {
+                            Text(mascot).font(.system(size: 20))
+                        }
+                        .accessibilityLabel("Déšť")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -65,7 +70,7 @@ struct ContentView: View {
                     } label: {
                         Label("Vzhled", systemImage: "paintbrush")
                     }
-                    .tint(theme.onBand)
+                    .tint(barItemColor)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -73,7 +78,7 @@ struct ContentView: View {
                     } label: {
                         Label("Vybrat město", systemImage: "building.2")
                     }
-                    .tint(theme.onBand)
+                    .tint(barItemColor)
                 }
             }
             .sheet(isPresented: $showingTheme) {
@@ -104,6 +109,23 @@ struct ContentView: View {
                 }
             }
             .task { await store.refresh() }
+        }
+        .overlay(EmojiRainOverlay(drops: drops))
+    }
+
+    /// Easter egg: tapping the mascot rains it across the screen; rapid repeat
+    /// taps pile up for a heavier downpour.
+    private func rain(_ emoji: String) {
+        rainTaps += 1
+        let count = min(10 + rainTaps * 6, 60)
+        let batch = RainDrop.burst(emoji, count: count)
+        drops.append(contentsOf: batch)
+        let ids = Set(batch.map(\.id))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            drops.removeAll { ids.contains($0.id) }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if rainTaps > 0 { rainTaps -= 1 }
         }
     }
 
@@ -195,5 +217,25 @@ struct ContentView: View {
             return "Vyberte město ručně, nebo povolte polohu v Nastavení."
         }
         return nil
+    }
+}
+
+/// Paints the nav bar with the theme's color band (inline title) when it has
+/// one; otherwise leaves the plain system bar with a large title — the clean,
+/// pre-theming look that "Čistý" restores.
+private struct ThemedBar: ViewModifier {
+    let theme: AppTheme
+
+    func body(content: Content) -> some View {
+        if let band = theme.band {
+            content
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(band, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbarColorScheme(theme.barScheme, for: .navigationBar)
+        } else {
+            content
+                .navigationBarTitleDisplayMode(.large)
+        }
     }
 }

@@ -9,27 +9,32 @@ import SwiftUI
 struct AppTheme: Identifiable, Hashable {
     let id: String
     let name: String
-    let band: Color
-    let onBand: Color      // text/icon color drawn on the band
-    let mascot: String?    // emoji, nil for the clean "Černá" look
+    let band: Color?       // nil = plain system bar (no color band) — the clean look
+    let onBand: Color      // text/icon color drawn on the band (used only when band != nil)
+    let mascot: String?    // emoji, nil for the clean / black looks
     let isDark: Bool       // dark band → light (white) bar contents + status bar
     var accentOverride: Color? = nil   // when the band color is a poor page accent
 
     /// Accent used throughout the page (prices, city SVG icons, buttons, the
     /// active-ticket banner). Defaults to the band color so the whole app reads
-    /// as one theme — but Černá overrides to teal, because pure black on the
-    /// light page is dull and indistinguishable from the system-black labels.
-    var accent: Color { accentOverride ?? band }
+    /// as one theme. Černá overrides to teal (pure black on the light page is
+    /// dull); Čistý has no band, so it falls back to teal — the original look.
+    var accent: Color { accentOverride ?? band ?? .brandTeal }
 
-    /// Color scheme to hand the navigation bar so the system title + status bar
-    /// pick a legible color automatically.
+    /// Whether this theme paints a solid color band (vs. the plain system bar).
+    var hasBand: Bool { band != nil }
+
+    /// Color scheme for the navigation bar so the system title + status bar pick
+    /// a legible color (only meaningful when there's a band).
     var barScheme: ColorScheme { isDark ? .dark : .light }
 
-    /// Order is intentional: clean black, brand teal, the original pink request,
-    /// then the people (Zajíc → wife → son → Slim), then the places.
+    /// Čistý (clean, the original look) is the default. Then Černá (hides the
+    /// Dynamic Island), the original pink request, the people (Zajíc → wife →
+    /// son → Slim), then the places. No standalone teal band — the clean default
+    /// already carries the teal accent.
     static let presets: [AppTheme] = [
-        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true, accentOverride: .brandTeal),
-        AppTheme(id: "teal",  name: "Teal",   band: .brandTeal,           onBand: .ink,   mascot: "🚊", isDark: false),
+        AppTheme(id: "clean", name: "Čistý",  band: nil,                  onBand: .ink,   mascot: nil,  isDark: false),
+        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true,  accentOverride: .brandTeal),
         AppTheme(id: "pink",  name: "Růžová", band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
         AppTheme(id: "zaba",  name: "Žába",   band: Color(hex: 0x4CC76A), onBand: .ink,   mascot: "🐸", isDark: false),
@@ -39,12 +44,13 @@ struct AppTheme: Identifiable, Hashable {
         AppTheme(id: "usa",   name: "USA",    band: Color(hex: 0x3C3B6E), onBand: .white, mascot: "🇺🇸", isDark: true),
     ]
 
-    /// Default at first launch stays the brand teal, independent of list order.
-    static let `default` = resolve("teal")
+    /// Default at first launch is the clean original look.
+    static let `default` = resolve("clean")
 
-    /// Resolve a stored id to a theme, falling back to teal if unknown.
+    /// Resolve a stored id to a theme, falling back to the clean look if unknown
+    /// (e.g. a previously-stored "teal" that no longer exists).
     static func resolve(_ id: String) -> AppTheme {
-        presets.first { $0.id == id } ?? presets.first { $0.id == "teal" }!
+        presets.first { $0.id == id } ?? presets.first { $0.id == "clean" }!
     }
 }
 
