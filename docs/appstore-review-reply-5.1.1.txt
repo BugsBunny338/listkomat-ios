@@ -1,0 +1,15 @@
+REPLY TO APP REVIEW — Guideline 5.1.1(iv) (Location pre-prompt)
+Submission ID: 582e9744-0637-4623-b100-89e40330b6a4
+(Attach to the resubmission of build 1.0 (2), or paste in App Review → Reply)
+================================================================
+
+Hello, and thank you for the detailed feedback.
+
+We have revised the location permission flow in build 1.0 (2) to address Guideline 5.1.1(iv):
+
+- The explanatory screen shown before the system prompt now has a single button labeled "Pokračovat" ("Continue"). It no longer uses wording that implies access is granted on our own screen.
+- We removed the "Not Now" / manual-skip button. The screen now always proceeds to the system location permission request.
+- The screen only explains why we ask (to suggest the nearest city) and notes that the location never leaves the device. If the user declines the system prompt, they can still choose a city manually from the main screen.
+
+Thank you very much.
+Jiří
