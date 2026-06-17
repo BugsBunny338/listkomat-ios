@@ -244,11 +244,18 @@ Stack** (iOS 18+).
 8. **v2 — Live map:** Prague (Golemio GTFS-RT) + Brno (KORDIS ArcGIS), landscape mode. Works for
    everyone regardless of SIM — the tourist-friendly feature.
 9. **v3 — Foreigner purchase path + storefront expansion.** Premium SMS only works on a Czech SIM,
-   so v1 ships to the **Czechia storefront only**. A later version adds a way for foreign-carrier
-   users to buy (options to explore: deep-link to the operator's official app, redirect to the
-   official web purchase, or in-app card payment — real-world transit service, so IAP doesn't
-   apply). **Only then** do we unblock other App Store storefronts. (Pairs naturally with the v2
-   map, which already serves all visitors.)
+   so v1 ships to the **Czechia storefront only**. Options to let foreign-carrier users buy:
+   - deep-link to the operator's official app, or redirect to the official web purchase; or
+   - **Lístkomat-as-provider (aggregator model):** the user pays *us* in-app (card / Apple Pay)
+     and **we send the premium SMS / buy the ticket on their behalf, adding a margin.** Works for
+     ANY carrier — even a foreign SIM or Wi-Fi-only — so it's the real tourist unlock *and* the
+     first actual revenue. Implications to weigh: we become a paid intermediary → need payment
+     processing, an SMS gateway or agreements with the operators / an aggregator for CZ
+     premium-shortcode access, refund + failed-delivery handling, and it flips us to **DSA trader**
+     status with VAT/tax obligations. Also a deliberate shift from the current free / no-money
+     ethos. Biggest step, biggest payoff.
+   **Only then** do we unblock other App Store storefronts. (Pairs with the v2 map, which already
+   serves all visitors regardless of SIM.)
 
 ## Android — deferred (Apple-only for now)
 

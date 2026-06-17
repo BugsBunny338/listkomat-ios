@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "updatedAt": "2026-06-15",
+  "version": 3,
+  "updatedAt": "2026-06-16",
   "cities": [
     {
       "key": "praha", "name": "Praha", "lat": 50.075538, "lng": 14.437800, "smsNumber": "90206",
@@ -53,8 +53,8 @@
       "tickets": [
         { "code": "MDJ", "duration": "60 min", "durationMinutes": 60, "priceKc": 26 },
         { "code": "MDJ106", "duration": "24 h", "durationMinutes": 1440, "priceKc": 106 },
-        { "code": "MDJ60", "duration": "24 h", "durationMinutes": 1440, "priceKc": 60 },
-        { "code": "MDJZD", "duration": "24 h", "durationMinutes": 1440, "priceKc": 53, "note": "zlevněný" }
+        { "code": "MDJ60", "duration": "24 h", "durationMinutes": 1440, "priceKc": 60, "note": "Ústecké jízdné (doprovod dítěte do 3 let nebo 62–65 let)" },
+        { "code": "MDJZD", "duration": "24 h", "durationMinutes": 1440, "priceKc": 53, "note": "zlevněné 50 % (děti, studenti)" }
       ]
     },
     {
