@@ -9,8 +9,7 @@ struct ContentView: View {
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
-    @State private var drops: [RainDrop] = []
-    @State private var rainTaps = 0
+    @State private var rainTrigger = RainTrigger(emoji: "", nonce: 0)
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
@@ -118,7 +117,7 @@ struct ContentView: View {
             }
             .task { await store.refresh() }
         }
-        .overlay(EmojiRainOverlay(drops: drops))
+        .overlay(RainLayer(trigger: rainTrigger))
         .modifier(ForcedScheme(scheme: contentScheme))
     }
 
@@ -133,20 +132,10 @@ struct ContentView: View {
             .padding(.bottom, 4)
     }
 
-    /// Easter egg: tapping the mascot rains it across the screen; rapid repeat
-    /// taps pile up for a heavier downpour.
+    /// Easter egg: tapping the mascot rains it across the screen (handled by
+    /// RainLayer); rapid repeat taps pile up for a heavier downpour.
     private func rain(_ emoji: String) {
-        rainTaps += 1
-        let count = min(10 + rainTaps * 6, 60)
-        let batch = RainDrop.burst(emoji, count: count)
-        drops.append(contentsOf: batch)
-        let ids = Set(batch.map(\.id))
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-            drops.removeAll { ids.contains($0.id) }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            if rainTaps > 0 { rainTaps -= 1 }
-        }
+        rainTrigger = RainTrigger(emoji: emoji, nonce: rainTrigger.nonce + 1)
     }
 
     private func handleAppear() {

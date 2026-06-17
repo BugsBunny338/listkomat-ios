@@ -1,66 +1,83 @@
 import SwiftUI
 
-/// One falling emoji in the mascot-rain easter egg.
-/// All drops render at this one font size; per-drop size variety comes from
-/// `scaleEffect` (a GPU transform) so the emoji glyph is only rasterized once —
-/// avoids a frame hitch when a burst spawns.
-private let dropFontSize: CGFloat = 36
-
+/// One falling emoji. Its position is derived from `start` + elapsed time inside
+/// a Canvas, so spawning more drops never interrupts the ones already falling.
 struct RainDrop: Identifiable {
     let id = UUID()
     let emoji: String
     let x: CGFloat        // 0...1 fraction of screen width
-    let scale: CGFloat    // applied via scaleEffect, not font size
-    let duration: Double
-    let delay: Double
+    let scale: CGFloat
     let spin: Double
+    let duration: Double
+    let start: Date       // when this drop begins falling (now + a small stagger)
 
-    /// A burst of `count` randomized drops of one emoji.
-    static func burst(_ emoji: String, count: Int) -> [RainDrop] {
+    static func burst(_ emoji: String, count: Int, now: Date) -> [RainDrop] {
         (0..<count).map { _ in
             RainDrop(
                 emoji: emoji,
-                x: CGFloat.random(in: 0.03...0.97),
-                scale: CGFloat.random(in: 0.6...1.3),
-                duration: Double.random(in: 1.4...2.6),
-                delay: Double.random(in: 0...0.5),
-                spin: Double.random(in: -220...220)
+                x: .random(in: 0.03...0.97),
+                scale: .random(in: 0.6...1.3),
+                spin: .random(in: -220...220),
+                duration: .random(in: 1.6...2.8),
+                start: now.addingTimeInterval(.random(in: 0...0.5))
             )
         }
     }
 }
 
-private struct FallingEmoji: View {
-    let drop: RainDrop
-    let size: CGSize
-    @State private var fall = false
-
-    var body: some View {
-        Text(drop.emoji)
-            .font(.system(size: dropFontSize))
-            .scaleEffect(drop.scale)
-            .rotationEffect(.degrees(fall ? drop.spin : 0))
-            .position(x: drop.x * size.width, y: fall ? size.height + 60 : -60)
-            .onAppear {
-                withAnimation(.easeIn(duration: drop.duration).delay(drop.delay)) {
-                    fall = true
-                }
-            }
-    }
+/// Bump `trigger` (new emoji + incremented nonce) to drop a burst. Drops live in
+/// this layer's own state and are drawn in a Canvas, so a new tap never re-runs
+/// the parent view's body or interrupts drops already in flight. Rapid taps pile
+/// up for a heavier downpour.
+struct RainTrigger: Equatable {
+    var emoji: String
+    var nonce: Int
 }
 
-/// Full-screen, non-interactive overlay that renders the current drops falling.
-struct EmojiRainOverlay: View {
-    let drops: [RainDrop]
+struct RainLayer: View {
+    let trigger: RainTrigger
+    @State private var drops: [RainDrop] = []
+    @State private var recent = 0
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                ForEach(drops) { drop in
-                    FallingEmoji(drop: drop, size: geo.size)
+        Group {
+            if drops.isEmpty {
+                Color.clear   // no animation timer while idle
+            } else {
+                TimelineView(.animation) { timeline in
+                    Canvas { context, size in
+                        let now = timeline.date
+                        for drop in drops {
+                            let p = now.timeIntervalSince(drop.start) / drop.duration
+                            guard p >= 0, p <= 1 else { continue }
+                            let eased = p * p   // gentle gravity-like acceleration
+                            let y = -60 + (size.height + 120) * eased
+                            var ctx = context
+                            ctx.translateBy(x: drop.x * size.width, y: y)
+                            ctx.rotate(by: .degrees(drop.spin * p))
+                            ctx.scaleBy(x: drop.scale, y: drop.scale)
+                            ctx.draw(ctx.resolve(Text(drop.emoji).font(.system(size: 36))),
+                                     at: .zero)
+                        }
+                    }
                 }
             }
         }
         .allowsHitTesting(false)
+        .onChange(of: trigger) { _ in addBurst() }
+    }
+
+    private func addBurst() {
+        guard !trigger.emoji.isEmpty else { return }
+        recent += 1
+        let count = min(10 + recent * 6, 60)
+        drops.append(contentsOf: RainDrop.burst(trigger.emoji, count: count, now: Date()))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            let cutoff = Date()
+            drops.removeAll { $0.start.addingTimeInterval($0.duration) < cutoff }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if recent > 0 { recent -= 1 }
+        }
     }
 }
