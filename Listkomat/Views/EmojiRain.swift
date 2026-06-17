@@ -1,11 +1,16 @@
 import SwiftUI
 
 /// One falling emoji in the mascot-rain easter egg.
+/// All drops render at this one font size; per-drop size variety comes from
+/// `scaleEffect` (a GPU transform) so the emoji glyph is only rasterized once —
+/// avoids a frame hitch when a burst spawns.
+private let dropFontSize: CGFloat = 36
+
 struct RainDrop: Identifiable {
     let id = UUID()
     let emoji: String
     let x: CGFloat        // 0...1 fraction of screen width
-    let size: CGFloat
+    let scale: CGFloat    // applied via scaleEffect, not font size
     let duration: Double
     let delay: Double
     let spin: Double
@@ -16,7 +21,7 @@ struct RainDrop: Identifiable {
             RainDrop(
                 emoji: emoji,
                 x: CGFloat.random(in: 0.03...0.97),
-                size: CGFloat.random(in: 22...46),
+                scale: CGFloat.random(in: 0.6...1.3),
                 duration: Double.random(in: 1.4...2.6),
                 delay: Double.random(in: 0...0.5),
                 spin: Double.random(in: -220...220)
@@ -32,7 +37,8 @@ private struct FallingEmoji: View {
 
     var body: some View {
         Text(drop.emoji)
-            .font(.system(size: drop.size))
+            .font(.system(size: dropFontSize))
+            .scaleEffect(drop.scale)
             .rotationEffect(.degrees(fall ? drop.spin : 0))
             .position(x: drop.x * size.width, y: fall ? size.height + 60 : -60)
             .onAppear {

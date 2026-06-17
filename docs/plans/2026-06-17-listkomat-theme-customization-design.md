@@ -22,9 +22,12 @@ the top that elegantly hid the Dynamic Island**. He liked that look and asked fo
   mascot) **and the app-wide accent** — the theme color flows into the city SVG
   icons, ticket prices, the active-ticket banner, the city picker grid, and
   button tints, so the whole app reads as one theme. Plus a **Light / Systém /
-  Tmavý** appearance toggle at the top of the Theme sheet (`preferredColorScheme`,
-  stored in `@AppStorage("appearanceMode")`). The app already adapts to system
-  dark mode via semantic colors; the toggle just lets the user override it.
+  Tmavý** appearance toggle at the top of the Theme sheet (stored in
+  `@AppStorage("appearanceMode")`). The app already adapts to system dark mode via
+  semantic colors; the toggle overrides the **page** appearance through the SwiftUI
+  environment (`\.colorScheme`) rather than `preferredColorScheme`, so it doesn't
+  fight the status-bar color the bar sets — letting a black bar sit on a light page
+  with a legible white status bar.
 - **Out of scope (YAGNI):** custom page backgrounds beyond system light/dark, a
   free color picker, and theming the **Live Activity / lock-screen widget** (that
   would need an App Group to share the setting — a nice later extension,
@@ -63,15 +66,24 @@ signature), two after places that matter to the dev.
 | `usa`  | USA   | `#3C3B6E` flag navy | band | 🇺🇸 (dev now lives in the US) |
 
 **Model B — clean by default.** The default `Čistý` paints **no color band**: the
-plain system nav bar (large title) plus teal accents — i.e. exactly how the app
-looked before theming (and what the live App Store screenshots show). Painting
-the whole top bar is now a deliberate opt-in. There is no standalone teal band
-theme — the clean default already carries the teal accent.
+plain system nav bar plus teal accents — essentially how the app looked before
+theming (and what the live App Store screenshots show). Painting the whole top
+bar is now a deliberate opt-in. There is no standalone teal band theme — the
+clean default already carries the teal accent. All themes use the same **inline**
+title layout, so switching themes never shifts the title.
 
 `Čistý` and `Černá` both use the **teal** accent (pure black on the light page is
-dull and blends with system-black labels). `Černá` uses pure `#000000` so the bar
-matches the page's black and the Dynamic Island disappears. For every other
-theme, the band color doubles as the app-wide accent.
+dull and blends with system-black labels). `Černá` uses pure `#000000` so the
+Dynamic Island disappears. For every other theme, the band color doubles as the
+app-wide accent.
+
+**Layout.** The colored band paints only the **slim top bar** (status bar +
+buttons + mascot), not the whole top zone. The large "Lístkomat" title lives in
+the page content (`titleHeader`), below the bar, on the page background — so a
+colored theme tints just the strip. The bar's contrast scheme follows whatever
+sits behind the status bar: the band's darkness for a colored theme, or the page
+appearance for `Čistý` — keeping the clock/Wi-Fi/battery legible in every
+theme × light/dark combination.
 
 ### Mascot rain (easter egg)
 

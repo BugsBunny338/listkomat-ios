@@ -13,7 +13,12 @@ struct ContentView: View {
     @State private var rainTaps = 0
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
+    @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
+
     private var theme: AppTheme { AppTheme.resolve(themeId) }
+
+    /// Forced page appearance from the Režim toggle (nil = follow the system).
+    private var contentScheme: ColorScheme? { AppearanceMode.from(appearanceMode).colorScheme }
 
     /// Bar buttons: contrast color on a colored band, the accent on the plain bar.
     private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.accent }
@@ -37,6 +42,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                titleHeader
                 if let active = liveActivity.active {
                     activeTicketBanner(active)
                 }
@@ -52,8 +58,8 @@ struct ContentView: View {
                     emptyState
                 }
             }
-            .navigationTitle("Lístkomat")
-            .modifier(ThemedBar(theme: theme))
+            .navigationTitle("")
+            .modifier(ThemedBar(theme: theme, contentScheme: contentScheme))
             .tint(theme.accent)
             .toolbar {
                 if let mascot = theme.mascot {
@@ -111,6 +117,18 @@ struct ContentView: View {
             .task { await store.refresh() }
         }
         .overlay(EmojiRainOverlay(drops: drops))
+        .modifier(ForcedScheme(scheme: contentScheme))
+    }
+
+    /// Large in-content title so the color band only paints the slim top bar,
+    /// not the whole top zone. Color follows the page appearance.
+    private var titleHeader: some View {
+        Text("Lístkomat")
+            .font(.brandBold(34, relativeTo: .largeTitle))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
     }
 
     /// Easter egg: tapping the mascot rains it across the screen; rapid repeat
@@ -220,11 +238,13 @@ struct ContentView: View {
     }
 }
 
-/// Paints the nav bar with the theme's color band (inline title) when it has
-/// one; otherwise leaves the plain system bar with a large title — the clean,
-/// pre-theming look that "Čistý" restores.
+/// Paints the slim top bar with the theme's color band when it has one. The
+/// status-bar/title contrast follows whatever sits behind the status bar: the
+/// band's darkness for a colored theme, or the page appearance for Čistý — so a
+/// black bar on a light page still gets a legible white status bar.
 private struct ThemedBar: ViewModifier {
     let theme: AppTheme
+    let contentScheme: ColorScheme?
 
     func body(content: Content) -> some View {
         if let band = theme.band {
@@ -233,9 +253,29 @@ private struct ThemedBar: ViewModifier {
                 .toolbarBackground(band, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbarColorScheme(theme.barScheme, for: .navigationBar)
+        } else if let cs = contentScheme {
+            // Čistý: plain bar, but match the status bar to the forced page scheme.
+            content
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarColorScheme(cs, for: .navigationBar)
         } else {
             content
-                .navigationBarTitleDisplayMode(.large)
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+/// Forces the page (content + sheets) to light/dark via the SwiftUI environment
+/// without touching the window — so it doesn't override the status-bar color the
+/// bar sets. nil = follow the system.
+private struct ForcedScheme: ViewModifier {
+    let scheme: ColorScheme?
+
+    func body(content: Content) -> some View {
+        if let scheme {
+            content.environment(\.colorScheme, scheme)
+        } else {
+            content
         }
     }
 }
