@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct ListkomatApp: App {
+    @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
+
     init() {
         Brand.configureNavigationBar()
     }
@@ -10,6 +12,7 @@ struct ListkomatApp: App {
         WindowGroup {
             ContentView()
                 .tint(.brandTeal)
+                .preferredColorScheme(AppearanceMode.from(appearanceMode).colorScheme)
         }
     }
 }

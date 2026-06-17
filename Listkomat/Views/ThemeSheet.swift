@@ -4,16 +4,31 @@ import SwiftUI
 /// the sheet recolors immediately) and there's no Save button — just "Hotovo".
 struct ThemeSheet: View {
     @Binding var themeId: String
+    @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            List(AppTheme.presets) { theme in
-                Button {
-                    themeId = theme.id
-                    dismiss()
-                } label: { row(theme) }
-                    .buttonStyle(.plain)
+            List {
+                Section("Režim") {
+                    Picker("Režim", selection: $appearanceMode) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.label).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                Section("Motiv") {
+                    ForEach(AppTheme.presets) { theme in
+                        Button {
+                            themeId = theme.id
+                            dismiss()
+                        } label: { row(theme) }
+                            .buttonStyle(.plain)
+                    }
+                }
             }
             .navigationTitle("Vzhled")
             .navigationBarTitleDisplayMode(.inline)

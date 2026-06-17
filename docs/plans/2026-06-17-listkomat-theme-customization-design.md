@@ -21,11 +21,14 @@ the top that elegantly hid the Dynamic Island**. He liked that look and asked fo
 - **In scope (v1):** the app's top bar (fill color, text/icon color, emoji
   mascot) **and the app-wide accent** — the theme color flows into the city SVG
   icons, ticket prices, the active-ticket banner, the city picker grid, and
-  button tints, so the whole app reads as one theme.
-- **Out of scope (YAGNI):** full theming (page backgrounds, light/dark
-  overrides), a free color picker, and theming the **Live Activity / lock-screen
-  widget** (that would need an App Group to share the setting — a nice later
-  extension, explicitly deferred).
+  button tints, so the whole app reads as one theme. Plus a **Light / Systém /
+  Tmavý** appearance toggle at the top of the Theme sheet (`preferredColorScheme`,
+  stored in `@AppStorage("appearanceMode")`). The app already adapts to system
+  dark mode via semantic colors; the toggle just lets the user override it.
+- **Out of scope (YAGNI):** custom page backgrounds beyond system light/dark, a
+  free color picker, and theming the **Live Activity / lock-screen widget** (that
+  would need an App Group to share the setting — a nice later extension,
+  explicitly deferred).
 
 ## The top bar & the Dynamic Island
 

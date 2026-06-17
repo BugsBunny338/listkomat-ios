@@ -48,6 +48,33 @@ struct AppTheme: Identifiable, Hashable {
     }
 }
 
+/// Light / OS / Dark override for the whole app, applied via
+/// `.preferredColorScheme`. "Systém" follows the device setting (the default).
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case light, system, dark
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .light:  return "Světlý"
+        case .system: return "Systém"
+        case .dark:   return "Tmavý"
+        }
+    }
+
+    /// nil = follow the operating system.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .light:  return .light
+        case .system: return nil
+        case .dark:   return .dark
+        }
+    }
+
+    static func from(_ raw: String) -> AppearanceMode { AppearanceMode(rawValue: raw) ?? .system }
+}
+
 extension Color {
     /// Build a color from a 0xRRGGBB literal.
     init(hex: UInt32) {
