@@ -58,6 +58,8 @@ struct ContentView: View {
                     emptyState
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("")
             .modifier(ThemedBar(theme: theme, contentScheme: contentScheme))
             .tint(theme.accent)
