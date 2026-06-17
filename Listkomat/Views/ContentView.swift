@@ -8,6 +8,10 @@ struct ContentView: View {
     @State private var selectedCityKey: String?
     @State private var showingPicker = false
     @State private var showingPrimer = false
+    @State private var showingTheme = false
+
+    @AppStorage("themeId") private var themeId = AppTheme.default.id
+    private var theme: AppTheme { AppTheme.resolve(themeId) }
 
     init() {
         let store = CatalogStore()
@@ -43,14 +47,35 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Lístkomat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(theme.band, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(theme.barScheme, for: .navigationBar)
             .toolbar {
+                if let mascot = theme.mascot {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Text(mascot).font(.system(size: 20))
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingPicker = true
                     } label: {
                         Label("Vybrat město", systemImage: "building.2")
                     }
+                    .tint(theme.onBand)
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingTheme = true
+                    } label: {
+                        Label("Vzhled", systemImage: "paintbrush")
+                    }
+                    .tint(theme.onBand)
+                }
+            }
+            .sheet(isPresented: $showingTheme) {
+                ThemeSheet(themeId: $themeId)
             }
             .sheet(isPresented: $showingPicker) {
                 CityPickerView(
