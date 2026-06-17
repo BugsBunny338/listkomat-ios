@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Friendly priming screen shown before the system location prompt, so the user
-/// understands why we ask (and can opt to choose a city manually instead).
+/// understands why we ask. Per App Store Guideline 5.1.1(iv), it always proceeds
+/// to the system permission request — no neutral wording, no escape button.
 struct LocationPrimerView: View {
-    let onAllow: () -> Void
-    let onManual: () -> Void
+    let onContinue: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
@@ -15,24 +15,16 @@ struct LocationPrimerView: View {
             Text("Najít nejbližší město")
                 .font(.brandBold(22, relativeTo: .title2))
 
-            Text("S přístupem k poloze vám Lístkomat rovnou nabídne lístky pro město, ve kterém právě jste. Polohu nikam neodesíláme.")
+            Text("S přístupem k poloze vám Lístkomat rovnou nabídne lístky pro město, ve kterém právě jste. Polohu nikam neodesíláme. Pokud přístup nepovolíte, můžete si město kdykoli vybrat ručně.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            VStack(spacing: 12) {
-                Button(action: onAllow) {
-                    Text("Povolit přístup k poloze")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button(action: onManual) {
-                    Text("Teď ne, vyberu město sám")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
+            Button(action: onContinue) {
+                Text("Pokračovat")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
             .padding(.top, 4)
         }
         .padding(24)

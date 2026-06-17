@@ -62,15 +62,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingPrimer) {
                 LocationPrimerView(
-                    onAllow: {
+                    onContinue: {
                         showingPrimer = false
                         location.requestPermission()
-                    },
-                    onManual: {
-                        showingPrimer = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                            showingPicker = true
-                        }
                     }
                 )
             }
