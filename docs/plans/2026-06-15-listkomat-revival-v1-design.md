@@ -290,6 +290,49 @@ If Android ever happens:
 - The app is **free**, so only Apple's free-app agreement is needed — **no banking or tax
   forms**. (Dev has both CZ and US Apple IDs / billing / residency; CZ chosen deliberately.)
 
+## App Store submission log
+
+- **Build 1 (1.0)** — submitted 2026-06-16. Two review rounds:
+  - **Guideline 2.1** (info needed) — reviewer on a Wi-Fi iPad couldn't complete a purchase.
+    Replied explaining the carrier-billed premium-SMS model (real-world transit service → no IAP;
+    needs a Czech SIM, so iPad/foreign reviewers can't transact by design). Reply saved in
+    `docs/appstore-review-reply.txt`.
+  - **Guideline 5.1.1(iv)** (location pre-prompt) — rejected 2026-06-17. The primer button said
+    "Povolit přístup k poloze" (implied the grant happened on our screen) and offered a "Teď ne"
+    escape that skipped the system prompt. Both disallowed.
+- **Build 2 (1.0)** — fix for 5.1.1(iv), uploaded 2026-06-17:
+  - Single neutral **"Pokračovat"** button that always proceeds to the iOS permission request;
+    removed the manual-skip button (users who decline can still pick a city manually from the
+    main screen). See `Listkomat/Views/LocationPrimerView.swift`, reply in
+    `docs/appstore-review-reply-5.1.1.txt`.
+  - Fixed the build-number pipeline: `Info.plist` had hardcoded `CFBundleVersion=1` and
+    xcodegen reset it each regenerate, so `CURRENT_PROJECT_VERSION` bumps never reached the
+    binary. Both targets' version keys now point at `$(MARKETING_VERSION)` /
+    `$(CURRENT_PROJECT_VERSION)` in `project.yml` → bumping `project.yml` flows through.
+
+### CLI release pipeline (autonomous — for v2/v3)
+
+The full archive → export → upload runs from the command line, no Xcode UI:
+
+```sh
+# 1. bump CURRENT_PROJECT_VERSION in project.yml, then:
+xcodegen generate
+xcodebuild -scheme Listkomat -configuration Release \
+  -archivePath build/Listkomat.xcarchive -destination 'generic/platform=iOS' \
+  -allowProvisioningUpdates archive
+xcodebuild -exportArchive -archivePath build/Listkomat.xcarchive \
+  -exportPath build/export -exportOptionsPlist <exportOptions.plist> -allowProvisioningUpdates
+xcrun altool --upload-app -f build/export/Listkomat.ipa -t ios \
+  --apiKey J6LV34D5S8 --apiIssuer 69a6de8d-d1d6-47e3-e053-5b8c7c11a4d1
+```
+
+- **App Store Connect API key** (App Manager role): `~/.appstoreconnect/private_keys/AuthKey_J6LV34D5S8.p8`
+  (Key ID `J6LV34D5S8`, Issuer ID `69a6de8d-d1d6-47e3-e053-5b8c7c11a4d1`). The `.p8` is the secret
+  and stays local; Key/Issuer IDs are not secret.
+- `exportOptions.plist`: method `app-store-connect`, teamID `35AS7FL468`, automatic signing.
+- Still manual in App Store Connect (could be automated later via the ASC REST API): attach the
+  processed build to the version + click **Submit**.
+
 ## Risks / open questions
 
 - **Ticket-data accuracy** is the real ongoing burden — codes/prices drift. Mitigated by
