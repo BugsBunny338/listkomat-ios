@@ -29,6 +29,8 @@ targets:
       path: Listkomat/Info.plist
       properties:
         CFBundleDisplayName: Lístkomat
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSLocationWhenInUseUsageDescription: "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
@@ -54,6 +56,8 @@ targets:
       path: ListkomatWidgets/Info.plist
       properties:
         CFBundleDisplayName: Lístkomat
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
