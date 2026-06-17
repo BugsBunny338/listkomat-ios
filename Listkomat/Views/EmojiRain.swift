@@ -63,6 +63,7 @@ struct RainLayer: View {
                 }
             }
         }
+        .ignoresSafeArea()   // fall from the very top, above the Dynamic Island
         .allowsHitTesting(false)
         .onChange(of: trigger) { _ in addBurst() }
     }

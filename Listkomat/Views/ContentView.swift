@@ -65,7 +65,7 @@ struct ContentView: View {
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button { rain(mascot) } label: {
+                        Button { rain() } label: {
                             Text(mascot).font(.system(size: 20))
                         }
                         .accessibilityLabel("Déšť")
@@ -133,9 +133,12 @@ struct ContentView: View {
     }
 
     /// Easter egg: tapping the mascot rains it across the screen (handled by
-    /// RainLayer); rapid repeat taps pile up for a heavier downpour.
-    private func rain(_ emoji: String) {
-        rainTrigger = RainTrigger(emoji: emoji, nonce: rainTrigger.nonce + 1)
+    /// RainLayer); rapid repeat taps pile up for a heavier downpour. Reads the
+    /// current theme's mascot at tap time so switching themes takes effect
+    /// immediately (avoids a stale captured value in the toolbar button).
+    private func rain() {
+        guard let mascot = theme.mascot else { return }
+        rainTrigger = RainTrigger(emoji: mascot, nonce: rainTrigger.nonce + 1)
     }
 
     private func handleAppear() {
