@@ -13,11 +13,13 @@ struct AppTheme: Identifiable, Hashable {
     let onBand: Color      // text/icon color drawn on the band
     let mascot: String?    // emoji, nil for the clean "Černá" look
     let isDark: Bool       // dark band → light (white) bar contents + status bar
+    var accentOverride: Color? = nil   // when the band color is a poor page accent
 
     /// Accent used throughout the page (prices, city SVG icons, buttons, the
-    /// active-ticket banner) — same hue as the bar so the whole app reads as one
-    /// theme. (Černá's band is pure black to match the page's system text.)
-    var accent: Color { band }
+    /// active-ticket banner). Defaults to the band color so the whole app reads
+    /// as one theme — but Černá overrides to teal, because pure black on the
+    /// light page is dull and indistinguishable from the system-black labels.
+    var accent: Color { accentOverride ?? band }
 
     /// Color scheme to hand the navigation bar so the system title + status bar
     /// pick a legible color automatically.
@@ -26,7 +28,7 @@ struct AppTheme: Identifiable, Hashable {
     /// Order is intentional: clean black, brand teal, the original pink request,
     /// then the people (Zajíc → wife → son → Slim), then the places.
     static let presets: [AppTheme] = [
-        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true),
+        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true, accentOverride: .brandTeal),
         AppTheme(id: "teal",  name: "Teal",   band: .brandTeal,           onBand: .ink,   mascot: "🚊", isDark: false),
         AppTheme(id: "pink",  name: "Růžová", band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
