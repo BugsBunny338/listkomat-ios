@@ -14,15 +14,20 @@ struct AppTheme: Identifiable, Hashable {
     let mascot: String?    // emoji, nil for the clean "Černá" look
     let isDark: Bool       // dark band → light (white) bar contents + status bar
 
+    /// Accent used throughout the page (prices, city SVG icons, buttons, the
+    /// active-ticket banner) — same hue as the bar so the whole app reads as one
+    /// theme. (Černá's band is pure black to match the page's system text.)
+    var accent: Color { band }
+
     /// Color scheme to hand the navigation bar so the system title + status bar
     /// pick a legible color automatically.
     var barScheme: ColorScheme { isDark ? .dark : .light }
 
-    /// Order is intentional: brand default, the clean black, the original pink
-    /// request, then the people (Zajíc → wife → son → Slim), then the places.
+    /// Order is intentional: clean black, brand teal, the original pink request,
+    /// then the people (Zajíc → wife → son → Slim), then the places.
     static let presets: [AppTheme] = [
+        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true),
         AppTheme(id: "teal",  name: "Teal",   band: .brandTeal,           onBand: .ink,   mascot: "🚊", isDark: false),
-        AppTheme(id: "black", name: "Černá",  band: Color(hex: 0x111111), onBand: .white, mascot: nil,  isDark: true),
         AppTheme(id: "pink",  name: "Růžová", band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
         AppTheme(id: "zaba",  name: "Žába",   band: Color(hex: 0x4CC76A), onBand: .ink,   mascot: "🐸", isDark: false),
@@ -32,11 +37,12 @@ struct AppTheme: Identifiable, Hashable {
         AppTheme(id: "usa",   name: "USA",    band: Color(hex: 0x3C3B6E), onBand: .white, mascot: "🇺🇸", isDark: true),
     ]
 
-    static let `default` = presets[0]
+    /// Default at first launch stays the brand teal, independent of list order.
+    static let `default` = resolve("teal")
 
-    /// Resolve a stored id to a theme, falling back to the default if unknown.
+    /// Resolve a stored id to a theme, falling back to teal if unknown.
     static func resolve(_ id: String) -> AppTheme {
-        presets.first { $0.id == id } ?? .default
+        presets.first { $0.id == id } ?? presets.first { $0.id == "teal" }!
     }
 }
 

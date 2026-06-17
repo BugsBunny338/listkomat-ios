@@ -9,7 +9,10 @@ struct ThemeSheet: View {
     var body: some View {
         NavigationStack {
             List(AppTheme.presets) { theme in
-                Button { themeId = theme.id } label: { row(theme) }
+                Button {
+                    themeId = theme.id
+                    dismiss()
+                } label: { row(theme) }
                     .buttonStyle(.plain)
             }
             .navigationTitle("Vzhled")
@@ -46,7 +49,7 @@ struct ThemeSheet: View {
             if theme.id == themeId {
                 Image(systemName: "checkmark")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.brandTeal)
+                    .foregroundStyle(AppTheme.resolve(themeId).accent)
             }
         }
         .contentShape(Rectangle())

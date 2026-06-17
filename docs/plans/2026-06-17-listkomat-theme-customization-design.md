@@ -18,12 +18,14 @@ the top that elegantly hid the Dynamic Island**. He liked that look and asked fo
 
 ## What's customizable (and what isn't)
 
-- **In scope (v1):** the app's top bar — its fill color, text/icon color, and an
-  emoji mascot.
-- **Out of scope (YAGNI):** full theming (backgrounds, light/dark overrides), a
-  free color picker, and theming the **Live Activity / lock-screen widget**
-  (that would need an App Group to share the setting — a nice later extension,
-  explicitly deferred).
+- **In scope (v1):** the app's top bar (fill color, text/icon color, emoji
+  mascot) **and the app-wide accent** — the theme color flows into the city SVG
+  icons, ticket prices, the active-ticket banner, the city picker grid, and
+  button tints, so the whole app reads as one theme.
+- **Out of scope (YAGNI):** full theming (page backgrounds, light/dark
+  overrides), a free color picker, and theming the **Live Activity / lock-screen
+  widget** (that would need an App Group to share the setting — a nice later
+  extension, explicitly deferred).
 
 ## The top bar & the Dynamic Island
 
@@ -45,17 +47,22 @@ Curated combos (not a free picker) so every choice looks intentional. Colors are
 starting values — easy to tune. Two presets are named after people (a little
 signature), two after places that matter to the dev.
 
-| id     | Name  | Band color (start) | Text/icons | Mascot |
-|--------|-------|--------------------|------------|--------|
+| id     | Name  | Band / accent color | Text/icons | Mascot |
+|--------|-------|---------------------|------------|--------|
+| `black`| Černá | pure `#000000` | white | — (clean; Island vanishes) |
 | `teal` | Teal (default) | `#56C4CF` (brand) | dark | 🚊 |
-| `black`| Black | `#111111` near-black | white | — (clean; Island vanishes) |
-| `pink` | Pink  | `#FF7EB6` | dark | 🦄 |
+| `pink` | Růžová | `#FF7EB6` | dark | 🦄 |
 | `zajic`| Zajíc | `#AFA79E` warm grey | dark | 🐰 (dev's surname = "hare") |
-| `slim` | Slim  | `#74B84A` leaf green | dark | 🐌 (Štěpán "slimák"/snail) |
 | `zaba` | Žába  | `#4CC76A` spring green | dark | 🐸 (dev's wife) |
 | `meda` | Méďa  | `#8B5E3C` warm brown | white | 🐻 (dev's son) |
+| `slim` | Slim  | `#74B84A` leaf green | dark | 🐌 (Štěpán "slimák"/snail) |
 | `brno` | Brno  | `#C8102E` heraldic red | white | 🐉 (Brněnský drak) |
 | `usa`  | USA   | `#3C3B6E` flag navy | white | 🇺🇸 (dev now lives in the US) |
+
+`Černá` is listed first and uses **pure black** so the bar matches the page's
+system-black text/icons exactly (no two-shades-of-black mismatch). The default at
+first launch stays **Teal** regardless of list order. The band color doubles as
+the app-wide accent.
 
 The "keep it to ~5" guideline is intentionally and happily relaxed: these named,
 personal themes *are* the charm of the feature — the dev (Zajíc 🐰), his wife

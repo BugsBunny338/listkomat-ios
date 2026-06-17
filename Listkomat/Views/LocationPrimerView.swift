@@ -4,13 +4,14 @@ import SwiftUI
 /// understands why we ask. Per App Store Guideline 5.1.1(iv), it always proceeds
 /// to the system permission request — no neutral wording, no escape button.
 struct LocationPrimerView: View {
+    var accent: Color = .brandTeal
     let onContinue: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "location.circle.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(Color.brandTeal)
+                .foregroundStyle(accent)
 
             Text("Najít nejbližší město")
                 .font(.brandBold(22, relativeTo: .title2))

@@ -8,6 +8,7 @@ struct TicketListView: View {
     let updatedAt: String
     let isOffline: Bool
     let liveActivity: LiveActivityController
+    let accent: Color
 
     @State private var pending: Ticket?
     @State private var cannotSend = false
@@ -71,12 +72,12 @@ struct TicketListView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 92)
-                .foregroundStyle(Color.brandTeal)
+                .foregroundStyle(accent)
             Text(city.name)
                 .font(.brandBold(22, relativeTo: .title2))
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 6)
+        .padding(.top, 24)
         .padding(.bottom, 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(city.name)
@@ -99,7 +100,7 @@ struct TicketListView: View {
                 Spacer()
                 Text("\(ticket.priceKc) Kč")
                     .font(.brandBold(18, relativeTo: .headline))
-                    .foregroundStyle(Color.brandTeal)
+                    .foregroundStyle(accent)
             }
             if let note = ticket.note, !note.isEmpty {
                 Text(note)

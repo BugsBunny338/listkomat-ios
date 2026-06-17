@@ -40,7 +40,8 @@ struct ContentView: View {
                         city: city,
                         updatedAt: store.catalog.updatedAt,
                         isOffline: store.refreshFailed,
-                        liveActivity: liveActivity
+                        liveActivity: liveActivity,
+                        accent: theme.accent
                     )
                 } else {
                     emptyState
@@ -51,6 +52,7 @@ struct ContentView: View {
             .toolbarBackground(theme.band, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(theme.barScheme, for: .navigationBar)
+            .tint(theme.accent)
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -59,17 +61,17 @@ struct ContentView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showingPicker = true
+                        showingTheme = true
                     } label: {
-                        Label("Vybrat město", systemImage: "building.2")
+                        Label("Vzhled", systemImage: "paintbrush")
                     }
                     .tint(theme.onBand)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showingTheme = true
+                        showingPicker = true
                     } label: {
-                        Label("Vzhled", systemImage: "paintbrush")
+                        Label("Vybrat město", systemImage: "building.2")
                     }
                     .tint(theme.onBand)
                 }
@@ -80,13 +82,15 @@ struct ContentView: View {
             .sheet(isPresented: $showingPicker) {
                 CityPickerView(
                     cities: store.cities,
-                    selectedKey: currentCity?.key
+                    selectedKey: currentCity?.key,
+                    accent: theme.accent
                 ) { city in
                     selectedCityKey = city.key
                 }
             }
             .sheet(isPresented: $showingPrimer) {
                 LocationPrimerView(
+                    accent: theme.accent,
                     onContinue: {
                         showingPrimer = false
                         location.requestPermission()
@@ -119,7 +123,7 @@ struct ContentView: View {
     private func activeTicketBanner(_ active: LiveActivityController.ActiveTicket) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "tram.fill")
-                .foregroundStyle(Color.brandTeal)
+                .foregroundStyle(theme.accent)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Aktivní lístek")
                     .font(.caption2)
@@ -135,7 +139,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color.brandTeal.opacity(0.12))
+        .background(theme.accent.opacity(0.12))
     }
 
     // MARK: - Empty state (no city to show)

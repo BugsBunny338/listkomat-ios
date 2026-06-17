@@ -5,6 +5,7 @@ import SwiftUI
 struct CityPickerView: View {
     let cities: [City]
     let selectedKey: String?
+    let accent: Color
     let onSelect: (City) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -37,13 +38,13 @@ struct CityPickerView: View {
         VStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(selected ? Color.brandTeal : Color.brandTeal.opacity(0.12))
+                    .fill(selected ? accent : accent.opacity(0.12))
                 Image("city_\(city.key)")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .padding(18)
-                    .foregroundStyle(selected ? Color.white : Color.brandTeal)
+                    .foregroundStyle(selected ? Color.white : accent)
             }
             .aspectRatio(1, contentMode: .fit)
             Text(city.name)
