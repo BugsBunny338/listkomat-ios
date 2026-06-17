@@ -310,28 +310,30 @@ If Android ever happens:
     binary. Both targets' version keys now point at `$(MARKETING_VERSION)` /
     `$(CURRENT_PROJECT_VERSION)` in `project.yml` → bumping `project.yml` flows through.
 
-### CLI release pipeline (autonomous — for v2/v3)
+### CLI release pipeline (fully autonomous — for v2/v3)
 
-The full archive → export → upload runs from the command line, no Xcode UI:
+The whole release — archive → export → upload → **attach build → submit for review** — runs from
+the command line, no Xcode UI and no App Store Connect clicks. Scripts live in `scripts/`:
 
 ```sh
-# 1. bump CURRENT_PROJECT_VERSION in project.yml, then:
-xcodegen generate
-xcodebuild -scheme Listkomat -configuration Release \
-  -archivePath build/Listkomat.xcarchive -destination 'generic/platform=iOS' \
-  -allowProvisioningUpdates archive
-xcodebuild -exportArchive -archivePath build/Listkomat.xcarchive \
-  -exportPath build/export -exportOptionsPlist <exportOptions.plist> -allowProvisioningUpdates
-xcrun altool --upload-app -f build/export/Listkomat.ipa -t ios \
-  --apiKey J6LV34D5S8 --apiIssuer 69a6de8d-d1d6-47e3-e053-5b8c7c11a4d1
+# 1. bump CURRENT_PROJECT_VERSION (and MARKETING_VERSION for a new version) in project.yml
+# 2. one command:
+scripts/release.sh              # archive + export + upload, wait for processing, then submit
+scripts/release.sh --no-submit  # stop after upload (submit later)
+scripts/asc_submit.py           # just attach latest VALID build to the version + submit
+scripts/asc_submit.py --dry-run # read-only: print version/build/open-submission state
 ```
+
+What `asc_submit.py` does via the ASC REST API: finds the editable App Store version and the
+latest VALID build, attaches the build, **cancels any open (e.g. rejected) review submission** to
+free the version, then creates a fresh submission, adds the version as an item, and submits.
 
 - **App Store Connect API key** (App Manager role): `~/.appstoreconnect/private_keys/AuthKey_J6LV34D5S8.p8`
   (Key ID `J6LV34D5S8`, Issuer ID `69a6de8d-d1d6-47e3-e053-5b8c7c11a4d1`). The `.p8` is the secret
-  and stays local; Key/Issuer IDs are not secret.
-- `exportOptions.plist`: method `app-store-connect`, teamID `35AS7FL468`, automatic signing.
-- Still manual in App Store Connect (could be automated later via the ASC REST API): attach the
-  processed build to the version + click **Submit**.
+  and stays **local — never committed**; Key/Issuer IDs are not secret and live in the scripts
+  (overridable via `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_APP_ID` env vars).
+- `scripts/exportOptions.plist`: method `app-store-connect`, teamID `35AS7FL468`, automatic signing.
+- Requires `xcodegen`, Xcode CLT, and `pyjwt` + `cryptography` for the JWT (both already installed).
 
 ## Risks / open questions
 
