@@ -9,7 +9,7 @@ struct ContentView: View {
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
-    @State private var rainTrigger = RainTrigger(emoji: "", nonce: 0)
+    @State private var rainNonce = 0
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
@@ -117,7 +117,7 @@ struct ContentView: View {
             }
             .task { await store.refresh() }
         }
-        .overlay(RainLayer(trigger: rainTrigger))
+        .overlay(RainLayer(trigger: rainNonce))
         .modifier(ForcedScheme(scheme: contentScheme))
     }
 
@@ -132,13 +132,12 @@ struct ContentView: View {
             .padding(.bottom, 4)
     }
 
-    /// Easter egg: tapping the mascot rains it across the screen (handled by
-    /// RainLayer); rapid repeat taps pile up for a heavier downpour. Reads the
-    /// current theme's mascot at tap time so switching themes takes effect
-    /// immediately (avoids a stale captured value in the toolbar button).
+    /// Easter egg: tapping the mascot rains it across the screen. Just bumps a
+    /// nonce — RainLayer resolves the current mascot from @AppStorage(themeId) at
+    /// burst time, so even if this toolbar button's closure is stale the right
+    /// mascot rains. Rapid repeat taps pile up for a heavier downpour (in RainLayer).
     private func rain() {
-        guard let mascot = theme.mascot else { return }
-        rainTrigger = RainTrigger(emoji: mascot, nonce: rainTrigger.nonce + 1)
+        rainNonce += 1
     }
 
     private func handleAppear() {

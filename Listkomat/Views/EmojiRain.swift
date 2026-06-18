@@ -25,17 +25,15 @@ struct RainDrop: Identifiable {
     }
 }
 
-/// Bump `trigger` (new emoji + incremented nonce) to drop a burst. Drops live in
-/// this layer's own state and are drawn in a Canvas, so a new tap never re-runs
-/// the parent view's body or interrupts drops already in flight. Rapid taps pile
-/// up for a heavier downpour.
-struct RainTrigger: Equatable {
-    var emoji: String
-    var nonce: Int
-}
-
+/// Bump `trigger` (an incrementing nonce) to drop a burst. The emoji is resolved
+/// here from the live `themeId` at burst time, so it's always the *current*
+/// mascot — even if the toolbar button that bumped the nonce captured a stale
+/// value. Drops live in this layer's own state and are drawn in a Canvas, so a
+/// new tap never re-runs the parent view's body or interrupts drops already in
+/// flight. Rapid taps pile up for a heavier downpour.
 struct RainLayer: View {
-    let trigger: RainTrigger
+    let trigger: Int
+    @AppStorage("themeId") private var themeId = AppTheme.default.id
     @State private var drops: [RainDrop] = []
     @State private var recent = 0
 
@@ -69,10 +67,10 @@ struct RainLayer: View {
     }
 
     private func addBurst() {
-        guard !trigger.emoji.isEmpty else { return }
+        guard trigger > 0, let mascot = AppTheme.resolve(themeId).mascot else { return }
         recent += 1
         let count = min(10 + recent * 6, 60)
-        drops.append(contentsOf: RainDrop.burst(trigger.emoji, count: count, now: Date()))
+        drops.append(contentsOf: RainDrop.burst(mascot, count: count, now: Date()))
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             let cutoff = Date()
             drops.removeAll { $0.start.addingTimeInterval($0.duration) < cutoff }
