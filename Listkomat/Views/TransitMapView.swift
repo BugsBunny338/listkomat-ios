@@ -41,6 +41,7 @@ struct TransitMapView: UIViewRepresentable {
     var brno: Bool = false      // tram → "Šalina" in callouts
     var stopNames: [Int: String] = [:]   // FinalStopID → destination name
     var onSelect: (SelectedVehicle?) -> Void = { _ in }
+    var recenter: Int = 0                // bump to re-center on the user / city
 
     func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames) }
 
@@ -62,6 +63,7 @@ struct TransitMapView: UIViewRepresentable {
         context.coordinator.onSelect = onSelect
         context.coordinator.syncVehicles(vehicles, on: map)
         context.coordinator.refreshStops(on: map)
+        context.coordinator.applyRecenter(recenter, fallback: initialCenter, on: map)
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate {
@@ -74,9 +76,23 @@ struct TransitMapView: UIViewRepresentable {
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
         private let cap = 300
+        private var lastRecenter = 0
 
         init(stops: [Stop], brno: Bool, stopNames: [Int: String]) {
             self.stops = stops; self.brno = brno; self.stopNames = stopNames
+        }
+
+        /// Re-center on the user (if located) else the city — only when the nonce
+        /// changes (so the live polls don't keep snapping the map back).
+        func applyRecenter(_ nonce: Int, fallback: CLLocationCoordinate2D, on map: MKMapView) {
+            guard nonce != lastRecenter else { return }
+            lastRecenter = nonce
+            let user = map.userLocation.location?.coordinate
+            let target = (user.map { CLLocationCoordinate2DIsValid($0) && ($0.latitude != 0 || $0.longitude != 0) } == true)
+                ? user! : fallback
+            map.setRegion(MKCoordinateRegion(center: target,
+                                             span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)),
+                          animated: true)
         }
 
         private func destination(_ v: Vehicle) -> String? { v.destinationId.flatMap { stopNames[$0] } }

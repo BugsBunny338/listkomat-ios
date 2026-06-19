@@ -7,12 +7,27 @@ struct LiveMapView: View {
     @StateObject private var vm = LiveMapViewModel()
     @State private var showingSources = false
     @State private var selected: SelectedVehicle?
+    @State private var recenterNonce = 0
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
                        initialCenter: city.coordinate, brno: city.key == "brno",
-                       stopNames: vm.stopNames, onSelect: { selected = $0 })
+                       stopNames: vm.stopNames, onSelect: { selected = $0 },
+                       recenter: recenterNonce)
             .ignoresSafeArea()                       // map floats under the translucent top bar
+            .overlay(alignment: .bottomTrailing) {
+                Button { recenterNonce += 1 } label: {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .padding(12)
+                        .background(.regularMaterial, in: Circle())
+                }
+                .tint(.brandTeal)
+                .padding(.trailing, 16)
+                .padding(.bottom, selected == nil ? 28 : 104)   // lift above the card
+                .animation(.spring(response: 0.3), value: selected?.id)
+            }
             .overlay(alignment: .bottom) {
                 if let sel = selected { vehicleCard(sel) }
             }
@@ -54,6 +69,10 @@ struct LiveMapView: View {
             .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno") }
             .onAppear { vm.start() }
             .onDisappear { vm.stop() }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active { vm.start() }          // resume on return
+                else if phase == .background { vm.stop() }  // pause while backgrounded
+            }
     }
 
     /// Bottom info card for a tapped vehicle: type + line, and where it's heading.
