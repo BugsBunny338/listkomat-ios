@@ -40,6 +40,7 @@ struct Vehicle: Identifiable, Equatable {
     let line: String          // "1", "258"
     let kind: VehicleKind
     let updatedAt: Date
+    let destinationId: Int?   // FinalStopID; resolved to a stop name for the callout
 
     static func == (a: Vehicle, b: Vehicle) -> Bool {
         a.id == b.id

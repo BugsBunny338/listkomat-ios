@@ -8,7 +8,9 @@ final class VehicleAnnotation: NSObject, MKAnnotation {
     var line: String
     var kind: VehicleKind
     var brno = false
+    var destination: String?
     var title: String? { "\(kind.displayName(brno: brno)) \(line)" }  // callout, e.g. "Šalina 7" in Brno
+    var subtitle: String? { destination.map { "→ \($0)" } }           // e.g. "→ Královo Pole, nádraží"
 
     init(_ v: Vehicle) { id = v.id; coordinate = v.coordinate; line = v.line; kind = v.kind }
     func apply(_ v: Vehicle) { line = v.line; kind = v.kind }
@@ -29,8 +31,9 @@ struct TransitMapView: UIViewRepresentable {
     var stops: [Stop]
     var initialCenter: CLLocationCoordinate2D
     var brno: Bool = false      // tram → "Šalina" in callouts
+    var stopNames: [Int: String] = [:]   // FinalStopID → destination name
 
-    func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno) }
+    func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames) }
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
@@ -54,12 +57,17 @@ struct TransitMapView: UIViewRepresentable {
         weak var map: MKMapView?
         var stops: [Stop]
         let brno: Bool
+        let stopNames: [Int: String]
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
         private let cap = 300
 
-        init(stops: [Stop], brno: Bool) { self.stops = stops; self.brno = brno }
+        init(stops: [Stop], brno: Bool, stopNames: [Int: String]) {
+            self.stops = stops; self.brno = brno; self.stopNames = stopNames
+        }
+
+        private func destination(_ v: Vehicle) -> String? { v.destinationId.flatMap { stopNames[$0] } }
 
         // MARK: Vehicles
 
@@ -70,11 +78,12 @@ struct TransitMapView: UIViewRepresentable {
             for v in visible {
                 seen.insert(v.id)
                 if let a = vehicleAnn[v.id] {
-                    a.apply(v)
+                    a.apply(v); a.destination = destination(v)
                     UIView.animate(withDuration: 0.9) { a.coordinate = v.coordinate }
                     if let view = map.view(for: a) as? MKMarkerAnnotationView { style(view, v.kind, v.line) }
                 } else {
-                    let a = VehicleAnnotation(v); a.brno = brno; vehicleAnn[v.id] = a; map.addAnnotation(a)
+                    let a = VehicleAnnotation(v); a.brno = brno; a.destination = destination(v)
+                    vehicleAnn[v.id] = a; map.addAnnotation(a)
                 }
             }
             for (id, a) in vehicleAnn where !seen.contains(id) {

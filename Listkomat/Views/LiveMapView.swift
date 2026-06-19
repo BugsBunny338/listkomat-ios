@@ -9,7 +9,8 @@ struct LiveMapView: View {
 
     var body: some View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
-                       initialCenter: city.coordinate, brno: city.key == "brno")
+                       initialCenter: city.coordinate, brno: city.key == "brno",
+                       stopNames: vm.stopNames)
             .ignoresSafeArea()                       // map floats under the translucent top bar
             .overlay(alignment: .center) {
                 if !vm.didLoadOnce {

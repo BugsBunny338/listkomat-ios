@@ -6,6 +6,7 @@ import Foundation
 final class LiveMapViewModel: ObservableObject {
     @Published private(set) var vehicles: [Vehicle] = []
     @Published private(set) var stops: [Stop] = []
+    @Published private(set) var stopNames: [Int: String] = [:]   // FinalStopID → destination name
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
@@ -16,6 +17,7 @@ final class LiveMapViewModel: ObservableObject {
 
     func start() {
         if stops.isEmpty { stops = StopsStore.brno() }
+        if stopNames.isEmpty { stopNames = StopNamesStore.brno() }
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             while !Task.isCancelled {

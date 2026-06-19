@@ -10,7 +10,7 @@ final class BrnoVehicleSourceTests: XCTestCase {
       {"geometry":{"type":"Point","coordinates":[16.6371,49.2142]},"properties":
         {"LineName":"1","Bearing":-1,"TimeUpdated":1767776798912,"IsInactive":"true","VType":0,"ID":7098}},
       {"geometry":{"type":"Point","coordinates":[16.6012,49.4798]},"properties":
-        {"LineName":"258","Bearing":225,"TimeUpdated":1767776798912,"IsInactive":"false","VType":4,"ID":21856}}
+        {"LineName":"258","Bearing":225,"TimeUpdated":1767776798912,"IsInactive":"false","VType":4,"ID":21856,"FinalStopID":12515}}
     ]}
     """
 
@@ -22,8 +22,15 @@ final class BrnoVehicleSourceTests: XCTestCase {
         XCTAssertEqual(v.line, "258")
         XCTAssertEqual(v.kind, .bus)
         XCTAssertEqual(v.bearing, 225)
+        XCTAssertEqual(v.destinationId, 12515)
         XCTAssertEqual(v.coordinate.latitude, 49.4798, accuracy: 0.0001)
         XCTAssertEqual(v.coordinate.longitude, 16.6012, accuracy: 0.0001)
+    }
+
+    func testStopNamesDecode() throws {
+        let map = try StopNamesStore.decode(Data(#"{"1286":"Královo Pole, nádraží","12515":"Obora"}"#.utf8))
+        XCTAssertEqual(map[12515], "Obora")
+        XCTAssertEqual(map[1286], "Královo Pole, nádraží")
     }
 
     func testBearingMinusOneBecomesNilAndTramKind() throws {

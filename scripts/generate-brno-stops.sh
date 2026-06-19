@@ -26,11 +26,14 @@ while :; do
 done
 
 python3 - "$TMP" "$OUT" <<'PY'
-import json, sys, glob, os, math
+import json, sys, glob, os, math, re
 tmp, out = sys.argv[1], sys.argv[2]
 
-# Collect platforms grouped by name.
+# Collect platforms grouped by name; also build numeric-stop-id -> name so the
+# live feed's FinalStopID can be shown as a destination ("U1286Z10" -> id 1286).
 by_name = {}
+id_names = {}
+id_re = re.compile(r'^U(\d+)[ZN]')
 for fp in sorted(glob.glob(os.path.join(tmp, 'page_*.json'))):
     for ft in json.load(open(fp)).get('features', []):
         p = ft.get('properties', {}); g = ft.get('geometry') or {}
@@ -40,6 +43,9 @@ for fp in sorted(glob.glob(os.path.join(tmp, 'page_*.json'))):
         lng, lat = c[0], c[1]
         name = (p.get('stop_name') or '').strip() or str(p.get('stop_id'))
         by_name.setdefault(name, []).append((lat, lng))
+        m = id_re.match(str(p.get('stop_id') or ''))
+        if m and name:
+            id_names.setdefault(int(m.group(1)), name)
 
 def dist_m(a, b):
     R = 6371000.0
@@ -66,5 +72,10 @@ for name, pts in by_name.items():
 stops.sort(key=lambda s: s['name'])
 json.dump(stops, open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
 print('stations:', len(stops), '->', out)
+
+names_out = os.path.join(os.path.dirname(out), 'brno-stop-names.json')
+json.dump({str(k): v for k, v in sorted(id_names.items())},
+          open(names_out, 'w'), ensure_ascii=False, separators=(',', ':'))
+print('stop names:', len(id_names), '->', names_out)
 PY
 echo "size: $(wc -c < "$OUT") bytes"

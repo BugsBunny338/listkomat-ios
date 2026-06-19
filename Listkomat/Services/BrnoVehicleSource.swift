@@ -19,6 +19,7 @@ enum BrnoVehicleSource {
         let IsInactive: String       // "true" / "false" (string in the feed)
         let VType: Int
         let ID: Int
+        let FinalStopID: Int?        // destination stop (numeric KORDIS id)
     }
 
     /// Decode the ArcGIS GeoJSON, dropping inactive vehicles.
@@ -35,7 +36,8 @@ enum BrnoVehicleSource {
                 bearing: f.properties.Bearing >= 0 ? f.properties.Bearing : nil,
                 line: f.properties.LineName,
                 kind: kind(forVType: f.properties.VType),
-                updatedAt: Date(timeIntervalSince1970: f.properties.TimeUpdated / 1000))
+                updatedAt: Date(timeIntervalSince1970: f.properties.TimeUpdated / 1000),
+                destinationId: (f.properties.FinalStopID ?? 0) > 0 ? f.properties.FinalStopID : nil)
         }
     }
 
