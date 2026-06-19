@@ -26,9 +26,11 @@ while :; do
 done
 
 python3 - "$TMP" "$OUT" <<'PY'
-import json, sys, glob, os
+import json, sys, glob, os, math
 tmp, out = sys.argv[1], sys.argv[2]
-groups = {}
+
+# Collect platforms grouped by name.
+by_name = {}
 for fp in sorted(glob.glob(os.path.join(tmp, 'page_*.json'))):
     for ft in json.load(open(fp)).get('features', []):
         p = ft.get('properties', {}); g = ft.get('geometry') or {}
@@ -37,20 +39,30 @@ for fp in sorted(glob.glob(os.path.join(tmp, 'page_*.json'))):
             continue
         lng, lat = c[0], c[1]
         name = (p.get('stop_name') or '').strip() or str(p.get('stop_id'))
-        # One pin per station: group same-name platforms within ~100 m. Avoids the
-        # feed's inconsistent parent_station while keeping distant same-name stops
-        # (regional feed) separate.
-        key = (name, round(lat, 3), round(lng, 3))
-        d = groups.setdefault(key, {'name': name, 'lats': [], 'lngs': []})
-        d['lats'].append(lat); d['lngs'].append(lng)
+        by_name.setdefault(name, []).append((lat, lng))
 
+def dist_m(a, b):
+    R = 6371000.0
+    p1, p2 = math.radians(a[0]), math.radians(b[0])
+    dp = math.radians(b[0]-a[0]); dl = math.radians(b[1]-a[1])
+    h = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
+    return 2*R*math.asin(math.sqrt(h))
+
+# One pin per station: cluster same-name platforms within 300 m (merges the two
+# poles of a stop) while keeping distant same-name stops (regional feed) separate.
 stops = []
-for d in groups.values():
-    if not d['lats']:
-        continue
-    lat = round(sum(d['lats']) / len(d['lats']), 6)
-    lng = round(sum(d['lngs']) / len(d['lngs']), 6)
-    stops.append({'id': f"{d['name']}@{lat},{lng}", 'name': d['name'], 'lat': lat, 'lng': lng})
+for name, pts in by_name.items():
+    clusters = []   # each: list of points
+    for pt in pts:
+        for cl in clusters:
+            if dist_m(pt, cl[0]) <= 300:
+                cl.append(pt); break
+        else:
+            clusters.append([pt])
+    for cl in clusters:
+        lat = round(sum(p[0] for p in cl)/len(cl), 6)
+        lng = round(sum(p[1] for p in cl)/len(cl), 6)
+        stops.append({'id': f"{name}@{lat},{lng}", 'name': name, 'lat': lat, 'lng': lng})
 stops.sort(key=lambda s: s['name'])
 json.dump(stops, open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
 print('stations:', len(stops), '->', out)

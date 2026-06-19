@@ -7,6 +7,7 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var vehicles: [Vehicle] = []
     @Published private(set) var stops: [Stop] = []
     @Published private(set) var loadFailed = false
+    @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
     private let source: VehicleSource
     private var pollTask: Task<Void, Never>?
@@ -36,5 +37,6 @@ final class LiveMapViewModel: ObservableObject {
         } catch {
             loadFailed = true   // keep last vehicles on screen
         }
+        didLoadOnce = true
     }
 }

@@ -1,8 +1,34 @@
+import SwiftUI
 import CoreLocation
 
 /// Kind of transit vehicle, for tinting the map marker.
-enum VehicleKind: String {
+enum VehicleKind: String, CaseIterable {
     case tram, trolleybus, bus, train
+
+    /// Czech name shown in callouts and the legend.
+    var czechName: String {
+        switch self {
+        case .tram: return "Tramvaj"
+        case .trolleybus: return "Trolejbus"
+        case .bus: return "Autobus"
+        case .train: return "Vlak"
+        }
+    }
+
+    /// City-aware name. Easter egg: in Brno a tram is a "Šalina" (local hantec slang).
+    func displayName(brno: Bool) -> String {
+        (self == .tram && brno) ? "Šalina" : czechName
+    }
+
+    /// Marker color — distinct, refined transit palette.
+    var color: Color {
+        switch self {
+        case .tram: return Color(hex: 0xD7263D)        // crimson
+        case .trolleybus: return Color(hex: 0x2A9D8F)  // teal-green
+        case .bus: return Color(hex: 0x2E6F95)         // steel blue
+        case .train: return Color(hex: 0x6A4C93)       // purple
+        }
+    }
 }
 
 /// A live transit vehicle position, normalized across data sources (Brno now,

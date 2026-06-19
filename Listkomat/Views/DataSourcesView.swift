@@ -2,11 +2,28 @@ import SwiftUI
 
 /// Attribution for the live map (CC-BY 4.0 obligation).
 struct DataSourcesView: View {
+    var brno: Bool = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
+                Section("Legenda") {
+                    ForEach(VehicleKind.allCases, id: \.self) { kind in
+                        HStack(spacing: 12) {
+                            Circle().fill(kind.color).frame(width: 16, height: 16)
+                            Text(kind.displayName(brno: brno))
+                            Spacer()
+                        }
+                    }
+                    HStack(spacing: 12) {
+                        Circle().stroke(Color.brandTeal, lineWidth: 3.5)
+                            .background(Circle().fill(.white)).frame(width: 16, height: 16)
+                        Text("Zastávka")
+                        Spacer()
+                    }
+                }
+
                 Section("Živá mapa") {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Vozidla a zastávky").font(.headline)

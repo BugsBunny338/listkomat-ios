@@ -7,7 +7,8 @@ final class VehicleAnnotation: NSObject, MKAnnotation {
     @objc dynamic var coordinate: CLLocationCoordinate2D
     var line: String
     var kind: VehicleKind
-    var title: String? { "Linka \(line)" }
+    var brno = false
+    var title: String? { "\(kind.displayName(brno: brno)) \(line)" }  // callout, e.g. "Šalina 7" in Brno
 
     init(_ v: Vehicle) { id = v.id; coordinate = v.coordinate; line = v.line; kind = v.kind }
     func apply(_ v: Vehicle) { line = v.line; kind = v.kind }
@@ -27,8 +28,9 @@ struct TransitMapView: UIViewRepresentable {
     var vehicles: [Vehicle]
     var stops: [Stop]
     var initialCenter: CLLocationCoordinate2D
+    var brno: Bool = false      // tram → "Šalina" in callouts
 
-    func makeCoordinator() -> Coordinator { Coordinator(stops: stops) }
+    func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno) }
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
@@ -51,12 +53,13 @@ struct TransitMapView: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         weak var map: MKMapView?
         var stops: [Stop]
+        let brno: Bool
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
         private let cap = 300
 
-        init(stops: [Stop]) { self.stops = stops }
+        init(stops: [Stop], brno: Bool) { self.stops = stops; self.brno = brno }
 
         // MARK: Vehicles
 
@@ -71,7 +74,7 @@ struct TransitMapView: UIViewRepresentable {
                     UIView.animate(withDuration: 0.9) { a.coordinate = v.coordinate }
                     if let view = map.view(for: a) as? MKMarkerAnnotationView { style(view, v.kind, v.line) }
                 } else {
-                    let a = VehicleAnnotation(v); vehicleAnn[v.id] = a; map.addAnnotation(a)
+                    let a = VehicleAnnotation(v); a.brno = brno; vehicleAnn[v.id] = a; map.addAnnotation(a)
                 }
             }
             for (id, a) in vehicleAnn where !seen.contains(id) {
@@ -114,13 +117,10 @@ struct TransitMapView: UIViewRepresentable {
                 style(view, v.kind, v.line)
                 return view
             case let s as StopAnnotation:
-                let id = "stop"
-                let view = map.dequeueReusableAnnotationView(withIdentifier: id)
-                    ?? MKAnnotationView(annotation: s, reuseIdentifier: id)
+                let view = (map.dequeueReusableAnnotationView(withIdentifier: StopMarkerView.reuse) as? StopMarkerView)
+                    ?? StopMarkerView(annotation: s, reuseIdentifier: StopMarkerView.reuse)
                 view.annotation = s
-                view.image = Coordinator.stopDot
-                view.canShowCallout = true
-                view.displayPriority = .defaultLow
+                view.configure(name: s.title ?? "")
                 return view
             default:
                 return nil
@@ -128,31 +128,72 @@ struct TransitMapView: UIViewRepresentable {
         }
 
         private func style(_ view: MKMarkerAnnotationView, _ kind: VehicleKind, _ line: String) {
-            view.markerTintColor = UIColor(Self.color(kind))
+            view.markerTintColor = UIColor(kind.color)
             view.glyphText = line
-            view.canShowCallout = true
+            view.titleVisibility = .hidden        // no floating "Linka X" label; number stays in the bubble
+            view.subtitleVisibility = .hidden
+            view.canShowCallout = true            // tap → "Tramvaj 7"
             view.displayPriority = .required
         }
+    }
+}
 
-        static func color(_ kind: VehicleKind) -> Color {
-            switch kind {
-            case .tram: return .red
-            case .trolleybus: return .purple
-            case .bus: return .blue
-            case .train: return .green
-            }
-        }
+/// A stop: a bright teal dot (the app's identity color) with the stop name beneath,
+/// so stops pop and are labeled. Distinct from the colored vehicle bubbles.
+final class StopMarkerView: MKAnnotationView {
+    static let reuse = "stop"
+    private let dot = UIView()
+    private let label = PaddedLabel()
 
-        static let stopDot: UIImage = {
-            let s = CGSize(width: 12, height: 12)
-            return UIGraphicsImageRenderer(size: s).image { ctx in
-                UIColor.darkGray.setFill()
-                ctx.cgContext.fillEllipse(in: CGRect(origin: .zero, size: s))
-                UIColor.white.setStroke()
-                ctx.cgContext.setLineWidth(1.5)
-                ctx.cgContext.strokeEllipse(in: CGRect(x: 0.75, y: 0.75, width: 10.5, height: 10.5))
-            }
-        }()
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        frame = CGRect(x: 0, y: 0, width: 15, height: 15)
+        centerOffset = .zero
+        clipsToBounds = false
+        displayPriority = .defaultLow            // vehicles win collisions
+        collisionMode = .circle
+
+        dot.frame = bounds
+        dot.backgroundColor = .white
+        dot.layer.cornerRadius = 7.5
+        dot.layer.borderWidth = 3.5
+        dot.layer.borderColor = UIColor(Color.brandTeal).cgColor
+        dot.layer.shadowColor = UIColor.black.cgColor
+        dot.layer.shadowOpacity = 0.35
+        dot.layer.shadowRadius = 2
+        dot.layer.shadowOffset = CGSize(width: 0, height: 1)
+        addSubview(dot)
+
+        label.font = .systemFont(ofSize: 11, weight: .semibold)
+        label.textColor = .label
+        label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.82)
+        label.layer.cornerRadius = 4
+        label.clipsToBounds = true
+        addSubview(label)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(name: String) {
+        label.text = name
+        label.sizeToFit()
+        label.frame = CGRect(x: bounds.midX - label.bounds.width / 2,
+                             y: bounds.maxY + 2,
+                             width: label.bounds.width, height: label.bounds.height)
+    }
+}
+
+/// UILabel with a little horizontal padding (for the stop-name pill).
+private final class PaddedLabel: UILabel {
+    private let inset = UIEdgeInsets(top: 1, left: 5, bottom: 1, right: 5)
+    override func drawText(in rect: CGRect) { super.drawText(in: rect.inset(by: inset)) }
+    override var intrinsicContentSize: CGSize {
+        var s = super.intrinsicContentSize
+        s.width += inset.left + inset.right; s.height += inset.top + inset.bottom; return s
+    }
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
+        var s = super.sizeThatFits(size)
+        s.width += inset.left + inset.right; s.height += inset.top + inset.bottom; return s
     }
 }
 
