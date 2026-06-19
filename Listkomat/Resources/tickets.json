@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "updatedAt": "2026-06-16",
+  "version": 4,
+  "updatedAt": "2026-06-19",
   "cities": [
     {
       "key": "praha", "name": "Praha", "lat": 50.075538, "lng": 14.437800, "smsNumber": "90206",
@@ -13,6 +13,7 @@
     },
     {
       "key": "brno", "name": "Brno", "lat": 49.195060, "lng": 16.606837, "smsNumber": "90206",
+      "hasLiveMap": true,
       "tickets": [
         { "code": "BRNO20", "duration": "20 min", "durationMinutes": 20, "priceKc": 20 },
         { "code": "BRNO", "duration": "75 min", "durationMinutes": 75, "priceKc": 29 },

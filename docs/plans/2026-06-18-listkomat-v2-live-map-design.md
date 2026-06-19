@@ -1,6 +1,6 @@
 # Lístkomat v2 — Live transit map
 
-*Date: 2026-06-18 · Status: design validated, ready for implementation*
+*Date: 2026-06-18 · Status: implemented (Brno) on branch v2-live-map — pending merge + ship*
 
 ## Overview
 
