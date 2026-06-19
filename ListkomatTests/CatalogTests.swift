@@ -32,5 +32,20 @@ final class CatalogTests: XCTestCase {
 
         let last = try XCTUnwrap(city.tickets.last)
         XCTAssertEqual(last.note, "demo")      // optional note present
+        XCTAssertFalse(city.showsLiveMap)      // absent -> false
+    }
+
+    func testHasLiveMapDecodes() throws {
+        let json = """
+        {
+          "version": 1, "updatedAt": "2026-06-19",
+          "cities": [
+            { "key": "brno", "name": "Brno", "lat": 49.19, "lng": 16.6, "smsNumber": "90206",
+              "hasLiveMap": true, "tickets": [] }
+          ]
+        }
+        """
+        let catalog = try JSONDecoder().decode(TicketCatalog.self, from: Data(json.utf8))
+        XCTAssertTrue(try XCTUnwrap(catalog.cities.first).showsLiveMap)
     }
 }
