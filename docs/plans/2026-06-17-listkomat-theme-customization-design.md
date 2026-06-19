@@ -62,6 +62,7 @@ signature), two after places that matter to the dev.
 | `zaba` | Žába  | `#4CC76A` spring green | band | 🐸 (dev's wife) |
 | `meda` | Méďa  | `#8B5E3C` warm brown | band | 🐻 (dev's son) |
 | `slim` | Slim  | `#74B84A` leaf green | band | 🐌 (Štěpán "slimák"/snail) |
+| `evelina` | Evelína | `#E0B04A` hay-gold | band | 🐐 (pun: *kozy* = goats) |
 | `brno` | Brno  | `#C8102E` heraldic red | band | 🐉 (Brněnský drak) |
 | `usa`  | USA   | `#3C3B6E` flag navy | band | 🇺🇸 (dev now lives in the US) |
 

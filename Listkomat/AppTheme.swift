@@ -39,8 +39,9 @@ struct AppTheme: Identifiable, Hashable {
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
         AppTheme(id: "zaba",  name: "Žába",   band: Color(hex: 0x4CC76A), onBand: .ink,   mascot: "🐸", isDark: false),
         AppTheme(id: "meda",  name: "Méďa",   band: Color(hex: 0x8B5E3C), onBand: .white, mascot: "🐻", isDark: true),
-        AppTheme(id: "slim",  name: "Slim",   band: Color(hex: 0x74B84A), onBand: .ink,   mascot: "🐌", isDark: false),
-        AppTheme(id: "brno",  name: "Brno",   band: Color(hex: 0xC8102E), onBand: .white, mascot: "🐉", isDark: true),
+        AppTheme(id: "slim",  name: "Slim",    band: Color(hex: 0x74B84A), onBand: .ink,   mascot: "🐌", isDark: false),
+        AppTheme(id: "evelina", name: "Evelína", band: Color(hex: 0xE0B04A), onBand: .ink, mascot: "🐐", isDark: false),
+        AppTheme(id: "brno",  name: "Brno",    band: Color(hex: 0xC8102E), onBand: .white, mascot: "🐉", isDark: true),
         AppTheme(id: "usa",   name: "USA",    band: Color(hex: 0x3C3B6E), onBand: .white, mascot: "🇺🇸", isDark: true),
     ]
 
