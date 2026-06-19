@@ -49,6 +49,7 @@ struct TransitMapView: UIViewRepresentable {
 
     func updateUIView(_ map: MKMapView, context: Context) {
         context.coordinator.stops = stops
+        context.coordinator.stopNames = stopNames   // loads after makeCoordinator, so refresh it here
         context.coordinator.syncVehicles(vehicles, on: map)
         context.coordinator.refreshStops(on: map)
     }
@@ -57,7 +58,7 @@ struct TransitMapView: UIViewRepresentable {
         weak var map: MKMapView?
         var stops: [Stop]
         let brno: Bool
-        let stopNames: [Int: String]
+        var stopNames: [Int: String]
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this

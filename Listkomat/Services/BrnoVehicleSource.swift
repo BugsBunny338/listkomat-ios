@@ -56,12 +56,17 @@ enum BrnoVehicleSource {
     static func layerName(year: Int) -> String { "Kordis_\(year % 100)_polohy" }
 
     /// Live GeoJSON query URL for the current year's layer.
+    ///
+    /// `orderByFields=TimeUpdated DESC` is essential: the plain `where=1=1`
+    /// response is served from a long-TTL CDN cache (positions never advance),
+    /// but this ordered variant returns genuinely live data — and conveniently
+    /// puts the freshest vehicles first (so the on-screen cap keeps recent ones).
     static func currentQueryURL(now: Date = Date(),
                                 calendar: Calendar = Calendar(identifier: .gregorian)) -> URL {
         let year = calendar.component(.year, from: now)
         let base = "https://gis.brno.cz/ags1/rest/services/Hosted/"
             + "\(layerName(year: year))/FeatureServer/0/query"
-        return URL(string: "\(base)?where=1%3D1&outFields=*&f=geojson")!
+        return URL(string: "\(base)?where=1%3D1&outFields=*&orderByFields=TimeUpdated%20DESC&f=geojson")!
     }
 }
 
@@ -70,7 +75,10 @@ struct BrnoLiveSource: VehicleSource {
     var session: URLSession = .shared
 
     func fetch() async throws -> [Vehicle] {
-        let (data, _) = try await session.data(from: BrnoVehicleSource.currentQueryURL())
+        // Same URL every poll, so bypass the cache or we'd get stale (static) data.
+        var req = URLRequest(url: BrnoVehicleSource.currentQueryURL())
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, _) = try await session.data(for: req)
         return try BrnoVehicleSource.decode(data)
     }
 }
