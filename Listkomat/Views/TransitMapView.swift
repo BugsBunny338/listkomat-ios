@@ -24,6 +24,14 @@ final class StopAnnotation: NSObject, MKAnnotation {
     init(_ s: Stop) { id = s.id; coordinate = s.coordinate; title = s.name }
 }
 
+/// What a tapped vehicle shows in the bottom info card.
+struct SelectedVehicle: Identifiable {
+    let id: String
+    let title: String         // "Šalina 12"
+    let destination: String?  // "Královo Pole, nádraží"
+    let color: Color
+}
+
 /// MKMapView wrapped for SwiftUI: live vehicles (always) + stops (only when zoomed
 /// in). Keeps the iOS 16.2 floor and gives full annotation control.
 struct TransitMapView: UIViewRepresentable {
@@ -32,6 +40,7 @@ struct TransitMapView: UIViewRepresentable {
     var initialCenter: CLLocationCoordinate2D
     var brno: Bool = false      // tram → "Šalina" in callouts
     var stopNames: [Int: String] = [:]   // FinalStopID → destination name
+    var onSelect: (SelectedVehicle?) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames) }
 
@@ -50,6 +59,7 @@ struct TransitMapView: UIViewRepresentable {
     func updateUIView(_ map: MKMapView, context: Context) {
         context.coordinator.stops = stops
         context.coordinator.stopNames = stopNames   // loads after makeCoordinator, so refresh it here
+        context.coordinator.onSelect = onSelect
         context.coordinator.syncVehicles(vehicles, on: map)
         context.coordinator.refreshStops(on: map)
     }
@@ -59,6 +69,7 @@ struct TransitMapView: UIViewRepresentable {
         var stops: [Stop]
         let brno: Bool
         var stopNames: [Int: String]
+        var onSelect: (SelectedVehicle?) -> Void = { _ in }
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
@@ -113,6 +124,20 @@ struct TransitMapView: UIViewRepresentable {
 
         func mapView(_ map: MKMapView, regionDidChangeAnimated animated: Bool) { refreshStops(on: map) }
 
+        // MARK: Selection → bottom info card
+
+        func mapView(_ map: MKMapView, didSelect view: MKAnnotationView) {
+            guard let v = view.annotation as? VehicleAnnotation else { return }
+            onSelect(SelectedVehicle(id: v.id,
+                                     title: "\(v.kind.displayName(brno: brno)) \(v.line)",
+                                     destination: v.destination,
+                                     color: v.kind.color))
+        }
+
+        func mapView(_ map: MKMapView, didDeselect view: MKAnnotationView) {
+            if view.annotation is VehicleAnnotation { onSelect(nil) }
+        }
+
         // MARK: Views
 
         func mapView(_ map: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
@@ -140,9 +165,9 @@ struct TransitMapView: UIViewRepresentable {
         private func style(_ view: MKMarkerAnnotationView, _ kind: VehicleKind, _ line: String) {
             view.markerTintColor = UIColor(kind.color)
             view.glyphText = line
-            view.titleVisibility = .hidden        // no floating "Linka X" label; number stays in the bubble
+            view.titleVisibility = .hidden        // no floating label; number stays in the bubble
             view.subtitleVisibility = .hidden
-            view.canShowCallout = true            // tap → "Tramvaj 7"
+            view.canShowCallout = false           // tap shows the SwiftUI bottom card instead
             view.displayPriority = .required
         }
     }
