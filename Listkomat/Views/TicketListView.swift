@@ -24,6 +24,17 @@ struct TicketListView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if city.showsLiveMap {
+                NavigationLink {
+                    LiveMapView(city: city)
+                } label: {
+                    Label("Živá mapa", systemImage: "map")
+                        .font(.brandBold(15, relativeTo: .subheadline))
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .padding(.bottom, 12)
+            }
             List {
                 Section {
                     ForEach(city.tickets) { ticket in
