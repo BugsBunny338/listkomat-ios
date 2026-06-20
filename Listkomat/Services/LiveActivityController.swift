@@ -23,16 +23,18 @@ final class LiveActivityController: ObservableObject {
     func start(city: City, ticket: Ticket) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         endAllNow()
-        let start = Date()
-        let end = start.addingTimeInterval(Double(ticket.durationMinutes) * 60)
+        let timeline = TicketTimeline.make(sentAt: Date(),
+                                           durationSeconds: Double(ticket.durationMinutes) * 60)
         let attributes = TicketActivityAttributes(
             cityName: city.name,
             ticketLabel: ticket.duration,
             priceKc: ticket.priceKc
         )
-        let state = TicketActivityAttributes.ContentState(startDate: start, endDate: end)
+        let state = TicketActivityAttributes.ContentState(
+            sentAt: timeline.sentAt, validFrom: timeline.validFrom, endDate: timeline.endDate)
         do {
-            _ = try Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: end))
+            _ = try Activity.request(attributes: attributes,
+                                     content: ActivityContent(state: state, staleDate: timeline.endDate))
             active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration)
         } catch {
             // Best-effort; nothing to surface if it fails.

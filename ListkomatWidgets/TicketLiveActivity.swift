@@ -19,7 +19,7 @@ struct TicketLiveActivity: Widget {
                         .foregroundStyle(Color.brandTeal)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
+                    Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                         .monospacedDigit()
                         .multilineTextAlignment(.trailing)
                         .frame(width: 80)
@@ -34,7 +34,7 @@ struct TicketLiveActivity: Widget {
                 Image(systemName: "tram.fill")
                     .foregroundStyle(Color.brandTeal)
             } compactTrailing: {
-                Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
+                Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                     .monospacedDigit()
                     .frame(width: 46)
                     .foregroundStyle(Color.brandTeal)
@@ -71,7 +71,7 @@ private struct LockScreenView: View {
                 Text("zbývá")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
+                Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                     .font(.title2.weight(.semibold))
                     .monospacedDigit()
                     .multilineTextAlignment(.trailing)

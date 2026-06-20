@@ -6,7 +6,8 @@ import Foundation
 /// ticks on-device with no push updates.
 struct TicketActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
-        var startDate: Date
+        var sentAt: Date
+        var validFrom: Date
         var endDate: Date
     }
 
