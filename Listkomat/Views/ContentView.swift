@@ -154,25 +154,36 @@ struct ContentView: View {
     // MARK: - Active ticket banner (manual end)
 
     private func activeTicketBanner(_ active: LiveActivityController.ActiveTicket) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "tram.fill")
-                .foregroundStyle(theme.accent)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Aktivní lístek")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text("\(active.cityName) · \(active.ticketLabel)")
-                    .font(.brandBold(15, relativeTo: .subheadline))
+        // TimelineView so the banner flips from pending → active on its own at
+        // validFrom while the app is open (no push needed in-app).
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let pending = ctx.date < active.validFrom
+            HStack(spacing: 12) {
+                Image(systemName: "tram.fill")
+                    .foregroundStyle(theme.accent)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(pending ? "Čeká na potvrzovací SMS" : "Aktivní lístek")
+                        .font(.caption2)
+                        .foregroundStyle(pending ? .orange : .secondary)
+                    Text("\(active.cityName) · \(active.ticketLabel)")
+                        .font(.brandBold(15, relativeTo: .subheadline))
+                }
+                Spacer()
+                if pending {
+                    Button("Potvrdit nyní") { liveActivity.confirmNow() }
+                        .font(.subheadline.weight(.semibold))
+                        .buttonStyle(.bordered)
+                        .tint(theme.accent)
+                }
+                Button("Ukončit") { liveActivity.stop() }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .tint(.red)
             }
-            Spacer()
-            Button("Ukončit") { liveActivity.stop() }
-                .font(.subheadline.weight(.semibold))
-                .buttonStyle(.bordered)
-                .tint(.red)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(theme.accent.opacity(0.12))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(theme.accent.opacity(0.12))
     }
 
     // MARK: - Empty state (no city to show)
