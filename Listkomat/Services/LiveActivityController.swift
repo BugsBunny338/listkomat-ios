@@ -11,6 +11,7 @@ final class LiveActivityController: ObservableObject {
     struct ActiveTicket: Equatable {
         let cityName: String
         let ticketLabel: String
+        let validFrom: Date   // banner shows "čeká na potvrzení" + Potvrdit nyní until this
     }
 
     @Published private(set) var active: ActiveTicket?
@@ -35,9 +36,24 @@ final class LiveActivityController: ObservableObject {
         do {
             _ = try Activity.request(attributes: attributes,
                                      content: ActivityContent(state: state, staleDate: timeline.endDate))
-            active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration)
+            active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration,
+                                  validFrom: timeline.validFrom)
         } catch {
             // Best-effort; nothing to surface if it fails.
+        }
+    }
+
+    /// User got the confirmation SMS early — re-anchor validity to now.
+    func confirmNow() {
+        guard let activity = Activity<TicketActivityAttributes>.activities.first else { return }
+        let s = activity.content.state
+        let timeline = TicketTimeline(sentAt: s.sentAt, validFrom: s.validFrom, endDate: s.endDate)
+            .confirmed(at: Date())
+        let new = TicketActivityAttributes.ContentState(
+            sentAt: timeline.sentAt, validFrom: timeline.validFrom, endDate: timeline.endDate)
+        Task {
+            await activity.update(ActivityContent(state: new, staleDate: timeline.endDate))
+            syncState()
         }
     }
 
@@ -56,7 +72,8 @@ final class LiveActivityController: ObservableObject {
     private func syncState() {
         if let activity = Activity<TicketActivityAttributes>.activities.first {
             active = ActiveTicket(cityName: activity.attributes.cityName,
-                                  ticketLabel: activity.attributes.ticketLabel)
+                                  ticketLabel: activity.attributes.ticketLabel,
+                                  validFrom: activity.content.state.validFrom)
         } else {
             active = nil
         }
