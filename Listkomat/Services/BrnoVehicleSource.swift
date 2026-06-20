@@ -66,7 +66,10 @@ enum BrnoVehicleSource {
         let year = calendar.component(.year, from: now)
         let base = "https://gis.brno.cz/ags1/rest/services/Hosted/"
             + "\(layerName(year: year))/FeatureServer/0/query"
-        return URL(string: "\(base)?where=1%3D1&outFields=*&orderByFields=TimeUpdated%20DESC&f=geojson")!
+        // Only the 7 properties we decode (geometry is always returned for geojson).
+        // TimeUpdated must stay — orderByFields sorts on it.
+        let fields = "ID%2CBearing%2CLineName%2CVType%2CIsInactive%2CTimeUpdated%2CFinalStopID"
+        return URL(string: "\(base)?where=1%3D1&outFields=\(fields)&orderByFields=TimeUpdated%20DESC&f=geojson")!
     }
 }
 

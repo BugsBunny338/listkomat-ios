@@ -49,6 +49,14 @@ final class BrnoVehicleSourceTests: XCTestCase {
         XCTAssertEqual(BrnoVehicleSource.kind(forVType: 5), .train)
     }
 
+    func testQueryURLRequestsOnlyNeededFieldsNotStar() {
+        let url = BrnoVehicleSource.currentQueryURL().absoluteString
+        XCTAssertFalse(url.contains("outFields=*"), "should not request all fields")
+        for field in ["ID", "Bearing", "LineName", "VType", "IsInactive", "TimeUpdated", "FinalStopID"] {
+            XCTAssertTrue(url.contains(field), "missing required field \(field)")
+        }
+    }
+
     func testLayerNameRollsOverByYear() {
         XCTAssertEqual(BrnoVehicleSource.layerName(year: 2026), "Kordis_26_polohy")
         XCTAssertEqual(BrnoVehicleSource.layerName(year: 2027), "Kordis_27_polohy")
