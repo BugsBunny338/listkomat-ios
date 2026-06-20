@@ -201,10 +201,12 @@ Text("platí za ")
 ```
 (rendered small/secondary). The existing `zbývá` + `validFrom…endDate` timer stays as the primary number. Keep it readable: buffer line `.font(.caption2).foregroundStyle(.secondary)`.
 
-> Note: `Text(timerInterval:)` self-ticks; during the buffer the validity timer
-> sits frozen at full and the "platí za" timer counts to 0:00, then the validity
-> timer begins — no state update needed. After validity starts, the pending line
-> and "platí za 0:00" simply linger (acceptable; cleanup waits for the later push).
+> Note: `Text(timerInterval:)` self-ticks with no state update. The intent is the
+> validity timer sits frozen at full during the buffer, then starts at validFrom.
+> ⚠️ UNVERIFIED on device: the buffer timer likely does NOT stop at 0:00 — it may
+> count *up* past validFrom, and we can't hide the pending block without a push.
+> Confirm on device; if it climbs, swap to a single static caption
+> ("Platí od potvrzovací SMS"). Clean label cleanup waits for the later push.
 
 **Step 2: Dynamic Island expanded — mirror it**
 

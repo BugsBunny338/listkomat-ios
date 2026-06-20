@@ -22,8 +22,11 @@ correctly on a locked screen with zero server involvement:
 - **Buffer (first ~120 s):** show "Aktivuje se — čeká na potvrzovací SMS", a
   `platí za M:SS` countdown to `validFrom`, and the validity time sitting frozen
   at full (`zbývá 30:00`).
-- **At `validFrom` (automatic):** the validity timer begins ticking; the buffer
-  timer reads `0:00`. No push, no scheduled update.
+- **At `validFrom` (automatic):** the validity timer begins ticking. No push, no
+  scheduled update. ⚠️ The buffer timer does NOT cleanly stop at `0:00` — without a
+  push we can't hide the pending block, and `Text(timerInterval:)` may count *up*
+  past its end. **Verify on device;** if it climbs, swap the two timers for a single
+  static caption ("Platí od potvrzovací SMS"), which is honest in both phases.
 - **Potvrdit nyní:** in-app banner button — re-anchors `validFrom = now` for users
   whose confirmation SMS arrived early. (iOS 16.2 Live Activities aren't
   interactive; in-activity buttons are a deferred iOS-17+ enhancement — YAGNI.)

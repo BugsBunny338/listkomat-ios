@@ -71,7 +71,11 @@ private struct LockScreenView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 // Pending note: validity begins at the operator's confirmation SMS.
-                // Lingers after validFrom (cleanup waits for the later push); harmless.
+                // ⚠️ VERIFY ON DEVICE: without a push we can't hide this after
+                // validFrom, and Text(timerInterval:) may count UP past its end —
+                // so the "platí za" timer below could climb after activation. If it
+                // does, replace these two timers with a single static caption
+                // ("Platí od potvrzovací SMS"). Tracked in the LA timing design.
                 Text("čeká na potvrzovací SMS")
                     .font(.caption2)
                     .foregroundStyle(.orange)
