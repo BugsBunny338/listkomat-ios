@@ -36,6 +36,8 @@ struct AppTheme: Identifiable, Hashable {
         AppTheme(id: "clean", name: "Čistý",  band: nil,                  onBand: .ink,   mascot: nil,  isDark: false),
         AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true,  accentOverride: .brandTeal),
         AppTheme(id: "pink",  name: "Růžová", band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
+        AppTheme(id: "blahovka", name: "Bláhovka", band: Color(hex: 0xE6A52C), onBand: .ink, mascot: "🍺", isDark: false),
+        AppTheme(id: "bomba", name: "Bomba",  band: Color(hex: 0xE6A52C), onBand: .ink, mascot: "💣", isDark: false),
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
         AppTheme(id: "zaba",  name: "Žába",   band: Color(hex: 0x4CC76A), onBand: .ink,   mascot: "🐸", isDark: false),
         AppTheme(id: "meda",  name: "Méďa",   band: Color(hex: 0x8B5E3C), onBand: .white, mascot: "🐻", isDark: true),
