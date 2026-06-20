@@ -42,8 +42,9 @@ struct TransitMapView: UIViewRepresentable {
     var stopNames: [Int: String] = [:]   // FinalStopID → destination name
     var onSelect: (SelectedVehicle?) -> Void = { _ in }
     var recenter: Int = 0                // bump to re-center on the user / city
+    var accent: Color = .brandTeal       // theme accent (stop rings)
 
-    func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames) }
+    func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames, accent: accent) }
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
@@ -61,6 +62,7 @@ struct TransitMapView: UIViewRepresentable {
         context.coordinator.stops = stops
         context.coordinator.stopNames = stopNames   // loads after makeCoordinator, so refresh it here
         context.coordinator.onSelect = onSelect
+        context.coordinator.accent = accent
         context.coordinator.syncVehicles(vehicles, on: map)
         context.coordinator.refreshStops(on: map)
         context.coordinator.applyRecenter(recenter, fallback: initialCenter, on: map)
@@ -72,14 +74,15 @@ struct TransitMapView: UIViewRepresentable {
         let brno: Bool
         var stopNames: [Int: String]
         var onSelect: (SelectedVehicle?) -> Void = { _ in }
+        var accent: Color
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
         private let cap = 300
         private var lastRecenter = 0
 
-        init(stops: [Stop], brno: Bool, stopNames: [Int: String]) {
-            self.stops = stops; self.brno = brno; self.stopNames = stopNames
+        init(stops: [Stop], brno: Bool, stopNames: [Int: String], accent: Color) {
+            self.stops = stops; self.brno = brno; self.stopNames = stopNames; self.accent = accent
         }
 
         /// Re-center on the user (if located) else the city — only when the nonce
@@ -171,7 +174,7 @@ struct TransitMapView: UIViewRepresentable {
                 let view = (map.dequeueReusableAnnotationView(withIdentifier: StopMarkerView.reuse) as? StopMarkerView)
                     ?? StopMarkerView(annotation: s, reuseIdentifier: StopMarkerView.reuse)
                 view.annotation = s
-                view.configure(name: s.title ?? "")
+                view.configure(name: s.title ?? "", ring: UIColor(accent))
                 return view
             default:
                 return nil
@@ -189,8 +192,8 @@ struct TransitMapView: UIViewRepresentable {
     }
 }
 
-/// A stop: a bright teal dot (the app's identity color) with the stop name beneath,
-/// so stops pop and are labeled. Distinct from the colored vehicle bubbles.
+/// A stop: a dot ringed in the theme accent, with the stop name beneath, so stops
+/// pop and are labeled. Distinct from the (fixed-color) vehicle bubbles.
 final class StopMarkerView: MKAnnotationView {
     static let reuse = "stop"
     private let dot = UIView()
@@ -208,7 +211,6 @@ final class StopMarkerView: MKAnnotationView {
         dot.backgroundColor = .white
         dot.layer.cornerRadius = 7.5
         dot.layer.borderWidth = 3.5
-        dot.layer.borderColor = UIColor(Color.brandTeal).cgColor
         dot.layer.shadowColor = UIColor.black.cgColor
         dot.layer.shadowOpacity = 0.35
         dot.layer.shadowRadius = 2
@@ -225,7 +227,8 @@ final class StopMarkerView: MKAnnotationView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(name: String) {
+    func configure(name: String, ring: UIColor) {
+        dot.layer.borderColor = ring.cgColor
         label.text = name
         label.sizeToFit()
         label.frame = CGRect(x: bounds.midX - label.bounds.width / 2,

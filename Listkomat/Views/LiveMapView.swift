@@ -18,7 +18,7 @@ struct LiveMapView: View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
                        initialCenter: city.coordinate, brno: city.key == "brno",
                        stopNames: vm.stopNames, onSelect: { selected = $0 },
-                       recenter: recenterNonce)
+                       recenter: recenterNonce, accent: accent)
             .ignoresSafeArea()                       // map floats under the translucent top bar
             .overlay(alignment: .bottomTrailing) {
                 Button { recenterNonce += 1 } label: {
@@ -70,7 +70,7 @@ struct LiveMapView: View {
                         .accessibilityLabel("Zdroje dat")
                 }
             }
-            .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno") }
+            .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno", accent: accent) }
             .onAppear { vm.start() }
             .onDisappear { vm.stop() }
             .onChange(of: scenePhase) { phase in
