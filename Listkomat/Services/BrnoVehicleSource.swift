@@ -28,22 +28,33 @@ enum BrnoVehicleSource {
         func contains(lat: Double, lng: Double) -> Bool {
             lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng
         }
-        /// Generous Brno-agglomeration box (~±40 km around the city, incl. regional
-        /// lines like 258 well north of centre). Excludes the far reaches of JMK
-        /// (Znojmo/Hodonín/Břeclav) so the retained set is hundreds, not ~10k.
-        /// Widen here if vehicles ever vanish on pan-out.
+        /// Generous Brno-agglomeration box, kept as a cheap guard against the odd
+        /// far-flung feature. NOTE: geographic bounding is only a minor cut — the
+        /// feed's vehicles cluster in/around Brno, so the real reductions come from
+        /// `resultRecordCount` (source cap) + the freshness filter below.
         static let brnoArea = BoundingBox(minLat: 48.85, maxLat: 49.55, minLng: 16.15, maxLng: 17.05)
     }
 
-    /// Decode the ArcGIS GeoJSON, dropping inactive vehicles. When `bbox` is given,
-    /// also drop features outside it — the feed is region-wide (~10k), we only show Brno.
-    static func decode(_ data: Data, bbox: BoundingBox? = nil) throws -> [Vehicle] {
+    /// Keep only vehicles that reported within this window. `IsInactive=false`
+    /// includes parked/stale ghosts (median age ~7 min observed live), so this is
+    /// the real liveness signal — it both bounds the set and drops stale markers.
+    static let freshnessLimit: TimeInterval = 120
+
+    /// Decode the ArcGIS GeoJSON, dropping inactive vehicles. `bbox` drops features
+    /// outside the Brno area; `fresherThan` drops vehicles whose `TimeUpdated` is
+    /// older than that many seconds before `now` (nil = keep regardless of age).
+    static func decode(_ data: Data,
+                       bbox: BoundingBox? = nil,
+                       fresherThan: TimeInterval? = nil,
+                       now: Date = Date()) throws -> [Vehicle] {
         let fc = try JSONDecoder().decode(FeatureCollection.self, from: data)
         return fc.features.compactMap { f -> Vehicle? in
             guard f.properties.IsInactive != "true",
                   f.geometry.coordinates.count == 2 else { return nil }
             let lng = f.geometry.coordinates[0], lat = f.geometry.coordinates[1]
             if let bbox, !bbox.contains(lat: lat, lng: lng) { return nil }
+            if let fresherThan,
+               now.timeIntervalSince1970 - f.properties.TimeUpdated / 1000 > fresherThan { return nil }
             return Vehicle(
                 id: String(f.properties.ID),
                 coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
@@ -83,7 +94,9 @@ enum BrnoVehicleSource {
         // Only the 7 properties we decode (geometry is always returned for geojson).
         // TimeUpdated must stay — orderByFields sorts on it.
         let fields = "ID%2CBearing%2CLineName%2CVType%2CIsInactive%2CTimeUpdated%2CFinalStopID"
-        return URL(string: "\(base)?where=1%3D1&outFields=\(fields)&orderByFields=TimeUpdated%20DESC&f=geojson")!
+        // resultRecordCount IS honored (unlike where/geometry); with the DESC sort it
+        // returns the freshest 2000 — cuts the ~2.3 MB / 10k payload to ~0.45 MB.
+        return URL(string: "\(base)?where=1%3D1&outFields=\(fields)&orderByFields=TimeUpdated%20DESC&resultRecordCount=2000&f=geojson")!
     }
 }
 
@@ -96,6 +109,7 @@ struct BrnoLiveSource: VehicleSource {
         var req = URLRequest(url: BrnoVehicleSource.currentQueryURL())
         req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         let (data, _) = try await session.data(for: req)
-        return try BrnoVehicleSource.decode(data, bbox: .brnoArea)
+        return try BrnoVehicleSource.decode(data, bbox: .brnoArea,
+                                            fresherThan: BrnoVehicleSource.freshnessLimit)
     }
 }

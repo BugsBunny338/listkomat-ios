@@ -78,6 +78,32 @@ final class BrnoVehicleSourceTests: XCTestCase {
         }
     }
 
+    func testQueryURLCapsRecordCountAtSource() {
+        // The feed returns ~10k features (where/geometry filters ignored) but DOES
+        // honor resultRecordCount — so cap the freshest N at the source.
+        let url = BrnoVehicleSource.currentQueryURL().absoluteString
+        XCTAssertTrue(url.contains("resultRecordCount=2000"), "should cap records at source")
+    }
+
+    func testDecodeDropsStaleVehiclesByFreshness() throws {
+        // IsInactive=false includes parked/stale ghosts (median age ~7 min live).
+        // A freshness limit keeps only genuinely-live vehicles.
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let freshMs = Int((now.timeIntervalSince1970 - 30) * 1000)    // 30 s ago
+        let staleMs = Int((now.timeIntervalSince1970 - 600) * 1000)   // 10 min ago
+        let json = """
+        {"type":"FeatureCollection","features":[
+          {"geometry":{"type":"Point","coordinates":[16.607,49.195]},"properties":
+            {"LineName":"1","Bearing":10,"TimeUpdated":\(freshMs),"IsInactive":"false","VType":0,"ID":111}},
+          {"geometry":{"type":"Point","coordinates":[16.607,49.195]},"properties":
+            {"LineName":"2","Bearing":10,"TimeUpdated":\(staleMs),"IsInactive":"false","VType":0,"ID":222}}
+        ]}
+        """
+        let kept = try BrnoVehicleSource.decode(Data(json.utf8), fresherThan: 120, now: now)
+        XCTAssertEqual(kept.map(\.id), ["111"])                       // stale one dropped
+        XCTAssertEqual(try BrnoVehicleSource.decode(Data(json.utf8)).count, 2)  // no limit → keep both
+    }
+
     func testLayerNameRollsOverByYear() {
         XCTAssertEqual(BrnoVehicleSource.layerName(year: 2026), "Kordis_26_polohy")
         XCTAssertEqual(BrnoVehicleSource.layerName(year: 2027), "Kordis_27_polohy")
