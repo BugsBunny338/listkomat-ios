@@ -26,9 +26,16 @@ struct TicketLiveActivity: Widget {
                         .foregroundStyle(Color.brandTeal)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 2) {
+                        Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        (Text("čeká na potvrzovací SMS · platí za ")
+                            + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.orange)
+                    }
                 }
             } compactLeading: {
                 Image(systemName: "tram.fill")
@@ -63,11 +70,22 @@ private struct LockScreenView: View {
                 Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                // Pending note: validity begins at the operator's confirmation SMS.
+                // Lingers after validFrom (cleanup waits for the later push); harmless.
+                Text("čeká na potvrzovací SMS")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
             }
 
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 1) {
+                // Buffer countdown to validity — self-ticks to 0:00, no push needed.
+                (Text("platí za ")
+                    + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
                 Text("zbývá")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
