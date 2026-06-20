@@ -22,17 +22,31 @@ enum BrnoVehicleSource {
         let FinalStopID: Int?        // destination stop (numeric KORDIS id)
     }
 
-    /// Decode the ArcGIS GeoJSON, dropping inactive vehicles.
-    static func decode(_ data: Data) throws -> [Vehicle] {
+    /// A lat/lng rectangle. MapKit-free so the decoder stays pure/unit-testable.
+    struct BoundingBox {
+        let minLat, maxLat, minLng, maxLng: Double
+        func contains(lat: Double, lng: Double) -> Bool {
+            lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng
+        }
+        /// Generous Brno-agglomeration box (~±40 km around the city, incl. regional
+        /// lines like 258 well north of centre). Excludes the far reaches of JMK
+        /// (Znojmo/Hodonín/Břeclav) so the retained set is hundreds, not ~10k.
+        /// Widen here if vehicles ever vanish on pan-out.
+        static let brnoArea = BoundingBox(minLat: 48.85, maxLat: 49.55, minLng: 16.15, maxLng: 17.05)
+    }
+
+    /// Decode the ArcGIS GeoJSON, dropping inactive vehicles. When `bbox` is given,
+    /// also drop features outside it — the feed is region-wide (~10k), we only show Brno.
+    static func decode(_ data: Data, bbox: BoundingBox? = nil) throws -> [Vehicle] {
         let fc = try JSONDecoder().decode(FeatureCollection.self, from: data)
         return fc.features.compactMap { f -> Vehicle? in
             guard f.properties.IsInactive != "true",
                   f.geometry.coordinates.count == 2 else { return nil }
+            let lng = f.geometry.coordinates[0], lat = f.geometry.coordinates[1]
+            if let bbox, !bbox.contains(lat: lat, lng: lng) { return nil }
             return Vehicle(
                 id: String(f.properties.ID),
-                coordinate: CLLocationCoordinate2D(
-                    latitude: f.geometry.coordinates[1],
-                    longitude: f.geometry.coordinates[0]),
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                 bearing: f.properties.Bearing >= 0 ? f.properties.Bearing : nil,
                 line: f.properties.LineName,
                 kind: kind(forVType: f.properties.VType),
@@ -82,6 +96,6 @@ struct BrnoLiveSource: VehicleSource {
         var req = URLRequest(url: BrnoVehicleSource.currentQueryURL())
         req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         let (data, _) = try await session.data(for: req)
-        return try BrnoVehicleSource.decode(data)
+        return try BrnoVehicleSource.decode(data, bbox: .brnoArea)
     }
 }

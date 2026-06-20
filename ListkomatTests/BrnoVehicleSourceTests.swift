@@ -49,6 +49,27 @@ final class BrnoVehicleSourceTests: XCTestCase {
         XCTAssertEqual(BrnoVehicleSource.kind(forVType: 5), .train)
     }
 
+    func testDecodeDropsFeaturesOutsideBoundingBox() throws {
+        let withFaraway = """
+        {"type":"FeatureCollection","features":[
+          {"geometry":{"type":"Point","coordinates":[16.6012,49.4798]},"properties":
+            {"LineName":"258","Bearing":225,"TimeUpdated":1767776798912,"IsInactive":"false","VType":4,"ID":21856}},
+          {"geometry":{"type":"Point","coordinates":[14.4378,50.0755]},"properties":
+            {"LineName":"22","Bearing":10,"TimeUpdated":1767776798912,"IsInactive":"false","VType":0,"ID":99999}}
+        ]}
+        """
+        let bounded = try BrnoVehicleSource.decode(Data(withFaraway.utf8), bbox: .brnoArea)
+        XCTAssertEqual(bounded.map(\.id), ["21856"])           // Prague tram dropped
+
+        let unbounded = try BrnoVehicleSource.decode(Data(withFaraway.utf8))
+        XCTAssertEqual(unbounded.count, 2)                     // no bbox → keep both
+    }
+
+    func testBrnoAreaContainsCityCenter() {
+        XCTAssertTrue(BrnoVehicleSource.BoundingBox.brnoArea.contains(lat: 49.195, lng: 16.607))
+        XCTAssertFalse(BrnoVehicleSource.BoundingBox.brnoArea.contains(lat: 50.075, lng: 14.437))
+    }
+
     func testQueryURLRequestsOnlyNeededFieldsNotStar() {
         let url = BrnoVehicleSource.currentQueryURL().absoluteString
         XCTAssertFalse(url.contains("outFields=*"), "should not request all fields")
