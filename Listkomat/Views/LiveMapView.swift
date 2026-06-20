@@ -9,6 +9,10 @@ struct LiveMapView: View {
     @State private var selected: SelectedVehicle?
     @State private var recenterNonce = 0
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("themeId") private var themeId = AppTheme.default.id
+
+    /// Follow the user's chosen theme accent (not a fixed teal).
+    private var accent: Color { AppTheme.resolve(themeId).accent }
 
     var body: some View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
@@ -23,7 +27,7 @@ struct LiveMapView: View {
                         .padding(12)
                         .background(.regularMaterial, in: Circle())
                 }
-                .tint(.brandTeal)
+                .tint(accent)
                 .padding(.trailing, 16)
                 .padding(.bottom, selected == nil ? 28 : 104)   // lift above the card
                 .animation(.spring(response: 0.3), value: selected?.id)
@@ -34,7 +38,7 @@ struct LiveMapView: View {
             .overlay(alignment: .center) {
                 if !vm.didLoadOnce {
                     VStack(spacing: 10) {
-                        ProgressView()
+                        ProgressView().tint(accent)
                         Text("Načítám vozidla…").font(.footnote).foregroundStyle(.secondary)
                     }
                     .padding(18)

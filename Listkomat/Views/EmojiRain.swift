@@ -67,7 +67,10 @@ struct RainLayer: View {
     }
 
     private func addBurst() {
-        guard trigger > 0, let mascot = AppTheme.resolve(themeId).mascot else { return }
+        // No `trigger > 0` guard: onChange only fires on a real change (a tap), and
+        // the closure captures a one-step-stale `trigger`, so guarding on it ate the
+        // very first tap. Resolve the current mascot from @AppStorage instead.
+        guard let mascot = AppTheme.resolve(themeId).mascot else { return }
         recent += 1
         let count = min(10 + recent * 6, 60)
         drops.append(contentsOf: RainDrop.burst(mascot, count: count, now: Date()))
