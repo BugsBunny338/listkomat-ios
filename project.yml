@@ -9,7 +9,7 @@ options:
 settings:
   base:
     MARKETING_VERSION: "2.0"
-    CURRENT_PROJECT_VERSION: "4"
+    CURRENT_PROJECT_VERSION: "5"
     SWIFT_VERSION: "5.0"            # language mode; bump to 6.0 once it builds clean
     DEVELOPMENT_TEAM: "35AS7FL468" # Jiri Zajic team (paid program)
     CODE_SIGN_STYLE: Automatic
