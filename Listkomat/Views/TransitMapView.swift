@@ -79,6 +79,7 @@ struct TransitMapView: UIViewRepresentable {
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
         private let cap = 300
+        private let stopCap = 150               // stops are context — fewer than vehicles
         private var lastRecenter = 0
 
         init(stops: [Stop], brno: Bool, stopNames: [Int: String], accent: Color) {
@@ -110,7 +111,15 @@ struct TransitMapView: UIViewRepresentable {
                 seen.insert(v.id)
                 if let a = vehicleAnn[v.id] {
                     a.apply(v); a.destination = destination(v)
-                    UIView.animate(withDuration: 0.9) { a.coordinate = v.coordinate }
+                    // Only animate meaningful moves; skip the per-poll UIView.animate
+                    // for vehicles that barely shifted (~>5 m), which is most of them.
+                    let moved = abs(a.coordinate.latitude  - v.coordinate.latitude)  > 0.00005
+                             || abs(a.coordinate.longitude - v.coordinate.longitude) > 0.00005
+                    if moved {
+                        UIView.animate(withDuration: 0.9) { a.coordinate = v.coordinate }
+                    } else {
+                        a.coordinate = v.coordinate
+                    }
                     if let view = map.view(for: a) as? MKMarkerAnnotationView { style(view, v.kind, v.line) }
                 } else {
                     let a = VehicleAnnotation(v); a.brno = brno; a.destination = destination(v)
@@ -130,7 +139,7 @@ struct TransitMapView: UIViewRepresentable {
                 if !stopAnn.isEmpty { map.removeAnnotations(Array(stopAnn.values)); stopAnn.removeAll() }
                 return
             }
-            let visible = stops.filter { region.contains($0.coordinate) }.prefix(cap)
+            let visible = stops.filter { region.contains($0.coordinate) }.prefix(stopCap)
             var seen = Set<String>()
             for s in visible {
                 seen.insert(s.id)
@@ -210,11 +219,9 @@ final class StopMarkerView: MKAnnotationView {
         dot.frame = bounds
         dot.backgroundColor = .white
         dot.layer.cornerRadius = 7.5
-        dot.layer.borderWidth = 3.5
-        dot.layer.shadowColor = UIColor.black.cgColor
-        dot.layer.shadowOpacity = 0.35
-        dot.layer.shadowRadius = 2
-        dot.layer.shadowOffset = CGSize(width: 0, height: 1)
+        // No drop-shadow: per-marker offscreen rendering was a first-load hitch on
+        // older devices. A slightly heavier ring keeps the dot crisp without it.
+        dot.layer.borderWidth = 4
         addSubview(dot)
 
         label.font = .systemFont(ofSize: 11, weight: .semibold)
