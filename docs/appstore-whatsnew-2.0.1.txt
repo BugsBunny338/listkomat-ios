@@ -1,0 +1,12 @@
+App Store "What's New" — Lístkomat 2.0.1
+(written fresh for this release, not carried over from 2.0)
+
+--- Czech (primary) ---
+• Stabilnější a plynulejší živá mapa.
+• Živá aktivita lístku nově počítá s potvrzovací SMS – platnost běží až od potvrzení, takže lístek neukazuje „platí" dřív, než opravdu platí (potvrdit můžete i ručně).
+• Barevný motiv se teď propisuje i do živé aktivity a Dynamic Islandu.
+
+--- English ---
+• A smoother, more stable live map.
+• The ticket Live Activity now accounts for the confirmation SMS — validity starts at confirmation, so it won't show "valid" before it really is (you can also confirm manually).
+• Your color theme now extends to the Live Activity and Dynamic Island.
