@@ -1,0 +1,15 @@
+Lístkomat 2.0.1 — what changed in this update:
+• Live transit map: performance and stability improvements.
+• Ticket Live Activity: the validity countdown now accounts for the operator's
+  confirmation SMS (it shows a brief "waiting for confirmation" state instead of
+  claiming the ticket is valid the instant the SMS is sent).
+• Visual: the chosen color theme now extends to the Live Activity / Dynamic Island.
+
+Purchase mechanism is UNCHANGED from previous approved versions: a ticket is
+bought by sending a carrier-billed premium SMS (price = ticket price), which
+requires a Czech SIM. A reviewer on a foreign SIM or without a SIM cannot
+complete a purchase — this is expected and not a bug. No in-app purchase applies
+(this is a real-world public-transport ticket billed by the carrier).
+
+The live map uses open, CC-BY-licensed public transit data; it needs no account,
+no purchase, and no SIM.
