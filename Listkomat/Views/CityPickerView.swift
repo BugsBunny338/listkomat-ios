@@ -30,6 +30,7 @@ struct CityPickerView: View {
                 }
             }
         }
+        .tint(accent)   // sheets present in a fresh environment — re-apply the accent
     }
 
     @ViewBuilder

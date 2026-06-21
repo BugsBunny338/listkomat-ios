@@ -45,6 +45,7 @@ struct DataSourcesView: View {
                 }
             }
         }
+        .tint(accent)   // sheets present in a fresh environment — re-apply the accent
         .presentationDetents([.medium])
     }
 }

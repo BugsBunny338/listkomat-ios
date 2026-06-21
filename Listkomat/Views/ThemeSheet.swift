@@ -38,6 +38,7 @@ struct ThemeSheet: View {
                 }
             }
         }
+        .tint(AppTheme.resolve(themeId).accent)   // live accent; sheet has its own environment
         .presentationDetents([.medium, .large])
     }
 
