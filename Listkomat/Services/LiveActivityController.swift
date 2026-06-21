@@ -36,9 +36,11 @@ final class LiveActivityController: ObservableObject {
         let state = TicketActivityAttributes.ContentState(
             sentAt: timeline.sentAt, validFrom: timeline.validFrom, endDate: timeline.endDate)
         do {
-            // staleDate = validFrom: the system re-renders the widget when it passes,
-            // flipping pending → valid with no push (Live Activities can't otherwise
-            // re-render on a locked screen between updates).
+            // staleDate = validFrom DELIBERATELY repurposes `isStale` as a phase flag:
+            // the system re-renders the widget when staleDate passes, which is the only
+            // backend-free way to flip pending → valid on a locked screen. The widget
+            // gates the pending block on `!context.isStale`. ⚠️ Do NOT "fix" this back
+            // to staleDate = endDate — that would break the pending→valid transition.
             _ = try Activity.request(attributes: attributes,
                                      content: ActivityContent(state: state, staleDate: timeline.validFrom))
             active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration,
@@ -66,6 +68,9 @@ final class LiveActivityController: ObservableObject {
         Task {
             // staleDate = now → widget is immediately stale → flips to the valid layout.
             await activity.update(ActivityContent(state: new, staleDate: now))
+            // Reconcile: no-op on success, but if the activity was ended/dismissed out
+            // from under us the optimistic `active` is corrected (banner ↔ widget agree).
+            syncState()
         }
     }
 

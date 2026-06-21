@@ -7,6 +7,9 @@ struct ThemeSheet: View {
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
     @Environment(\.dismiss) private var dismiss
 
+    /// Live accent for the current selection (the sheet has its own environment).
+    private var accent: Color { AppTheme.resolve(themeId).accent }
+
     var body: some View {
         NavigationStack {
             List {
@@ -38,7 +41,7 @@ struct ThemeSheet: View {
                 }
             }
         }
-        .tint(AppTheme.resolve(themeId).accent)   // live accent; sheet has its own environment
+        .tint(accent)   // sheet has its own environment — re-apply the accent
         .presentationDetents([.medium, .large])
     }
 
@@ -66,7 +69,7 @@ struct ThemeSheet: View {
             if theme.id == themeId {
                 Image(systemName: "checkmark")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(AppTheme.resolve(themeId).accent)
+                    .foregroundStyle(accent)
             }
         }
         .contentShape(Rectangle())
