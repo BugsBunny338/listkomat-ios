@@ -44,4 +44,7 @@ struct TicketActivityAttributes: ActivityAttributes {
     var cityName: String
     var ticketLabel: String   // e.g. "30 min"
     var priceKc: Int
+    /// Theme accent as 0xRRGGBB, so the Live Activity matches the in-app accent.
+    /// Optional → a legacy 2.0 activity (no accent) decodes fine and falls back to teal.
+    var accentHex: UInt32?
 }

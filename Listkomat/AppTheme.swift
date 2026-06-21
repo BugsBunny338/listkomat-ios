@@ -85,14 +85,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 }
 
 extension Color {
-    /// Build a color from a 0xRRGGBB literal.
-    init(hex: UInt32) {
-        self.init(
-            red:   Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue:  Double(hex & 0xFF) / 255
-        )
-    }
+    // Color(hex:) now lives in Shared/BrandColor.swift so the widget can use it too.
 
     /// Soft near-black for text on light bands (gentler than pure black).
     static let ink = Color(white: 0.12)

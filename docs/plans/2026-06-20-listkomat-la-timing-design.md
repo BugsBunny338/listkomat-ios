@@ -22,11 +22,14 @@ correctly on a locked screen with zero server involvement:
 - **Buffer (first ~120 s):** show "Aktivuje se — čeká na potvrzovací SMS", a
   `platí za M:SS` countdown to `validFrom`, and the validity time sitting frozen
   at full (`zbývá 30:00`).
-- **At `validFrom` (automatic):** the validity timer begins ticking. No push, no
-  scheduled update. ⚠️ The buffer timer does NOT cleanly stop at `0:00` — without a
-  push we can't hide the pending block, and `Text(timerInterval:)` may count *up*
-  past its end. **Verify on device;** if it climbs, swap the two timers for a single
-  static caption ("Platí od potvrzovací SMS"), which is honest in both phases.
+- **At `validFrom` (automatic):** the validity timer begins ticking, and the whole
+  pending block (orange "čeká…" line + "platí za" timer) is HIDDEN. Mechanism
+  (device-tested 2026-06-21): set the activity's `staleDate = validFrom`; the system
+  re-renders the widget when it passes, and the widget gates the pending block on
+  `!context.isStale`. `confirmNow()` updates with `staleDate = now` to flip instantly.
+  This is the only backend-free way to re-render a Live Activity on a locked screen.
+  ⚠️ Watch on device for any system "stale" dimming of the valid layout; none
+  expected, but unverified across iOS versions.
 - **Potvrdit nyní:** in-app banner button — re-anchors `validFrom = now` for users
   whose confirmation SMS arrived early. (iOS 16.2 Live Activities aren't
   interactive; in-activity buttons are a deferred iOS-17+ enhancement — YAGNI.)

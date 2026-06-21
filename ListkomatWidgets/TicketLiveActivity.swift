@@ -4,65 +4,82 @@ import WidgetKit
 
 /// The ticket time-left Live Activity: lock screen / banner + Dynamic Island.
 /// The countdown uses Text(timerInterval:) so it ticks on-device, no pushes.
+///
+/// Pending vs valid is gated on `context.isStale`: `start()` sets the activity's
+/// staleDate = validFrom, so the system re-renders (flipping pending → valid) when
+/// it passes — and `confirmNow()` updates with a past staleDate to flip instantly.
+/// No push needed.
 struct TicketLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TicketActivityAttributes.self) { context in
             LockScreenView(context: context)
                 .padding(16)
-                .activityBackgroundTint(Color.brandTeal.opacity(0.12))
-                .activitySystemActionForegroundColor(Color.brandTeal)
+                .activityBackgroundTint(accent(context).opacity(0.12))
+                .activitySystemActionForegroundColor(accent(context))
         } dynamicIsland: { context in
-            DynamicIsland {
+            let tint = accent(context)
+            let pending = !context.isStale
+            return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Label(context.attributes.cityName, systemImage: "tram.fill")
                         .font(.headline)
-                        .foregroundStyle(Color.brandTeal)
+                        .foregroundStyle(tint)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                         .monospacedDigit()
                         .multilineTextAlignment(.trailing)
                         .frame(width: 80)
-                        .foregroundStyle(Color.brandTeal)
+                        .foregroundStyle(tint)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(spacing: 2) {
                         Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        (Text("čeká na potvrzovací SMS · platí za ")
-                            + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
-                            .font(.caption2)
-                            .monospacedDigit()
-                            .foregroundStyle(.orange)
+                        if pending {
+                            (Text("čeká na potvrzovací SMS · platí za ")
+                                + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
             } compactLeading: {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(Color.brandTeal)
+                    .foregroundStyle(tint)
             } compactTrailing: {
                 Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                     .monospacedDigit()
                     .frame(width: 46)
-                    .foregroundStyle(Color.brandTeal)
+                    .foregroundStyle(tint)
             } minimal: {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(Color.brandTeal)
+                    .foregroundStyle(tint)
             }
         }
     }
 }
 
+/// Theme accent carried in the attributes; falls back to teal for legacy activities.
+private func accent(_ context: ActivityViewContext<TicketActivityAttributes>) -> Color {
+    context.attributes.accentHex.map(Color.init(hex:)) ?? .brandTeal
+}
+
 private struct LockScreenView: View {
     let context: ActivityViewContext<TicketActivityAttributes>
 
+    private var tint: Color { accent(context) }
+    private var pending: Bool { !context.isStale }   // valid once the activity goes stale at validFrom
+
     var body: some View {
-        // City name + countdown use the default (primary) colour so they stay
-        // legible on the dimmed Always-On display; teal is only the icon accent.
+        // City name + the big countdown use the default (primary) colour so they
+        // stay legible on the dimmed Always-On display; the accent tints the icon.
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: "tram.fill")
                 .font(.title3)
-                .foregroundStyle(Color.brandTeal)
+                .foregroundStyle(tint)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.cityName)
@@ -70,26 +87,25 @@ private struct LockScreenView: View {
                 Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                // Pending note: validity begins at the operator's confirmation SMS.
-                // ⚠️ VERIFY ON DEVICE: without a push we can't hide this after
-                // validFrom, and Text(timerInterval:) may count UP past its end —
-                // so the "platí za" timer below could climb after activation. If it
-                // does, replace these two timers with a single static caption
-                // ("Platí od potvrzovací SMS"). Tracked in the LA timing design.
-                Text("čeká na potvrzovací SMS")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
+                if pending {
+                    // Validity begins at the operator's confirmation SMS; hidden once valid.
+                    Text("čeká na potvrzovací SMS")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
             }
 
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 1) {
-                // Buffer countdown to validity — self-ticks to 0:00, no push needed.
-                (Text("platí za ")
-                    + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
-                    .font(.caption2)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                if pending {
+                    // Buffer countdown to validity — self-ticks; gone once valid.
+                    (Text("platí za ")
+                        + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
                 Text("zbývá")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

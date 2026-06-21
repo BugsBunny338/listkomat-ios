@@ -60,12 +60,12 @@ struct TicketListView: View {
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
                 pending = nil
                 if case .sent = result {
-                    liveActivity.start(city: city, ticket: ticket)
+                    liveActivity.start(city: city, ticket: ticket, accent: accent)
                 }
                 #if targetEnvironment(simulator)
                 // The simulator can't actually send SMS, so start the Live
                 // Activity regardless — lets us demo the time-left countdown.
-                liveActivity.start(city: city, ticket: ticket)
+                liveActivity.start(city: city, ticket: ticket, accent: accent)
                 #endif
             }
         }

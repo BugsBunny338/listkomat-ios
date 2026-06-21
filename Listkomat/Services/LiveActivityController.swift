@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import SwiftUI
 
 /// Starts / ends the ticket time-left Live Activity and tracks whether one is
 /// running so the app can show an "end ticket" control. The countdown starts on
@@ -21,7 +22,7 @@ final class LiveActivityController: ObservableObject {
         observe()
     }
 
-    func start(city: City, ticket: Ticket) {
+    func start(city: City, ticket: Ticket, accent: Color) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         endAllNow()
         let timeline = TicketTimeline.make(sentAt: Date(),
@@ -29,13 +30,17 @@ final class LiveActivityController: ObservableObject {
         let attributes = TicketActivityAttributes(
             cityName: city.name,
             ticketLabel: ticket.duration,
-            priceKc: ticket.priceKc
+            priceKc: ticket.priceKc,
+            accentHex: accent.rgbHex
         )
         let state = TicketActivityAttributes.ContentState(
             sentAt: timeline.sentAt, validFrom: timeline.validFrom, endDate: timeline.endDate)
         do {
+            // staleDate = validFrom: the system re-renders the widget when it passes,
+            // flipping pending → valid with no push (Live Activities can't otherwise
+            // re-render on a locked screen between updates).
             _ = try Activity.request(attributes: attributes,
-                                     content: ActivityContent(state: state, staleDate: timeline.endDate))
+                                     content: ActivityContent(state: state, staleDate: timeline.validFrom))
             active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration,
                                   validFrom: timeline.validFrom)
         } catch {
@@ -46,14 +51,21 @@ final class LiveActivityController: ObservableObject {
     /// User got the confirmation SMS early — re-anchor validity to now.
     func confirmNow() {
         guard let activity = Activity<TicketActivityAttributes>.activities.first else { return }
+        let now = Date()
         let s = activity.content.state
         let timeline = TicketTimeline(sentAt: s.sentAt, validFrom: s.validFrom, endDate: s.endDate)
-            .confirmed(at: Date())
+            .confirmed(at: now)
         let new = TicketActivityAttributes.ContentState(
             sentAt: timeline.sentAt, validFrom: timeline.validFrom, endDate: timeline.endDate)
+        // Flip the in-app banner immediately — don't wait on the async update + state
+        // re-read, which lagged a tap behind (the "needs two taps" bug).
+        if let a = active {
+            active = ActiveTicket(cityName: a.cityName, ticketLabel: a.ticketLabel,
+                                  validFrom: timeline.validFrom)
+        }
         Task {
-            await activity.update(ActivityContent(state: new, staleDate: timeline.endDate))
-            syncState()
+            // staleDate = now → widget is immediately stale → flips to the valid layout.
+            await activity.update(ActivityContent(state: new, staleDate: now))
         }
     }
 
