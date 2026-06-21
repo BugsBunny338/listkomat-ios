@@ -29,6 +29,7 @@ struct LocationPrimerView: View {
             .padding(.top, 4)
         }
         .padding(24)
+        .tint(accent)   // theme the prominent "Pokračovat" button (sheet env doesn't inherit it)
         .presentationDetents([.medium])
     }
 }
