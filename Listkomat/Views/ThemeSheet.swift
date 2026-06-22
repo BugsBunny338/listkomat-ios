@@ -23,7 +23,7 @@ struct ThemeSheet: View {
                     .labelsHidden()
                 }
 
-                Section("Motiv") {
+                Section {
                     ForEach(AppTheme.presets) { theme in
                         Button {
                             themeId = theme.id
@@ -31,6 +31,19 @@ struct ThemeSheet: View {
                         } label: { row(theme) }
                             .buttonStyle(.plain)
                     }
+                } header: {
+                    Text("Motiv")
+                } footer: {
+                    // App version footer — the conventional bottom-of-settings spot.
+                    // Build number included so bug reports are pinned to a build.
+                    HStack {
+                        Spacer()
+                        Text("Lístkomat \(Bundle.main.versionAndBuild)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.top, 8)
                 }
             }
             .navigationTitle("Vzhled")
