@@ -3,12 +3,13 @@ import CoreLocation
 
 /// Kind of transit vehicle, for tinting the map marker.
 enum VehicleKind: String, CaseIterable {
-    case tram, trolleybus, bus, train
+    case tram, metro, trolleybus, bus, train
 
     /// Czech name shown in callouts and the legend.
     var czechName: String {
         switch self {
         case .tram: return "Tramvaj"
+        case .metro: return "Metro"
         case .trolleybus: return "Trolejbus"
         case .bus: return "Autobus"
         case .train: return "Vlak"
@@ -24,6 +25,7 @@ enum VehicleKind: String, CaseIterable {
     var color: Color {
         switch self {
         case .tram: return Color(hex: 0xD7263D)        // crimson
+        case .metro: return Color(hex: 0xE0812B)       // amber (Prague only)
         case .trolleybus: return Color(hex: 0x2A9D8F)  // teal-green
         case .bus: return Color(hex: 0x2E6F95)         // steel blue
         case .train: return Color(hex: 0x6A4C93)       // purple
@@ -40,7 +42,8 @@ struct Vehicle: Identifiable, Equatable {
     let line: String          // "1", "258"
     let kind: VehicleKind
     let updatedAt: Date
-    let destinationId: Int?   // FinalStopID; resolved to a stop name for the callout
+    let destinationId: Int?       // Brno: FinalStopID; resolved to a stop name for the callout
+    let destinationName: String?  // Prague: destination text (trip_headsign), used directly
 
     static func == (a: Vehicle, b: Vehicle) -> Bool {
         a.id == b.id

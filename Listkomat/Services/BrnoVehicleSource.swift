@@ -62,7 +62,8 @@ enum BrnoVehicleSource {
                 line: f.properties.LineName,
                 kind: kind(forVType: f.properties.VType),
                 updatedAt: Date(timeIntervalSince1970: f.properties.TimeUpdated / 1000),
-                destinationId: (f.properties.FinalStopID ?? 0) > 0 ? f.properties.FinalStopID : nil)
+                destinationId: (f.properties.FinalStopID ?? 0) > 0 ? f.properties.FinalStopID : nil,
+                destinationName: nil)   // Brno resolves destinationId → name in the view
         }
     }
 
