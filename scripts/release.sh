@@ -2,6 +2,9 @@
 #
 # One-shot App Store release for Lístkomat: archive -> export -> upload -> submit.
 #
+# Human habits around a release (fresh What's New, don't cancel in-review, check
+# Xcode Organizer after): see docs/release-checklist.md.
+#
 # Before running, bump the version in project.yml:
 #   - CURRENT_PROJECT_VERSION  -> +1 for every upload (must be unique per version)
 #   - MARKETING_VERSION        -> bump for a new user-facing version (e.g. 1.1)

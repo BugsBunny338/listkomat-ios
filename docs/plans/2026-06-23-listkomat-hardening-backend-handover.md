@@ -29,29 +29,35 @@ Source specs this consolidates:
 
 ---
 
-## Track A — Observability (client-only, can start now)
+## Track A — Observability — RESOLVED 2026-07-12: a habit, not a feature
 
 From hardening §3. Goal: know *if/when/why* the app crashes or hangs, without
 betraying the "Data Not Collected" / zero-third-party-SDK ethos.
 
-- **Baseline, no code (do this as a habit immediately):** Xcode → Organizer →
-  **Crashes** gives symbolicated reports from opted-in App Store users (~1–2 day
-  lag). "Check Organizer after each release" should be routine. For an urgent
-  report, a friendly user can share Settings → Privacy & Security → Analytics &
-  Improvements → **Analytics Data** (`Listkomat-*.ips` = code crash;
-  `JetsamEvent-*` = memory kill).
-- **App-side (MetricKit):** adopt `MXMetricManager` — Apple's built-in diagnostics
-  delivering `MXCrashDiagnostic` / `MXHangDiagnostic` / `MXAppLaunchMetric` on next
-  launch. **Registering the subscriber is client-only**; but *doing anything useful
-  off-device with the payloads requires Track B* (a sink to POST to).
-- **⚠️ Open decision (blocks the off-device half):** collecting diagnostics
-  off-device likely forces adding "Crash Data / Diagnostics" to the App Store
-  privacy label. Keeping "Data Not Collected" pristine means Organizer-only. **Decide
-  before building the sink.** Explicitly avoid Sentry/Crashlytics.
+**Decision (2026-07-12):** for a hobby app with **no third-party SDKs and no
+backend**, the honest best practice is **Xcode Organizer, and nothing else** — no
+code this session. The reasoning:
 
-**Smallest first step:** register a MetricKit subscriber that just logs locally
-(no network) — proves the plumbing, changes no privacy label, and is ready to point
-at a sink once Track B lands.
+- **Organizer already covers it, for free.** The **Crashes** tab gives
+  symbolicated, grouped stack traces from opted-in users; the **Metrics** tab is
+  *MetricKit-powered under the hood* (collected by Apple, no code) and shows hang
+  rate, launch time, memory, disk, battery. That is everything a zero-code setup
+  can produce, with **no privacy-label cost**. This directly serves the real goal:
+  when a friend reports a crash, look in Organizer for it.
+- **A custom `MXMetricManager` subscriber earns nothing right now.** Registering it
+  is client-only, but with no backend to POST payloads to, the diagnostics just sit
+  on the user's phone and never reach us. It's groundwork for a sink that doesn't
+  exist — **YAGNI until Track B**. If/when Track B lands, revisit as **B2** below.
+- **The breadcrumb gap is accepted.** The one thing Organizer lacks is the "what
+  were they doing before the crash" trail; only crash-reporter SDKs or a custom
+  backend give that, and both break "Data Not Collected." A stack trace is enough.
+- **Privacy-label question is therefore moot for now** — we stay Organizer-only, so
+  nothing forces a "Crash Data / Diagnostics" label. It only reopens if we ever
+  build the B2 sink. Explicitly avoid Sentry/Crashlytics regardless.
+
+**Outcome:** the Organizer habit is now written into the
+[release checklist](../release-checklist.md) as a post-release step. No app code
+changed. The MetricKit subscriber idea moves to Track B / B2 below.
 
 ---
 

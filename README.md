@@ -27,6 +27,7 @@ current family, but the original app predates the rename — so this is the cano
 
 - [v1 design](docs/plans/2026-06-15-listkomat-revival-v1-design.md)
 - [Hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md) — what's next
+- [Release checklist](docs/release-checklist.md) — habits around every App Store release (incl. Organizer observability)
 
 ## Status
 
@@ -34,6 +35,8 @@ current family, but the original app predates the rename — so this is the cano
 Live Activity with a validity buffer (pending → active, *Potvrdit nyní*), and a
 Brno live-vehicle map.
 
-Next up (not started): observability (MetricKit), and the v2.1 backend that
-unlocks the Prague live map, off-device diagnostics, and locked-screen push. See
-the [hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md).
+Observability is handled by Xcode Organizer as a post-release habit (no code, no
+third-party SDKs — see the [release checklist](docs/release-checklist.md)). Next
+build-work is the v2.1 backend that unlocks the Prague live map, off-device
+diagnostics, and locked-screen push. See the
+[hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md).
