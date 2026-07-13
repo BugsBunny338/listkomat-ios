@@ -80,35 +80,58 @@ caching. Design it as a small multi-purpose service, since B1–B3 all hang off 
 - Ship path: flip Prague's `hasLiveMap` in `listkomat-catalog` once code + proxy
   are live — **no app release needed** for the flip.
 
-**B2 — MetricKit diagnostics sink** (finishes Track A's off-device half).
-- POST the MetricKit payloads to an endpoint on the same proxy. Gated on the
-  privacy-label decision above.
+**B2 — MetricKit diagnostics sink — DEFERRED INDEFINITELY 2026-07-12.**
+- Would POST MetricKit payloads to an endpoint on the same proxy. But Track A
+  resolved to **Organizer-only** to keep the "Data Not Collected" label pristine,
+  so there's no sink to build. Only reopens if we ever decide off-device
+  diagnostics are worth the privacy-label change — currently we've decided they're
+  not. See the Track A section above.
 
-**B3 — Locked-screen push for pending → active** (deferred from the LA timing plan).
-- Today the pending → active flip at `validFrom` only happens while the app is open
-  (an in-app `TimelineView` ticks it). On a **locked** screen the Live Activity
-  can't self-update at `validFrom`.
-- Fix = an **APNs push** (ActivityKit push token → server → push at `validFrom`)
-  to flip the label cleanly without the app foregrounded. Needs the proxy + APNs
-  auth key + storing each activity's push token.
+**B3 — Locked-screen push for pending → active — DROPPED 2026-07-13 (already solved client-only).**
+- ~~Today the flip only happens while the app is open; on a locked screen the Live
+  Activity can't self-update.~~ **This premise was wrong.** It described the *in-app
+  banner* (`ContentView.swift:159`, a `TimelineView` — app-open only) and missed the
+  *widget's* separate mechanism.
+- The locked-screen flip is **already implemented client-only**: `start()` sets
+  `staleDate = validFrom` (`LiveActivityController.swift:45`), so iOS marks the
+  activity stale and re-renders it on the locked screen at `validFrom` — riding the
+  same system timeline that ticks the `Text(timerInterval:)` countdowns with no
+  push. The widget gates `pending = !context.isStale`; `confirmNow()` sets
+  `staleDate = now` for an instant flip. There's a ⚠️ in the code warning not to
+  revert it.
+- **No APNs push, token store, or scheduler needed.** Caveats: (1) the stale
+  re-render has minor system slack — a push wouldn't be more precise, and even if it
+  lags, only the "čeká" *label* lingers a few seconds while the countdowns stay
+  correct; (2) confirm once on a **real locked device** (send ticket → lock → wait
+  ~2 min → "čeká na potvrzovací SMS" should vanish at `validFrom`). Only revisit a
+  push if that field check ever shows it flaky.
 
 ---
 
-## Suggested sequencing
+## Suggested sequencing (updated 2026-07-12/13)
 
-1. **Track A baseline now** — make Organizer-checking a release habit; land the
-   local-only MetricKit subscriber. Zero backend, zero privacy-label risk.
-2. **Decide the privacy-label question** — it gates B2 and the useful half of A.
-3. **Track B** as a unit, because B1/B2/B3 share the proxy. **B1 (Prague map)** is
-   the highest user value and the natural reason to build the server; B2 and B3
-   ride along once it exists.
+Track A is **done** (Organizer habit → [release checklist](../release-checklist.md),
+no code). B2 is deferred and B3 is dropped (see above). So Track B is now **just
+B1**, and the only open build-work is:
+
+1. **B1 — Prague live map.** The one remaining feature. It's the sole reason to
+   stand up the proxy, and the proxy is a plain stateless cache (no token store, no
+   scheduler, no APNs) now that B2/B3 are gone. Design it as its own plan when you
+   start (`superpowers:writing-plans`). Open sub-decision to settle first: **have
+   the proxy decode GTFS-RT server-side and return simple JSON** (keeps
+   swift-protobuf out of the app, smaller payloads, `PragueVehicleSource` stays a
+   trivial JSON decode like Brno) **vs. pass raw protobuf through** (app adds
+   swift-protobuf). Server-side decode is the likely win for a hobby app.
 
 ## Key files / touchpoints
 - `Listkomat/Services/BrnoVehicleSource.swift` — template for `PragueVehicleSource`.
-- `Listkomat/Services/VehicleSource.swift` — the source protocol.
-- `Shared/TicketActivityAttributes.swift`, `Services/LiveActivityController.swift` —
-  where B3's push-driven state flip lands.
+- `Listkomat/Services/VehicleSource.swift` — the source protocol (yields `Vehicle`,
+  now incl. `destinationId`).
 - `Listkomat/Resources/tickets.json` + the `listkomat-catalog` repo — the
-  `hasLiveMap` flip for Prague.
-- Release via the existing CLI pipeline; keep the project habits: **write fresh
-  "What's New"** (don't carry over) and **don't cancel a build in review**.
+  `hasLiveMap` flip for Prague (no app release needed).
+- Live Activity flip (B3) is already handled client-side in
+  `Services/LiveActivityController.swift` + `ListkomatWidgets/TicketLiveActivity.swift`
+  via `staleDate` — leave it alone.
+- Release via the existing CLI pipeline; see the
+  [release checklist](../release-checklist.md) for the habits (fresh "What's New",
+  don't cancel in-review, check Organizer).
