@@ -7,7 +7,7 @@ phone number or the ticket code for your chosen duration.
 The original (React Native, ~2016) is archived privately at `BugsBunny338/listkomat-archive`.
 
 - **v1:** SMS tickets, 10 Czech cities, polished SwiftUI (iOS 16.1+).
-- **v2:** live transit-vehicle map (Prague + Brno).
+- **v2:** live transit-vehicle map (Brno; Prague planned for v2.1, needs a backend proxy).
 
 ## Related repositories
 
@@ -26,7 +26,14 @@ current family, but the original app predates the rename — so this is the cano
 ## Docs
 
 - [v1 design](docs/plans/2026-06-15-listkomat-revival-v1-design.md)
+- [Hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md) — what's next
 
 ## Status
 
-Brainstorming / design. Not yet implemented.
+**Live on the App Store — v2.0.1.** SMS tickets across 10 cities, theme-able UI,
+Live Activity with a validity buffer (pending → active, *Potvrdit nyní*), and a
+Brno live-vehicle map.
+
+Next up (not started): observability (MetricKit), and the v2.1 backend that
+unlocks the Prague live map, off-device diagnostics, and locked-screen push. See
+the [hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md).
