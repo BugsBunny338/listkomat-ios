@@ -99,7 +99,11 @@ struct TransitMapView: UIViewRepresentable {
                           animated: true)
         }
 
-        private func destination(_ v: Vehicle) -> String? { v.destinationId.flatMap { stopNames[$0] } }
+        // Prague carries the destination text directly (trip_headsign); Brno resolves
+        // its numeric FinalStopID against the bundled stop-names map.
+        private func destination(_ v: Vehicle) -> String? {
+            v.destinationName ?? v.destinationId.flatMap { stopNames[$0] }
+        }
 
         // MARK: Vehicles
 

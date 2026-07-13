@@ -11,13 +11,32 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
     private let source: VehicleSource
+    private let seedStops: [Stop]
+    private let seedStopNames: [Int: String]
     private var pollTask: Task<Void, Never>?
 
-    init(source: VehicleSource = BrnoLiveSource()) { self.source = source }
+    init(source: VehicleSource, stops: [Stop], stopNames: [Int: String]) {
+        self.source = source
+        self.seedStops = stops
+        self.seedStopNames = stopNames
+    }
+
+    /// Build the view model for a city: its live source + bundled stops.
+    /// Prague has no numeric stop-names map — destinations come from the feed.
+    static func make(for city: City) -> LiveMapViewModel {
+        switch city.key {
+        case "praha":
+            return LiveMapViewModel(source: PragueLiveSource(),
+                                    stops: StopsStore.prague(), stopNames: [:])
+        default: // "brno"
+            return LiveMapViewModel(source: BrnoLiveSource(),
+                                    stops: StopsStore.brno(), stopNames: StopNamesStore.brno())
+        }
+    }
 
     func start() {
-        if stops.isEmpty { stops = StopsStore.brno() }
-        if stopNames.isEmpty { stopNames = StopNamesStore.brno() }
+        if stops.isEmpty { stops = seedStops }
+        if stopNames.isEmpty { stopNames = seedStopNames }
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             while !Task.isCancelled {

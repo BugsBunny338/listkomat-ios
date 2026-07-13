@@ -4,12 +4,17 @@ import SwiftUI
 /// a data-sources (attribution) button. Portrait, pushed from the ticket screen.
 struct LiveMapView: View {
     let city: City
-    @StateObject private var vm = LiveMapViewModel()
+    @StateObject private var vm: LiveMapViewModel
     @State private var showingSources = false
     @State private var selected: SelectedVehicle?
     @State private var recenterNonce = 0
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeId") private var themeId = AppTheme.default.id
+
+    init(city: City) {
+        self.city = city
+        _vm = StateObject(wrappedValue: .make(for: city))
+    }
 
     /// Follow the user's chosen theme accent (not a fixed teal).
     private var accent: Color { AppTheme.resolve(themeId).accent }

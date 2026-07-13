@@ -10,7 +10,8 @@ struct DataSourcesView: View {
         NavigationStack {
             List {
                 Section("Legenda") {
-                    ForEach(VehicleKind.allCases, id: \.self) { kind in
+                    // Metro is Prague-only; hide it from Brno's legend.
+                    ForEach(VehicleKind.allCases.filter { brno ? $0 != .metro : true }, id: \.self) { kind in
                         HStack(spacing: 12) {
                             Circle().fill(kind.color).frame(width: 16, height: 16)
                             Text(kind.displayName(brno: brno))
@@ -28,7 +29,8 @@ struct DataSourcesView: View {
                 Section("Živá mapa") {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Vozidla a zastávky").font(.headline)
-                        Text("Magistrát města Brna (data.Brno) / KORDIS JMK")
+                        Text(brno ? "Magistrát města Brna (data.Brno) / KORDIS JMK"
+                                  : "Operátor ICT / Golemio (PID)")
                             .foregroundStyle(.secondary)
                         Link("Licence CC BY 4.0",
                              destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
