@@ -1,0 +1,8 @@
+name = "listkomat-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# GOLEMIO_TOKEN is a secret, never committed:
+#   wrangler secret put GOLEMIO_TOKEN
+# For local `wrangler dev`, put it in proxy/.dev.vars (gitignored):
+#   GOLEMIO_TOKEN=...

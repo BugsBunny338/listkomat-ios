@@ -1,0 +1,340 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          14.47317,
+          50.1045
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "last_position": {
+          "bearing": 354,
+          "delay": {
+            "actual": 75,
+            "last_stop_arrival": 40,
+            "last_stop_departure": 75
+          },
+          "is_canceled": null,
+          "last_stop": {
+            "arrival_time": "2026-07-13T22:09:00+02:00",
+            "departure_time": "2026-07-13T22:09:00+02:00",
+            "id": "U529Z4P",
+            "sequence": 33
+          },
+          "next_stop": {
+            "arrival_time": "2026-07-13T22:10:00+02:00",
+            "departure_time": "2026-07-13T22:10:00+02:00",
+            "id": "U471Z2P",
+            "sequence": 34
+          },
+          "origin_timestamp": "2026-07-13T22:10:15+02:00",
+          "shape_dist_traveled": "16.633915",
+          "speed": null,
+          "state_position": "on_track",
+          "tracking": true
+        },
+        "trip": {
+          "agency_name": {
+            "real": "DP PRAHA",
+            "scheduled": "DP PRAHA"
+          },
+          "cis": {
+            "line_id": null,
+            "trip_number": null
+          },
+          "gtfs": {
+            "route_id": "L10",
+            "route_short_name": "10",
+            "route_type": 0,
+            "trip_headsign": "Sídliště Ďáblice",
+            "trip_id": "10_14927_260418",
+            "trip_short_name": null
+          },
+          "origin_route_name": "10",
+          "sequence_id": 2,
+          "start_timestamp": "2026-07-13T21:20:00+02:00",
+          "vehicle_registration_number": 9268,
+          "vehicle_type": {
+            "description_cs": "tramvaj",
+            "description_en": "tram",
+            "id": 2
+          },
+          "wheelchair_accessible": true,
+          "air_conditioned": false,
+          "usb_chargers": false
+        }
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          14.477781,
+          50.077774
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "last_position": {
+          "bearing": 293,
+          "delay": {
+            "actual": -14,
+            "last_stop_arrival": 0,
+            "last_stop_departure": 5
+          },
+          "is_canceled": null,
+          "last_stop": {
+            "arrival_time": "2026-07-13T22:08:50+02:00",
+            "departure_time": "2026-07-13T22:09:10+02:00",
+            "id": "U713Z102P",
+            "sequence": 3
+          },
+          "next_stop": {
+            "arrival_time": "2026-07-13T22:10:35+02:00",
+            "departure_time": "2026-07-13T22:10:55+02:00",
+            "id": "U921Z102P",
+            "sequence": 4
+          },
+          "origin_timestamp": "2026-07-13T22:10:10+02:00",
+          "shape_dist_traveled": "3.524",
+          "speed": null,
+          "state_position": "on_track",
+          "tracking": true
+        },
+        "trip": {
+          "agency_name": {
+            "real": "DP PRAHA",
+            "scheduled": "DP PRAHA"
+          },
+          "cis": {
+            "line_id": null,
+            "trip_number": null
+          },
+          "gtfs": {
+            "route_id": "L991",
+            "route_short_name": "A",
+            "route_type": 1,
+            "trip_headsign": "Nemocnice Motol",
+            "trip_id": "991_11435_260202",
+            "trip_short_name": null
+          },
+          "origin_route_name": "991",
+          "sequence_id": 2,
+          "start_timestamp": "2026-07-13T22:03:35+02:00",
+          "vehicle_registration_number": null,
+          "vehicle_type": {
+            "description_cs": "metro",
+            "description_en": "metro",
+            "id": 1
+          },
+          "wheelchair_accessible": true,
+          "air_conditioned": null,
+          "usb_chargers": null
+        }
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          14.5441628,
+          50.09727
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "last_position": {
+          "bearing": 295,
+          "delay": {
+            "actual": 173,
+            "last_stop_arrival": 180,
+            "last_stop_departure": 180
+          },
+          "is_canceled": false,
+          "last_stop": {
+            "arrival_time": "2026-07-13T22:04:30+02:00",
+            "departure_time": "2026-07-13T22:05:00+02:00",
+            "id": "U801Z301",
+            "sequence": 10
+          },
+          "next_stop": {
+            "arrival_time": "2026-07-13T22:07:00+02:00",
+            "departure_time": "2026-07-13T22:07:30+02:00",
+            "id": "U1051Z301",
+            "sequence": 11
+          },
+          "origin_timestamp": "2026-07-13T22:09:46+02:00",
+          "shape_dist_traveled": "24.25",
+          "speed": null,
+          "state_position": "on_track",
+          "tracking": true
+        },
+        "trip": {
+          "agency_name": {
+            "real": null,
+            "scheduled": "ČESKÉ DRÁHY"
+          },
+          "cis": {
+            "line_id": "none",
+            "trip_number": 8650
+          },
+          "gtfs": {
+            "route_id": "L1001",
+            "route_short_name": "S1",
+            "route_type": 2,
+            "trip_headsign": "Praha Masarykovo nádraží",
+            "trip_id": "1001_8650_251214",
+            "trip_short_name": "Os 8650"
+          },
+          "origin_route_name": null,
+          "sequence_id": null,
+          "start_timestamp": "2026-07-13T21:42:00+02:00",
+          "vehicle_registration_number": null,
+          "vehicle_type": null,
+          "wheelchair_accessible": true,
+          "air_conditioned": null,
+          "usb_chargers": null
+        }
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          14.28761,
+          50.10538
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "last_position": {
+          "bearing": 340,
+          "delay": {
+            "actual": -6,
+            "last_stop_arrival": -5,
+            "last_stop_departure": 5
+          },
+          "is_canceled": null,
+          "last_stop": {
+            "arrival_time": "2026-07-13T22:09:00+02:00",
+            "departure_time": "2026-07-13T22:09:00+02:00",
+            "id": "U698Z1P",
+            "sequence": 3
+          },
+          "next_stop": {
+            "arrival_time": "2026-07-13T22:12:00+02:00",
+            "departure_time": "2026-07-13T22:12:00+02:00",
+            "id": "U776Z1P",
+            "sequence": 4
+          },
+          "origin_timestamp": "2026-07-13T22:10:10+02:00",
+          "shape_dist_traveled": "7.837",
+          "speed": null,
+          "state_position": "on_track",
+          "tracking": true
+        },
+        "trip": {
+          "agency_name": {
+            "real": "DP PRAHA",
+            "scheduled": "DP PRAHA"
+          },
+          "cis": {
+            "line_id": null,
+            "trip_number": null
+          },
+          "gtfs": {
+            "route_id": "L100",
+            "route_short_name": "100",
+            "route_type": 3,
+            "trip_headsign": "Letiště / Airport ✈",
+            "trip_id": "100_867_250630",
+            "trip_short_name": null
+          },
+          "origin_route_name": "100",
+          "sequence_id": 3,
+          "start_timestamp": "2026-07-13T22:00:00+02:00",
+          "vehicle_registration_number": 5562,
+          "vehicle_type": {
+            "description_cs": "autobus",
+            "description_en": "bus",
+            "id": 3
+          },
+          "wheelchair_accessible": true,
+          "air_conditioned": true,
+          "usb_chargers": false
+        }
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          14.53095,
+          50.15118
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "last_position": {
+          "bearing": 335,
+          "delay": {
+            "actual": 171,
+            "last_stop_arrival": 169,
+            "last_stop_departure": null
+          },
+          "is_canceled": null,
+          "last_stop": {
+            "arrival_time": "2026-07-13T22:07:00+02:00",
+            "departure_time": "2026-07-13T22:07:00+02:00",
+            "id": "U64Z6P",
+            "sequence": 21
+          },
+          "next_stop": {
+            "arrival_time": "2026-07-13T22:09:00+02:00",
+            "departure_time": "2026-07-13T22:09:00+02:00",
+            "id": "U399Z1P",
+            "sequence": 22
+          },
+          "origin_timestamp": "2026-07-13T22:09:51+02:00",
+          "shape_dist_traveled": "10.078066",
+          "speed": null,
+          "state_position": "at_stop",
+          "tracking": true
+        },
+        "trip": {
+          "agency_name": {
+            "real": "DP PRAHA",
+            "scheduled": "DP PRAHA"
+          },
+          "cis": {
+            "line_id": null,
+            "trip_number": null
+          },
+          "gtfs": {
+            "route_id": "L58",
+            "route_short_name": "58",
+            "route_type": 11,
+            "trip_headsign": "Miškovice",
+            "trip_id": "58_1837_250714",
+            "trip_short_name": null
+          },
+          "origin_route_name": "58",
+          "sequence_id": 1,
+          "start_timestamp": "2026-07-13T21:44:00+02:00",
+          "vehicle_registration_number": 6882,
+          "vehicle_type": {
+            "description_cs": "trolejbus",
+            "description_en": "trolleybus",
+            "id": 18
+          },
+          "wheelchair_accessible": true,
+          "air_conditioned": null,
+          "usb_chargers": null
+        }
+      },
+      "type": "Feature"
+    }
+  ]
+}
