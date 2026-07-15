@@ -71,9 +71,9 @@ enum PragueVehicleSource {
 
 /// Live Prague source: fetches the proxy's trimmed JSON and decodes it.
 struct PragueLiveSource: VehicleSource {
-    /// Proxy base, overridable for tests/staging. Placeholder until the Worker is
-    /// deployed — replace `<subdomain>` with the real workers.dev host (see proxy/README.md).
-    var endpoint = URL(string: "https://listkomat-proxy.<subdomain>.workers.dev/prague/vehicles")!
+    /// Proxy base, overridable for tests/staging. Points at the deployed Worker
+    /// (see proxy/README.md); the Golemio key lives only in that Worker's secret.
+    var endpoint = URL(string: "https://listkomat-proxy.listkomat.workers.dev/prague/vehicles")!
     var session: URLSession = .shared
 
     func fetch() async throws -> [Vehicle] {
