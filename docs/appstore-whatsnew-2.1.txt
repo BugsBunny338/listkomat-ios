@@ -1,0 +1,12 @@
+App Store "What's New" — Lístkomat 2.1
+(written fresh for this release, not carried over from 2.0.1)
+
+Headline: the live map now covers Prague.
+
+--- Czech (primary) ---
+• Živá mapa je teď i pro Prahu – tramvaje, metro, autobusy, vlaky a trolejbusy v reálném čase. Po klepnutí na vozidlo uvidíte jeho cílovou stanici.
+• Číslo verze aplikace nově najdete v nastavení vzhledu.
+
+--- English ---
+• The live map now covers Prague — trams, metro, buses, trains and trolleybuses in real time. Tap a vehicle to see where it's heading.
+• The app version number now appears in the Appearance settings.

@@ -7,7 +7,8 @@ phone number or the ticket code for your chosen duration.
 The original (React Native, ~2016) is archived privately at `BugsBunny338/listkomat-archive`.
 
 - **v1:** SMS tickets, 10 Czech cities, polished SwiftUI (iOS 16.1+).
-- **v2:** live transit-vehicle map (Brno; Prague planned for v2.1, needs a backend proxy).
+- **v2:** live transit-vehicle map (Brno).
+- **v2.1:** live map for Prague too, via a small Cloudflare Worker proxy (`proxy/`).
 
 ## Related repositories
 
@@ -35,8 +36,13 @@ current family, but the original app predates the rename — so this is the cano
 Live Activity with a validity buffer (pending → active, *Potvrdit nyní*), and a
 Brno live-vehicle map.
 
+**v2.1 — in submission.** Adds the **Prague live map** (trams, metro, buses, trains,
+trolleybuses) via a Cloudflare Worker proxy (`proxy/`) over Golemio/PID open data.
+Prague is gated client-side, so older builds are unaffected. See the
+[Prague live-map plan](docs/plans/2026-07-13-listkomat-prague-live-map-b1.md).
+
 Observability is handled by Xcode Organizer as a post-release habit (no code, no
-third-party SDKs — see the [release checklist](docs/release-checklist.md)). Next
-build-work is the v2.1 backend that unlocks the Prague live map, off-device
-diagnostics, and locked-screen push. See the
+third-party SDKs — see the [release checklist](docs/release-checklist.md)). The
+locked-screen Live Activity flip is already solved client-side (staleDate); B2
+off-device diagnostics remains deferred. See the
 [hardening & backend handover](docs/plans/2026-06-23-listkomat-hardening-backend-handover.md).

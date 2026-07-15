@@ -9,7 +9,7 @@ final class CatalogTests: XCTestCase {
           "updatedAt": "2026-06-15",
           "cities": [
             {
-              "key": "praha", "name": "Praha", "lat": 50.07, "lng": 14.43, "smsNumber": "90206",
+              "key": "olomouc", "name": "Olomouc", "lat": 49.59, "lng": 17.25, "smsNumber": "90206",
               "tickets": [
                 { "code": "DPT42", "duration": "30 min", "durationMinutes": 30, "priceKc": 42 },
                 { "code": "DPT350", "duration": "72 h", "durationMinutes": 4320, "priceKc": 350, "note": "demo" }
@@ -32,7 +32,23 @@ final class CatalogTests: XCTestCase {
 
         let last = try XCTUnwrap(city.tickets.last)
         XCTAssertEqual(last.note, "demo")      // optional note present
-        XCTAssertFalse(city.showsLiveMap)      // absent -> false
+        XCTAssertFalse(city.showsLiveMap)      // absent flag, non-map city -> false
+    }
+
+    func testPragueShowsLiveMapClientSide() throws {
+        // Prague's live map ships in the binary (PragueVehicleSource), so it's
+        // enabled client-side even when the catalog flag is absent — while older
+        // App Store builds, which lack that source, stay dark because the catalog
+        // flag stays unset. See City.showsLiveMap.
+        let json = #"""
+        {"version":1,"updatedAt":"2026-07-15","cities":[
+          {"key":"praha","name":"Praha","lat":50.07,"lng":14.43,"smsNumber":"90206","tickets":[]}
+        ]}
+        """#
+        let city = try XCTUnwrap(try JSONDecoder()
+            .decode(TicketCatalog.self, from: Data(json.utf8)).cities.first)
+        XCTAssertNil(city.hasLiveMap)      // catalog flag intentionally unset
+        XCTAssertTrue(city.showsLiveMap)   // ...but the client enables Prague itself
     }
 
     func testHasLiveMapDecodes() throws {
