@@ -1,27 +1,58 @@
 import XCTest
 @testable import Listkomat
 
-/// Guards the English localization: the built app must ship an en strings table
-/// that mirrors the Czech (source) one. Catches a key dropped from the catalog
-/// or a build that stopped compiling the catalog at all.
+/// Guards the English localization against the catalog source of truth: every
+/// translatable key in Shared/Localizable.xcstrings must resolve in the
+/// compiled en table. The catalog JSON is parsed from the repo via #filePath
+/// (simulator tests share the host filesystem), so the guard cannot silently
+/// self-disable on toolchains that skip emitting a source-language cs table —
+/// and the shouldTranslate opt-outs come from the catalog itself instead of a
+/// mirrored hardcoded list.
 final class LocalizationTests: XCTestCase {
     private let appBundle = Bundle(for: CatalogStore.self)
 
-    private func stringsTable(for localization: String) throws -> [String: String] {
+    private struct CatalogKeys {
+        let translatable: Set<String>   // expected to have an en translation
+        let optOuts: Set<String>        // shouldTranslate: false
+    }
+
+    private func loadCatalogKeys() throws -> CatalogKeys {
+        let url = URL(fileURLWithPath: #filePath)   // …/ListkomatTests/LocalizationTests.swift
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Shared/Localizable.xcstrings")
+        let data = try Data(contentsOf: url)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let strings = try XCTUnwrap(root["strings"] as? [String: [String: Any]])
+        var translatable = Set<String>()
+        var optOuts = Set<String>()
+        for (key, entry) in strings {
+            if entry["shouldTranslate"] as? Bool == false {
+                optOuts.insert(key)
+            } else {
+                translatable.insert(key)
+            }
+        }
+        return CatalogKeys(translatable: translatable, optOuts: optOuts)
+    }
+
+    private func stringsTable(for localization: String, table: String = "Localizable") throws -> [String: String] {
         let path = try XCTUnwrap(
-            appBundle.path(forResource: "Localizable", ofType: "strings",
+            appBundle.path(forResource: table, ofType: "strings",
                            inDirectory: nil, forLocalization: localization),
-            "Localizable.strings missing for \(localization)"
+            "\(table).strings missing for \(localization)"
         )
         return try XCTUnwrap(NSDictionary(contentsOfFile: path) as? [String: String])
     }
 
-    func testEnglishTableExistsAndIsSubstantial() throws {
+    func testEveryTranslatableKeyHasEnglish() throws {
+        let catalog = try loadCatalogKeys()
         let en = try stringsTable(for: "en")
-        // The catalog has ~50 translated keys; a near-empty table means the
-        // catalog silently stopped compiling.
-        XCTAssertGreaterThan(en.count, 40, "English strings table looks truncated")
+        let missing = catalog.translatable.subtracting(en.keys)
+        XCTAssertTrue(missing.isEmpty, "Keys missing English translation: \(missing.sorted())")
         XCTAssertFalse(en.values.contains(""), "English table contains empty translations")
+        // A truncated catalog would make the subset check pass vacuously.
+        XCTAssertGreaterThan(catalog.translatable.count, 40, "Catalog looks truncated")
     }
 
     func testSpotTranslations() throws {
@@ -30,31 +61,13 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(en["Potvrdit nyní"], "Confirm now")
         XCTAssertEqual(en["Funguje s českou SIM kartou."], "Requires a Czech SIM card.")
         XCTAssertEqual(en["Lístek na %@ · %lld Kč"], "Ticket for %1$@ · %2$lld Kč")
-    }
-
-    func testCzechAndEnglishKeysMatch() throws {
-        // cs is the source language; if its compiled table exists, en must
-        // cover exactly the translatable keys (shouldTranslate:false keys may
-        // be absent from en — so require en ⊆ cs and no cs-only *translated* gaps
-        // beyond the known opt-outs).
-        guard let csPath = appBundle.path(forResource: "Localizable", ofType: "strings",
-                                          inDirectory: nil, forLocalization: "cs"),
-              let cs = NSDictionary(contentsOfFile: csPath) as? [String: String] else {
-            throw XCTSkip("cs table not emitted separately (source language)")
-        }
-        let en = try stringsTable(for: "en")
-        let optOuts: Set<String> = ["%@ · %@", "→ %@", "Lístkomat", "Lístkomat %@", "OK", "Šalina"]
-        let missing = Set(cs.keys).subtracting(en.keys).subtracting(optOuts)
-        XCTAssertTrue(missing.isEmpty, "Keys missing English translation: \(missing.sorted())")
+        // Pins vehicle-name translations locale-independently (VehicleModelTests
+        // can't — localizedName resolves per the test host's language).
+        XCTAssertEqual(en["Tramvaj"], "Tram")
     }
 
     func testInfoPlistLocationUsageLocalized() throws {
-        let path = try XCTUnwrap(
-            appBundle.path(forResource: "InfoPlist", ofType: "strings",
-                           inDirectory: nil, forLocalization: "en"),
-            "InfoPlist.strings missing for en"
-        )
-        let table = try XCTUnwrap(NSDictionary(contentsOfFile: path) as? [String: String])
+        let table = try stringsTable(for: "en", table: "InfoPlist")
         XCTAssertNotNil(table["NSLocationWhenInUseUsageDescription"])
     }
 }

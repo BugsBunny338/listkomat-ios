@@ -77,12 +77,12 @@
         }
       }
     },
-    "čeká na potvrzovací SMS · platí za " : {
+    "čeká na potvrzovací SMS · platí za %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "waiting for confirmation SMS · valid in "
+            "value" : "waiting for confirmation SMS · valid in %@"
           }
         }
       }
@@ -236,12 +236,12 @@
         }
       }
     },
-    "platí za " : {
+    "platí za %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "valid in "
+            "value" : "valid in %@"
           }
         }
       }
@@ -345,9 +345,6 @@
           }
         }
       }
-    },
-    "Šalina" : {
-      "shouldTranslate" : false
     },
     "Tmavý" : {
       "localizations" : {
