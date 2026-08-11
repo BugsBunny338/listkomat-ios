@@ -2,8 +2,7 @@ Lístkomat 2.2 — what changed in this update:
 • The Brno live map moved to a new upstream data source (the previous public
   KORDIS feed was retired); vehicles stream over a WebSocket now.
 • Full English localization — the UI follows the device language (Czech remains
-  the primary/development language). An English App Store listing is added with
-  this version.
+  the primary/development language).
 • Reliability fixes for the Prague live map (outage handling, stale vehicle
   positions, a handful of unusable stop names).
 
