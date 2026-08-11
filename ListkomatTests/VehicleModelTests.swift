@@ -4,7 +4,7 @@ import CoreLocation
 
 final class VehicleModelTests: XCTestCase {
     func testMetroKind() {
-        XCTAssertEqual(VehicleKind.metro.czechName, "Metro")
+        XCTAssertEqual(VehicleKind.metro.localizedName, "Metro")
         XCTAssertEqual(VehicleKind.allCases.count, 5)
     }
 

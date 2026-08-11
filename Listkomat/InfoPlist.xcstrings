@@ -1,0 +1,22 @@
+{
+  "sourceLanguage" : "cs",
+  "strings" : {
+    "NSLocationWhenInUseUsageDescription" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podle polohy vám appka rovnou nabídne lístky pro nejbližší město. Bez polohy si město vyberete ručně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With location access, the app offers tickets for the nearest city right away. Without it, you pick a city manually."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
