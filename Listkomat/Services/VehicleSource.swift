@@ -12,3 +12,10 @@ protocol VehicleSource {
 extension VehicleSource {
     func shutdown() async {}
 }
+
+/// Transport-level failure. Thrown rather than decoded, so `LiveMapViewModel`
+/// keeps the last positions and flags the failure instead of clearing the map.
+enum VehicleSourceError: Error, Equatable {
+    /// The endpoint answered with a non-2xx status.
+    case httpStatus(Int)
+}

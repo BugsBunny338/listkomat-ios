@@ -1,6 +1,14 @@
 const GOLEMIO = "https://api.golemio.cz/v2/vehiclepositions?limit=5000";
 const TTL = 6; // seconds; one upstream fetch fans out to all clients within a window
 
+// ISO-8601 truncated to whole seconds. `toISOString()` emits milliseconds, which
+// a plain `ISO8601DateFormatter` (the app's parser) rejects — vehicles carrying
+// this fallback stamp would then be dated with the client's own clock and never
+// age out of its freshness filter.
+export function isoSeconds(date) {
+  return date.toISOString().replace(/\.\d+Z$/, "Z");
+}
+
 // Pure: Golemio GeoJSON -> compact wire object. Exported for unit tests.
 // Metro (route_type 1) is intentionally kept.
 export function transform(geojson, nowIso) {
@@ -25,37 +33,64 @@ export function transform(geojson, nowIso) {
   return { ts: nowIso, vehicles };
 }
 
+// The TTL is held in the isolate rather than in `caches.default`, which is a
+// documented no-op on *.workers.dev — every poll used to miss and fan out to a
+// fresh Golemio request, which the one embedded key cannot sustain. Each isolate
+// now makes at most one upstream request per TTL window, and concurrent misses
+// share the in-flight one. (On a custom domain the edge cache would front this,
+// but that would be an extra layer, not a replacement.)
+let cached = null; // { at: <ms>, body: <serialized payload> }
+let inFlight = null; // Promise<body> — shared by everyone waiting on one fetch
+
+async function loadUpstream(env) {
+  const upstream = await fetch(GOLEMIO, {
+    headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
+  });
+  if (!upstream.ok) throw new Error(`golemio responded ${upstream.status}`);
+  const geo = await upstream.json();
+  return JSON.stringify(transform(geo, isoSeconds(new Date())));
+}
+
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname !== "/prague/vehicles") {
       return new Response("Not found", { status: 404 });
     }
 
-    const cache = caches.default;
-    const cacheKey = new Request(url.toString(), { method: "GET" });
-    const hit = await cache.match(cacheKey);
-    if (hit) return hit;
+    if (cached && Date.now() - cached.at < TTL * 1000) return body(cached.body);
 
-    let upstream;
+    // Only a success updates `cached`, so a failed fetch is retried next request
+    // rather than being served as an empty payload for the rest of the window.
+    if (!inFlight) {
+      inFlight = loadUpstream(env)
+        .then((fresh) => {
+          cached = { at: Date.now(), body: fresh };
+          return fresh;
+        })
+        .finally(() => {
+          inFlight = null;
+        });
+    }
+
     try {
-      upstream = await fetch(GOLEMIO, {
-        headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
-      });
+      return body(await inFlight);
     } catch {
-      return json({ ts: new Date().toISOString(), vehicles: [] }, 502);
+      return json({ ts: isoSeconds(new Date()), vehicles: [] }, 502);
     }
-    if (!upstream.ok) {
-      return json({ ts: new Date().toISOString(), vehicles: [] }, 502);
-    }
-
-    const geo = await upstream.json();
-    const body = transform(geo, new Date().toISOString());
-    const res = json(body, 200, { "Cache-Control": `public, max-age=${TTL}` });
-    ctx.waitUntil(cache.put(cacheKey, res.clone()));
-    return res;
   },
 };
+
+function body(serialized) {
+  return new Response(serialized, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": `public, max-age=${TTL}`,
+    },
+  });
+}
 
 function json(obj, status = 200, extra = {}) {
   return new Response(JSON.stringify(obj), {

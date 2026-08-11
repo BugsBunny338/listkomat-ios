@@ -44,11 +44,62 @@ final class PragueVehicleSourceTests: XCTestCase {
         XCTAssertEqual(train.line, "S1")
     }
 
+    // The proxy answers an outage with a 502 whose body is a well-formed empty
+    // payload. Decoding that would wipe the map instead of surfacing the failure,
+    // so the source must reject any non-2xx before it decodes.
+    func testLiveSourceThrowsOnErrorStatus() async {
+        StubURLProtocol.status = 502
+        StubURLProtocol.body = Data(#"{"ts":"2026-07-13T20:10:20Z","vehicles":[]}"#.utf8)
+        do {
+            _ = try await PragueLiveSource(session: StubURLProtocol.session()).fetch()
+            XCTFail("a 502 must throw so the map keeps its last positions")
+        } catch let error as VehicleSourceError {
+            XCTAssertEqual(error, .httpStatus(502))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testLiveSourceDecodesOnSuccess() async throws {
+        StubURLProtocol.status = 200
+        StubURLProtocol.body = fixtureData
+        let vs = try await PragueLiveSource(session: StubURLProtocol.session()).fetch()
+        // The fixture is from July; the freshness filter drops it all, which is
+        // the point — it decoded rather than threw.
+        XCTAssertTrue(vs.isEmpty)
+    }
+
     func testBboxDropsOutOfArea() throws {
         // Shift nothing but use a box that excludes everything east of Prague.
         let tiny = PragueVehicleSource.BoundingBox(minLat: 0, maxLat: 1, minLng: 0, maxLng: 1)
         let vs = try PragueVehicleSource.decode(fixtureData, bbox: tiny, now: fixtureNow)
         XCTAssertTrue(vs.isEmpty)
+    }
+
+    // The proxy's fallback stamp used to carry milliseconds, which plain
+    // ISO8601DateFormatter rejects — those vehicles fell back to `now` on every
+    // poll and so were exempt from the freshness filter.
+    func testDecodeParsesFractionalSecondTimestamps() throws {
+        let json = #"""
+        {"ts":"2026-07-13T20:10:20.421Z","vehicles":[
+          {"id":"a","lat":50.09,"lng":14.43,"brng":10,"line":"9","rt":0,"ts":"2026-07-13T20:10:15.421Z","dest":null}
+        ]}
+        """#
+        let vs = try PragueVehicleSource.decode(Data(json.utf8), now: fixtureNow)
+        let v = try XCTUnwrap(vs.first)
+        // 22:10:15+02:00 == 20:10:15Z — parsed, not silently replaced by `now`.
+        XCTAssertEqual(v.updatedAt.timeIntervalSince1970,
+                       fixtureNow.timeIntervalSince1970 - 5, accuracy: 0.5)
+    }
+
+    func testFractionalSecondTimestampsAreSubjectToFreshness() throws {
+        let json = #"""
+        {"ts":"2026-07-13T20:10:20.421Z","vehicles":[
+          {"id":"a","lat":50.09,"lng":14.43,"brng":10,"line":"9","rt":0,"ts":"2026-07-13T19:00:00.123Z","dest":null}
+        ]}
+        """#
+        let vs = try PragueVehicleSource.decode(Data(json.utf8), fresherThan: 180, now: fixtureNow)
+        XCTAssertTrue(vs.isEmpty, "an hour-old vehicle must not survive the freshness filter")
     }
 
     func testFreshnessDropsStale() throws {
@@ -60,4 +111,32 @@ final class PragueVehicleSourceTests: XCTestCase {
         let dropped = try PragueVehicleSource.decode(fixtureData, fresherThan: 60, now: future)
         XCTAssertTrue(dropped.isEmpty)
     }
+}
+
+/// Serves a canned status + body to any request, so `PragueLiveSource` can be
+/// exercised without the network.
+final class StubURLProtocol: URLProtocol {
+    static var status = 200
+    static var body = Data()
+
+    static func session() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubURLProtocol.self]
+        return URLSession(configuration: config)
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        if let url = request.url,
+           let response = HTTPURLResponse(url: url, statusCode: Self.status,
+                                          httpVersion: "HTTP/1.1", headerFields: nil) {
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: Self.body)
+        }
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

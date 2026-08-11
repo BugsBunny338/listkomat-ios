@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { transform } from "../src/index.js";
+import { transform, isoSeconds } from "../src/index.js";
 
 const geo = JSON.parse(
   readFileSync(new URL("./golemio-sample.json", import.meta.url)),
@@ -38,6 +38,19 @@ test("drops features missing coords or trip_id", () => {
     "t",
   );
   assert.equal(out.vehicles.length, 0);
+});
+
+// `toISOString()` emits milliseconds, which the app's plain ISO8601DateFormatter
+// rejects — vehicles stamped with the fallback would then never look stale.
+test("isoSeconds drops the fractional part", () => {
+  assert.equal(
+    isoSeconds(new Date("2026-07-13T20:10:20.123Z")),
+    "2026-07-13T20:10:20Z",
+  );
+  assert.equal(
+    isoSeconds(new Date("2026-07-13T20:10:20.000Z")),
+    "2026-07-13T20:10:20Z",
+  );
 });
 
 test("bearing coerces non-number to null", () => {

@@ -10,11 +10,18 @@ struct City: Identifiable, Codable, Hashable {
     let smsNumber: String       // premium SMS recipient, e.g. "90206"
     let tickets: [Ticket]
     var hasLiveMap: Bool? = nil // catalog flag; absent decodes to nil (Optional tolerates a missing key)
+    /// Remote kill switch, absent by default. Prague's map is enabled by the binary
+    /// rather than by `hasLiveMap` (see `showsLiveMap`), so clearing that flag can no
+    /// longer switch it off; this can, without an app release, if the proxy or the
+    /// Golemio key dies. Older builds simply ignore the unknown key — they never
+    /// showed the Prague map anyway.
+    var liveMapDisabled: Bool? = nil
 
     var id: String { key }
 
     /// True when this city has a live map ("Živá mapa").
     var showsLiveMap: Bool {
+        if liveMapDisabled == true { return false }
         // Prague's live map ships *client-side*: this binary has PragueVehicleSource,
         // so it enables Praha itself rather than via the catalog flag. Crucially, the
         // catalog's `hasLiveMap` for Praha stays unset — so older App Store builds
