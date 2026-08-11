@@ -1,10 +1,10 @@
 const GOLEMIO = "https://api.golemio.cz/v2/vehiclepositions?limit=5000";
 const TTL = 6; // seconds; one upstream fetch fans out to all clients within a window
 
-/// ISO-8601 truncated to whole seconds. `toISOString()` emits milliseconds, which
-/// a plain `ISO8601DateFormatter` (the app's parser) rejects — vehicles carrying
-/// this fallback stamp would then be dated with the client's own clock and never
-/// age out of its freshness filter.
+// ISO-8601 truncated to whole seconds. `toISOString()` emits milliseconds, which
+// a plain `ISO8601DateFormatter` (the app's parser) rejects — vehicles carrying
+// this fallback stamp would then be dated with the client's own clock and never
+// age out of its freshness filter.
 export function isoSeconds(date) {
   return date.toISOString().replace(/\.\d+Z$/, "Z");
 }
