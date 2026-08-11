@@ -36,7 +36,10 @@ with open(src, newline='', encoding='utf-8-sig') as f:
         except (KeyError, ValueError, TypeError):
             continue
         name = (row.get('stop_name') or '').strip() or (row.get('stop_id') or '')
-        if not name:
+        # PID ships a few unnamed nodes as the literal placeholder "(-)". They are
+        # real coordinates with no station behind them, so they render as pins the
+        # user cannot identify. Anything with no letter or digit is the same thing.
+        if not name or not any(ch.isalnum() for ch in name):
             continue
         by_name.setdefault(name, []).append((lat, lng))
 

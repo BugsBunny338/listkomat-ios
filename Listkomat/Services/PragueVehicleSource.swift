@@ -50,11 +50,19 @@ enum PragueVehicleSource {
                        bbox: BoundingBox? = nil,
                        fresherThan: TimeInterval? = nil,
                        now: Date = Date()) throws -> [Vehicle] {
+        // Two parsers: `ISO8601DateFormatter` rejects fractional seconds unless
+        // told to expect them, and rejects their absence once told. Upstream stamps
+        // arrive in both shapes, and a rejected one used to fall back to `now` —
+        // which made the vehicle permanently exempt from the freshness filter.
         let iso = ISO8601DateFormatter()
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        func parse(_ s: String) -> Date? { iso.date(from: s) ?? isoFractional.date(from: s) }
+
         let payload = try JSONDecoder().decode(Payload.self, from: data)
         return payload.vehicles.compactMap { w -> Vehicle? in
             if let bbox, !bbox.contains(lat: w.lat, lng: w.lng) { return nil }
-            let updated = iso.date(from: w.ts) ?? now
+            let updated = parse(w.ts) ?? now
             if let fresherThan, now.timeIntervalSince(updated) > fresherThan { return nil }
             return Vehicle(
                 id: w.id,
@@ -79,7 +87,13 @@ struct PragueLiveSource: VehicleSource {
     func fetch() async throws -> [Vehicle] {
         var req = URLRequest(url: endpoint)
         req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        let (data, _) = try await session.data(for: req)
+        let (data, response) = try await session.data(for: req)
+        // The proxy reports an outage as a 502 whose body is a valid, empty payload.
+        // Decoding it would silently clear the map; throwing keeps the last
+        // positions on screen and lets the view model flag the failure.
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw VehicleSourceError.httpStatus(http.statusCode)
+        }
         return try PragueVehicleSource.decode(data, bbox: .pragueArea,
                                               fresherThan: PragueVehicleSource.freshnessLimit)
     }

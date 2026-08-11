@@ -51,6 +51,38 @@ final class CatalogTests: XCTestCase {
         XCTAssertTrue(city.showsLiveMap)   // ...but the client enables Prague itself
     }
 
+    // Prague is enabled by the binary, so `hasLiveMap` cannot switch it off again.
+    // `liveMapDisabled` is the remote kill switch for when the proxy or the
+    // Golemio key dies — and it works for catalog-gated cities too.
+    func testLiveMapDisabledOverridesBothGates() throws {
+        let json = #"""
+        {"version":1,"updatedAt":"2026-08-11","cities":[
+          {"key":"praha","name":"Praha","lat":50.07,"lng":14.43,"smsNumber":"90206",
+           "liveMapDisabled":true,"tickets":[]},
+          {"key":"brno","name":"Brno","lat":49.19,"lng":16.6,"smsNumber":"90206",
+           "hasLiveMap":true,"liveMapDisabled":true,"tickets":[]}
+        ]}
+        """#
+        let cities = try JSONDecoder()
+            .decode(TicketCatalog.self, from: Data(json.utf8)).cities
+        XCTAssertEqual(cities.count, 2)
+        for city in cities {
+            XCTAssertFalse(city.showsLiveMap, "\(city.key) should be remotely disabled")
+        }
+    }
+
+    func testLiveMapDisabledFalseKeepsTheMap() throws {
+        let json = #"""
+        {"version":1,"updatedAt":"2026-08-11","cities":[
+          {"key":"praha","name":"Praha","lat":50.07,"lng":14.43,"smsNumber":"90206",
+           "liveMapDisabled":false,"tickets":[]}
+        ]}
+        """#
+        let city = try XCTUnwrap(try JSONDecoder()
+            .decode(TicketCatalog.self, from: Data(json.utf8)).cities.first)
+        XCTAssertTrue(city.showsLiveMap)
+    }
+
     func testHasLiveMapDecodes() throws {
         let json = """
         {

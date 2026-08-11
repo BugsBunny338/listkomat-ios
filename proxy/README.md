@@ -44,8 +44,15 @@ Then set `PragueLiveSource.endpoint` in the app
 
 - **Token safety:** the Golemio token lives only in `wrangler secret` (deployed) or
   `.dev.vars` (local, gitignored). It is never in the repo or the app binary.
-- **Rate limit:** `Cache-Control: max-age=6` = one Golemio fetch per ~6 s at the
-  edge. Exceeding 20 req/8 s would need >20 simultaneous cache misses in an 8 s
-  window — implausible at hobby scale. If it ever matters, add a Durable Object
-  single-flight. Not needed now (YAGNI).
+- **Rate limit:** the 6 s TTL is held **in the isolate**, not in `caches.default` —
+  the Cache API is a documented no-op on `*.workers.dev`, so relying on it meant
+  every client poll became a fresh Golemio request. Each isolate now fetches at
+  most once per 6 s and concurrent misses share the in-flight request. Cloudflare
+  may run a handful of isolates, so the true worst case is a few fetches per
+  window — still far under 20 req/8 s. Moving to a custom domain would add the
+  edge cache back on top; a Durable Object would collapse it to exactly one
+  fetch globally. Neither is needed at hobby scale (YAGNI).
+- **Timestamps** are emitted at whole-second ISO-8601 precision (`isoSeconds`):
+  the app parses with `ISO8601DateFormatter`, which rejects the milliseconds that
+  `toISOString()` produces.
 - Get a Golemio token at https://api.golemio.cz/api-keys (free).

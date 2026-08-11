@@ -79,6 +79,11 @@ caching. Design it as a small multi-purpose service, since B1–B3 all hang off 
   `BrnoVehicleSource`'s shape and the same bbox/perf hardening from §2.
 - Ship path: flip Prague's `hasLiveMap` in `listkomat-catalog` once code + proxy
   are live — **no app release needed** for the flip.
+- **Shipped differently (v2.1):** Prague's map is enabled *by the binary*, so its
+  catalog `hasLiveMap` stays unset and cannot switch it off. To kill the map
+  remotely (dead proxy, revoked Golemio key), set `"liveMapDisabled": true` on the
+  city in `listkomat-catalog` — it overrides both gates, works for Brno too, and
+  older builds ignore the unknown key.
 
 **B2 — MetricKit diagnostics sink — DEFERRED INDEFINITELY 2026-07-12.**
 - Would POST MetricKit payloads to an endpoint on the same proxy. But Track A
@@ -128,7 +133,8 @@ B1**, and the only open build-work is:
 - `Listkomat/Services/VehicleSource.swift` — the source protocol (yields `Vehicle`,
   now incl. `destinationId`).
 - `Listkomat/Resources/tickets.json` + the `listkomat-catalog` repo — the
-  `hasLiveMap` flip for Prague (no app release needed).
+  `hasLiveMap` flip for Brno, and `liveMapDisabled` as the remote kill switch for
+  either city (no app release needed).
 - Live Activity flip (B3) is already handled client-side in
   `Services/LiveActivityController.swift` + `ListkomatWidgets/TicketLiveActivity.swift`
   via `staleDate` — leave it alone.
