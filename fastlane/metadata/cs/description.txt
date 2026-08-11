@@ -1,0 +1,19 @@
+Jízdenka na MHD jednou SMSkou. Bez registrace, bez dobíjení kreditu, bez internetu.
+
+Lístkomat si za vás pamatuje telefonní čísla i kódy SMS jízdenek v 10 českých městech. Vyberete lístek, appka předvyplní SMS a vy ji jen odešlete — jízdenka přijde obratem a cena se objeví ve vyúčtování od vašeho operátora.
+
+PROČ LÍSTKOMAT
+• Žádná registrace ani účet — otevřete a kupujete
+• Žádné dobíjení kreditu — platíte přes vyúčtování u operátora
+• Funguje bez internetu — stačí signál na SMS
+• 10 měst v jedné appce: Praha, Brno, Ostrava, Plzeň, Liberec, Olomouc, Ústí nad Labem, Hradec Králové, České Budějovice a Pardubice
+
+CHYTRÉ DROBNOSTI
+• Podle polohy appka sama nabídne lístky pro město, kde právě jste (poloha nikam neodchází)
+• Odpočet platnosti lístku na zamčené obrazovce i v Dynamic Islandu (Live Activity)
+• Živá mapa šalin, autobusů a trolejbusů v Brně
+• Volitelné motivy vzhledu
+
+DOBRÉ VĚDĚT
+• SMS jízdenky fungují s českou SIM kartou (premium SMS účtuje váš operátor)
+• Ceníky se aktualizují automaticky; poslední známý ceník funguje i offline

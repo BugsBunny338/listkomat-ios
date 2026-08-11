@@ -1,0 +1,1 @@
+sms,ticket,transit,transport,tram,bus,prague,brno,ostrava,czech,jízdenka,mhd
