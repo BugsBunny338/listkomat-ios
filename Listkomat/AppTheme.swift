@@ -32,10 +32,16 @@ struct AppTheme: Identifiable, Hashable {
     /// Dynamic Island), the original pink request, the people (Zajíc → wife →
     /// son → Slim), then the places. No standalone teal band — the clean default
     /// already carries the teal accent.
+    ///
+    /// Localization: only the generic names (Čistý, Černá, Růžová) translate.
+    /// The rest — Bláhovka, Bomba, Zajíc, Žába, Méďa, Slim, Evelína, Brno,
+    /// USA — are proper nouns / family nicknames and deliberately stay the
+    /// same in every language, which is why they're plain literals with no
+    /// catalog entry.
     static let presets: [AppTheme] = [
-        AppTheme(id: "clean", name: "Čistý",  band: nil,                  onBand: .ink,   mascot: nil,  isDark: false),
-        AppTheme(id: "black", name: "Černá",  band: .black,               onBand: .white, mascot: nil,  isDark: true,  accentOverride: .brandTeal),
-        AppTheme(id: "pink",  name: "Růžová", band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
+        AppTheme(id: "clean", name: String(localized: "Čistý"),  band: nil,                  onBand: .ink,   mascot: nil,  isDark: false),
+        AppTheme(id: "black", name: String(localized: "Černá"),  band: .black,               onBand: .white, mascot: nil,  isDark: true,  accentOverride: .brandTeal),
+        AppTheme(id: "pink",  name: String(localized: "Růžová"), band: Color(hex: 0xFF7EB6), onBand: .ink,   mascot: "🦄", isDark: false),
         AppTheme(id: "blahovka", name: "Bláhovka", band: Color(hex: 0xE6A52C), onBand: .ink, mascot: "🍺", isDark: false),
         AppTheme(id: "bomba", name: "Bomba",  band: Color(hex: 0xE6A52C), onBand: .ink, mascot: "💣", isDark: false),
         AppTheme(id: "zajic", name: "Zajíc",  band: Color(hex: 0xAFA79E), onBand: .ink,   mascot: "🐰", isDark: false),
@@ -66,9 +72,9 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .light:  return "Světlý"
-        case .system: return "Systém"
-        case .dark:   return "Tmavý"
+        case .light:  return String(localized: "Světlý")
+        case .system: return String(localized: "Systém")
+        case .dark:   return String(localized: "Tmavý")
         }
     }
 

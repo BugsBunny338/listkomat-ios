@@ -1,0 +1,571 @@
+{
+  "sourceLanguage" : "cs",
+  "strings" : {
+    "%@ · %@" : {
+      "shouldTranslate" : false
+    },
+    "%lld Kč" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Kč"
+          }
+        }
+      }
+    },
+    "→ %@" : {
+      "shouldTranslate" : false
+    },
+    "Aktivní lístek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active ticket"
+          }
+        }
+      }
+    },
+    "Autobus" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bus"
+          }
+        }
+      }
+    },
+    "Ceník platný k %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prices valid as of %@"
+          }
+        }
+      }
+    },
+    "Černá" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Black"
+          }
+        }
+      }
+    },
+    "Čeká na potvrzovací SMS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for confirmation SMS"
+          }
+        }
+      }
+    },
+    "čeká na potvrzovací SMS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "waiting for confirmation SMS"
+          }
+        }
+      }
+    },
+    "čeká na potvrzovací SMS · platí za %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "waiting for confirmation SMS · valid in %@"
+          }
+        }
+      }
+    },
+    "Čistý" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clean"
+          }
+        }
+      }
+    },
+    "Déšť" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rain"
+          }
+        }
+      }
+    },
+    "Hotovo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "Jste daleko od podporovaných měst. Vyberte město ručně." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're far from any supported city. Choose a city manually."
+          }
+        }
+      }
+    },
+    "Legenda" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legend"
+          }
+        }
+      }
+    },
+    "Licence CC BY 4.0" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CC BY 4.0 license"
+          }
+        }
+      }
+    },
+    "Lístek na %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticket for %@"
+          }
+        }
+      }
+    },
+    "Lístek na %@ · %lld Kč" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticket for %1$@ · %2$lld Kč"
+          }
+        }
+      }
+    },
+    "Lístkomat" : {
+      "shouldTranslate" : false
+    },
+    "Lístkomat %@" : {
+      "shouldTranslate" : false
+    },
+    "Metro" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metro"
+          }
+        }
+      }
+    },
+    "Motiv" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Theme"
+          }
+        }
+      }
+    },
+    "Načítám vozidla…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading vehicles…"
+          }
+        }
+      }
+    },
+    "Najít nejbližší město" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find the nearest city"
+          }
+        }
+      }
+    },
+    "Nejbližší podporované město (%@) je ~%lld km daleko. Vyberte město ručně." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The nearest supported city (%1$@) is ~%2$lld km away. Choose a city manually."
+          }
+        }
+      }
+    },
+    "OK" : {
+      "shouldTranslate" : false
+    },
+    "Offline – zobrazen uložený ceník (k %@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline – showing saved prices (as of %@)"
+          }
+        }
+      }
+    },
+    "platí za %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "valid in %@"
+          }
+        }
+      }
+    },
+    "Po klepnutí se otevře předvyplněná SMS na číslo %@. Lístek koupíte jejím odesláním." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tapping a ticket opens a pre-filled SMS to %@. Send it to buy the ticket."
+          }
+        }
+      }
+    },
+    "Pokračovat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "Poloha není povolená" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location access denied"
+          }
+        }
+      }
+    },
+    "Potvrdit nyní" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm now"
+          }
+        }
+      }
+    },
+    "Režim" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        }
+      }
+    },
+    "Růžová" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pink"
+          }
+        }
+      }
+    },
+    "S přístupem k poloze vám Lístkomat rovnou nabídne lístky pro město, ve kterém právě jste. Polohu nikam neodesíláme. Pokud přístup nepovolíte, můžete si město kdykoli vybrat ručně." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With location access, Lístkomat offers tickets for the city you're in right away. Your location never leaves the device. If you don't allow access, you can always pick a city manually."
+          }
+        }
+      }
+    },
+    "SMS nelze odeslat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't send SMS"
+          }
+        }
+      }
+    },
+    "Světlý" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "Systém" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        }
+      }
+    },
+    "Tmavý" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "Toto zařízení neumí posílat SMS (např. iPad bez SIM)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device can't send SMS messages (e.g. an iPad without a SIM)."
+          }
+        }
+      }
+    },
+    "Tramvaj" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tram"
+          }
+        }
+      }
+    },
+    "Trolejbus" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trolleybus"
+          }
+        }
+      }
+    },
+    "Ukončit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End"
+          }
+        }
+      }
+    },
+    "Funguje s českou SIM kartou." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requires a Czech SIM card."
+          }
+        }
+      }
+    },
+    "Vlak" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Train"
+          }
+        }
+      }
+    },
+    "Vozidla a zastávky" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicles and stops"
+          }
+        }
+      }
+    },
+    "Vybrat město" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose city"
+          }
+        }
+      }
+    },
+    "Vyberte město" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a city"
+          }
+        }
+      }
+    },
+    "Vyberte město ručně, nebo povolte polohu v Nastavení." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a city manually, or allow location access in Settings."
+          }
+        }
+      }
+    },
+    "Vzhled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "Zastávka" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop"
+          }
+        }
+      }
+    },
+    "Zavřít" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "zbývá" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "time left"
+          }
+        }
+      }
+    },
+    "Zdroje dat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data sources"
+          }
+        }
+      }
+    },
+    "Zjišťuji nejbližší město…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finding the nearest city…"
+          }
+        }
+      }
+    },
+    "Žádná vozidla v okolí" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicles nearby"
+          }
+        }
+      }
+    },
+    "Žádné město v okolí" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No city nearby"
+          }
+        }
+      }
+    },
+    "Živá data dočasně nedostupná" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live data temporarily unavailable"
+          }
+        }
+      }
+    },
+    "Živá mapa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live map"
+          }
+        }
+      }
+    },
+    "Živá mapa – %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live map – %@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

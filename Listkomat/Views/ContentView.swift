@@ -162,7 +162,7 @@ struct ContentView: View {
                 Image(systemName: "tram.fill")
                     .foregroundStyle(theme.accent)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(pending ? "Čeká na potvrzovací SMS" : "Aktivní lístek")
+                    (pending ? Text("Čeká na potvrzovací SMS") : Text("Aktivní lístek"))
                         .font(.caption2)
                         .foregroundStyle(pending ? .orange : .secondary)
                     Text("\(active.cityName) · \(active.ticketLabel)")
@@ -221,9 +221,9 @@ struct ContentView: View {
     }
 
     private var emptyTitle: String {
-        if location.isFarFromAllCities { return "Žádné město v okolí" }
-        if isDenied { return "Poloha není povolená" }
-        return "Zjišťuji nejbližší město…"
+        if location.isFarFromAllCities { return String(localized: "Žádné město v okolí") }
+        if isDenied { return String(localized: "Poloha není povolená") }
+        return String(localized: "Zjišťuji nejbližší město…")
     }
 
     private var emptySubtitle: String? {
@@ -231,12 +231,12 @@ struct ContentView: View {
             if let key = location.nearestCityKey,
                let name = store.city(forKey: key)?.name,
                let dist = location.nearestDistanceKm {
-                return "Nejbližší podporované město (\(name)) je ~\(Int(dist)) km daleko. Vyberte město ručně."
+                return String(localized: "Nejbližší podporované město (\(name)) je ~\(Int(dist)) km daleko. Vyberte město ručně.")
             }
-            return "Jste daleko od podporovaných měst. Vyberte město ručně."
+            return String(localized: "Jste daleko od podporovaných měst. Vyberte město ručně.")
         }
         if isDenied {
-            return "Vyberte město ručně, nebo povolte polohu v Nastavení."
+            return String(localized: "Vyberte město ručně, nebo povolte polohu v Nastavení.")
         }
         return nil
     }

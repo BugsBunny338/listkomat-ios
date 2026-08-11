@@ -4,8 +4,10 @@ import CoreLocation
 
 final class VehicleModelTests: XCTestCase {
     func testMetroKind() {
-        XCTAssertEqual(VehicleKind.metro.czechName, "Metro")
         XCTAssertEqual(VehicleKind.allCases.count, 5)
+        // Locale-independent by design — the Brno easter egg stays "Šalina" in
+        // every language. English vehicle names are pinned in LocalizationTests.
+        XCTAssertEqual(VehicleKind.tram.displayName(brno: true), "Šalina")
     }
 
     func testDestinationNameCarried() {
