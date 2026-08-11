@@ -1,0 +1,14 @@
+App Store "What's New" — Lístkomat 2.2
+(written fresh for this release, not carried over from 2.1)
+
+Headline: the Brno live map is back (new data source) and the app now speaks English.
+
+--- Czech (primary) ---
+• Živá mapa Brna zase funguje – přešli jsme na nový zdroj dat (starý byl bez ohlášení vypnut) a polohy vozidel teď chodí plynuleji.
+• Aplikace nově mluví i anglicky – řídí se jazykem vašeho zařízení.
+• Spolehlivější živá mapa Prahy – opravili jsme zobrazování výpadků, zastaralé polohy některých vozidel a pár dalších drobností.
+
+--- English ---
+• The Brno live map works again — we moved to a new data source (the old one was retired without notice), and vehicle positions now flow more smoothly.
+• The app now speaks English, following your device language.
+• A more reliable Prague live map — fixed outage handling, stale positions for some vehicles, and a few smaller glitches.
