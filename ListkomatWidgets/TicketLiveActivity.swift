@@ -38,8 +38,9 @@ struct TicketLiveActivity: Widget {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if pending {
-                            (Text("čeká na potvrzovací SMS · platí za ")
-                                + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                            // Single format key so translators control where the
+                            // countdown sits in the sentence.
+                            Text("čeká na potvrzovací SMS · platí za \(Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))")
                                 .font(.caption2)
                                 .monospacedDigit()
                                 .foregroundStyle(.orange)
@@ -100,8 +101,8 @@ private struct LockScreenView: View {
             VStack(alignment: .trailing, spacing: 1) {
                 if pending {
                     // Buffer countdown to validity — self-ticks; gone once valid.
-                    (Text("platí za ")
-                        + Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))
+                    // Single format key so translators control the word order.
+                    Text("platí za \(Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))")
                         .font(.caption2)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)

@@ -32,6 +32,12 @@ struct AppTheme: Identifiable, Hashable {
     /// Dynamic Island), the original pink request, the people (Zajíc → wife →
     /// son → Slim), then the places. No standalone teal band — the clean default
     /// already carries the teal accent.
+    ///
+    /// Localization: only the generic names (Čistý, Černá, Růžová) translate.
+    /// The rest — Bláhovka, Bomba, Zajíc, Žába, Méďa, Slim, Evelína, Brno,
+    /// USA — are proper nouns / family nicknames and deliberately stay the
+    /// same in every language, which is why they're plain literals with no
+    /// catalog entry.
     static let presets: [AppTheme] = [
         AppTheme(id: "clean", name: String(localized: "Čistý"),  band: nil,                  onBand: .ink,   mascot: nil,  isDark: false),
         AppTheme(id: "black", name: String(localized: "Černá"),  band: .black,               onBand: .white, mascot: nil,  isDark: true,  accentOverride: .brandTeal),
