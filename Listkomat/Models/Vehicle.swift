@@ -5,20 +5,21 @@ import CoreLocation
 enum VehicleKind: String, CaseIterable {
     case tram, metro, trolleybus, bus, train
 
-    /// Czech name shown in callouts and the legend.
-    var czechName: String {
+    /// Localized name shown in callouts and the legend.
+    var localizedName: String {
         switch self {
-        case .tram: return "Tramvaj"
-        case .metro: return "Metro"
-        case .trolleybus: return "Trolejbus"
-        case .bus: return "Autobus"
-        case .train: return "Vlak"
+        case .tram: return String(localized: "Tramvaj")
+        case .metro: return String(localized: "Metro")
+        case .trolleybus: return String(localized: "Trolejbus")
+        case .bus: return String(localized: "Autobus")
+        case .train: return String(localized: "Vlak")
         }
     }
 
-    /// City-aware name. Easter egg: in Brno a tram is a "Šalina" (local hantec slang).
+    /// City-aware name. Easter egg: in Brno a tram is a "Šalina" (local hantec
+    /// slang) — deliberately kept in every language.
     func displayName(brno: Bool) -> String {
-        (self == .tram && brno) ? "Šalina" : czechName
+        (self == .tram && brno) ? "Šalina" : localizedName
     }
 
     /// Marker color — distinct, refined transit palette.
