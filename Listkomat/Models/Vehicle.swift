@@ -44,6 +44,7 @@ struct Vehicle: Identifiable, Equatable {
     let updatedAt: Date
     let destinationId: Int?       // Brno: FinalStopID; resolved to a stop name for the callout
     let destinationName: String?  // Prague: destination text (trip_headsign), used directly
+    var delay: Double? = nil      // minutes; Brno stream feed only (not shown in UI yet)
 
     static func == (a: Vehicle, b: Vehicle) -> Bool {
         a.id == b.id

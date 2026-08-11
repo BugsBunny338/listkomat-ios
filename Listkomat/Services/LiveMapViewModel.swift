@@ -29,7 +29,7 @@ final class LiveMapViewModel: ObservableObject {
             return LiveMapViewModel(source: PragueLiveSource(),
                                     stops: StopsStore.prague(), stopNames: [:])
         default: // "brno"
-            return LiveMapViewModel(source: BrnoLiveSource(),
+            return LiveMapViewModel(source: BrnoStreamSource(),
                                     stops: StopsStore.brno(), stopNames: StopNamesStore.brno())
         }
     }
@@ -49,6 +49,7 @@ final class LiveMapViewModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        Task { [source] in await source.shutdown() }   // close the stream socket
     }
 
     private func refresh() async {

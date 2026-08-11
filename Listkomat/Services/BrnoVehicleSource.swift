@@ -102,6 +102,10 @@ enum BrnoVehicleSource {
 }
 
 /// Live Brno source: fetches the current layer and decodes it.
+///
+/// NOTE: the public FeatureServer was retired upstream 2026-08-10 (404) — the
+/// app now uses `BrnoStreamSource` (#6). Kept because the queryable layer may
+/// return as `Kordis_26_polohy_int`; if it does, this needs only a URL change.
 struct BrnoLiveSource: VehicleSource {
     var session: URLSession = .shared
 
