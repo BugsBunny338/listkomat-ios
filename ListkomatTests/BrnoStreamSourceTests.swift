@@ -88,6 +88,22 @@ final class BrnoStreamSourceTests: XCTestCase {
         XCTAssertTrue(snap.vehicles(now: sent.addingTimeInterval(600)).isEmpty)    // aged out
     }
 
+    func testSnapshotReturnsFreshestFirst() throws {
+        // TransitMapView caps markers with prefix(300) — the snapshot must hand
+        // back freshest-first (as the old orderByFields=TimeUpdated DESC did),
+        // or the cap keeps an arbitrary, flickering subset.
+        var snap = BrnoStreamSnapshot()
+        for i in 1...20 {   // ID i updated i seconds after the base timestamp
+            let msg = busMessage
+                .replacingOccurrences(of: "\"ID\":21042", with: "\"ID\":\(i)")
+                .replacingOccurrences(of: "\"TimeUpdated\":1786451030883",
+                                      with: "\"TimeUpdated\":\(1_786_451_030_883 + i * 1000)")
+            snap.apply(try BrnoStreamDecoder.decode(Data(msg.utf8)))
+        }
+        let now = Date(timeIntervalSince1970: 1_786_451_050.883)
+        XCTAssertEqual(snap.vehicles(now: now).map(\.id), (1...20).reversed().map(String.init))
+    }
+
     func testSnapshotPruneEvictsAgedEntries() throws {
         var snap = BrnoStreamSnapshot()
         snap.apply(try BrnoStreamDecoder.decode(Data(busMessage.utf8)))

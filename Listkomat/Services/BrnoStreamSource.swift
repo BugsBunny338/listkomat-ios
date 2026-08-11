@@ -60,9 +60,13 @@ struct BrnoStreamSnapshot {
         byId[update.id] = update.vehicle      // nil removes the entry
     }
 
+    /// Freshest first — the map view caps markers with prefix(N), which must
+    /// keep the most recently updated vehicles (as the old TimeUpdated DESC
+    /// query ordering did), not an arbitrary dictionary-order subset.
     func vehicles(now: Date = Date(),
                   fresherThan limit: TimeInterval = BrnoVehicleSource.freshnessLimit) -> [Vehicle] {
         byId.values.filter { now.timeIntervalSince($0.updatedAt) <= limit }
+            .sorted { $0.updatedAt > $1.updatedAt }
     }
 
     /// Evict entries that stopped updating (e.g. vehicles that vanished without
@@ -79,9 +83,16 @@ struct BrnoStreamSnapshot {
 /// polling source (throw → "Živá data dočasně nedostupná").
 actor BrnoStreamSource: VehicleSource {
     private var task: URLSessionWebSocketTask?
+    private var connectTask: Task<Void, Error>?   // de-dupes reentrant connects
     private var snapshot = BrnoStreamSnapshot()
     private var applyCount = 0
+    private var decodeFailureStreak = 0
     private let session: URLSession
+
+    /// Consecutive undecodable messages that force a reconnect. A reconnect's
+    /// first message is decoded strictly, so persistent schema drift surfaces
+    /// as a failed fetch (toast) instead of a silently empty map.
+    static let decodeFailureCutoff = 25
 
     init(session: URLSession = .shared) { self.session = session }
 
@@ -107,41 +118,61 @@ actor BrnoStreamSource: VehicleSource {
 
     /// Close the socket while the map is off-screen; the next fetch reconnects.
     func shutdown() {
+        connectTask?.cancel()
+        connectTask = nil
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
     }
 
     // MARK: Connection
 
+    /// Reentrancy-safe: overlapping fetches (e.g. onAppear + scenePhase both
+    /// calling start()) share one in-flight connect instead of each opening a
+    /// socket and leaking the loser.
     private func ensureConnected() async throws {
         if let task, task.state == .running { return }
+        let inFlight = connectTask ?? Task { try await self.openConnection() }
+        connectTask = inFlight
+        try await inFlight.value
+    }
+
+    private func openConnection() async throws {
+        defer { connectTask = nil }   // runs on the actor at this attempt's end
         task?.cancel(with: .goingAway, reason: nil)
         let t = session.webSocketTask(with: Self.currentStreamURL())
         t.resume()
         do {
-            // Await the first message inline: fails fast when unreachable, and
-            // guarantees the very first fetch already has data to show. The
-            // feed sends many messages per second, so 10 s means "down".
-            try apply(await nextMessage(t, timeout: 10))
+            // Await the first message inline, decoded STRICTLY: fails fast when
+            // the host is unreachable, the upgrade hangs, or the schema drifted
+            // — all surface as a failed fetch (toast), never a silently empty
+            // map. The feed sends many messages per second, so 10 s = "down".
+            let first = try await firstMessage(t, timeout: 10)
+            guard let data = payload(of: first) else { throw URLError(.cannotParseResponse) }
+            snapshot.apply(try BrnoStreamDecoder.decode(data))
         } catch {
             t.cancel(with: .goingAway, reason: nil)
             throw error
         }
-        // Seed from the initial burst so the first fetch paints a populated map
-        // instead of flashing "Žádná vozidla v okolí" until the next poll.
-        let deadline = Date().addingTimeInterval(1.5)
-        while Date() < deadline, snapshot.storedCount < 100,
-              let msg = try? await nextMessage(t, timeout: max(0.05, deadline.timeIntervalSinceNow)) {
-            apply(msg)
-        }
         task = t
         receiveLoop(on: t)
+        // Let the initial burst land so the first fetch paints a populated map
+        // instead of flashing "Žádná vozidla v okolí" until the next poll.
+        try? await Task.sleep(nanoseconds: 800_000_000)
     }
 
-    private func nextMessage(_ t: URLSessionWebSocketTask,
-                             timeout: TimeInterval) async throws -> URLSessionWebSocketTask.Message {
+    private func firstMessage(_ t: URLSessionWebSocketTask,
+                              timeout: TimeInterval) async throws -> URLSessionWebSocketTask.Message {
         try await withThrowingTaskGroup(of: URLSessionWebSocketTask.Message.self) { group in
-            group.addTask { try await t.receive() }
+            group.addTask {
+                // receive() ignores cooperative cancellation, and the group
+                // must await this child before it can exit — cancel the socket
+                // itself so the timeout can actually propagate.
+                try await withTaskCancellationHandler {
+                    try await t.receive()
+                } onCancel: {
+                    t.cancel(with: .goingAway, reason: nil)
+                }
+            }
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
                 throw URLError(.timedOut)
@@ -156,7 +187,10 @@ actor BrnoStreamSource: VehicleSource {
             while true {
                 do {
                     let msg = try await t.receive()
-                    await self?.apply(msg)
+                    guard let self, await self.accept(msg, from: t) else {
+                        t.cancel(with: .goingAway, reason: nil)   // superseded socket — evict
+                        return
+                    }
                 } catch {
                     await self?.connectionLost(t)   // next fetch reconnects
                     return
@@ -165,18 +199,39 @@ actor BrnoStreamSource: VehicleSource {
         }
     }
 
+    /// Apply a message if `t` is still the current socket. Returns false when
+    /// this loop's socket was superseded (a race left it orphaned) so the loop
+    /// closes it instead of receiving forever.
+    private func accept(_ msg: URLSessionWebSocketTask.Message, from t: URLSessionWebSocketTask) -> Bool {
+        guard task === t else { return false }
+        apply(msg)
+        return true
+    }
+
     private func apply(_ msg: URLSessionWebSocketTask.Message) {
-        let data: Data?
-        switch msg {
-        case .string(let s): data = Data(s.utf8)
-        case .data(let d): data = d
-        @unknown default: data = nil
+        // A lone malformed message is dropped, but a persistent streak means
+        // schema drift: force a reconnect, whose strict first decode fails the
+        // next fetch and shows the failure toast instead of an empty map.
+        guard let data = payload(of: msg), let update = try? BrnoStreamDecoder.decode(data) else {
+            decodeFailureStreak += 1
+            if decodeFailureStreak >= Self.decodeFailureCutoff {
+                task?.cancel(with: .goingAway, reason: nil)
+                task = nil
+            }
+            return
         }
-        // A malformed message is dropped, not fatal — the stream keeps flowing.
-        guard let data, let update = try? BrnoStreamDecoder.decode(data) else { return }
+        decodeFailureStreak = 0
         snapshot.apply(update)
         applyCount += 1
         if applyCount.isMultiple(of: 512) { snapshot.prune() }
+    }
+
+    private func payload(of msg: URLSessionWebSocketTask.Message) -> Data? {
+        switch msg {
+        case .string(let s): return Data(s.utf8)
+        case .data(let d): return d
+        @unknown default: return nil
+        }
     }
 
     private func connectionLost(_ t: URLSessionWebSocketTask) {
