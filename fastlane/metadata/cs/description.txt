@@ -11,7 +11,7 @@ PROČ LÍSTKOMAT
 CHYTRÉ DROBNOSTI
 • Podle polohy appka sama nabídne lístky pro město, kde právě jste (poloha nikam neodchází)
 • Odpočet platnosti lístku na zamčené obrazovce i v Dynamic Islandu (Live Activity)
-• Živá mapa šalin, autobusů a trolejbusů v Brně
+• Živá mapa MHD v Praze a Brně — tramvaje, šaliny, autobusy i trolejbusy
 • Volitelné motivy vzhledu
 
 DOBRÉ VĚDĚT
