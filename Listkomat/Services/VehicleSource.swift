@@ -18,6 +18,9 @@ protocol VehicleSource: AnyObject {
 extension VehicleSource {
     var maintainsConnection: Bool { false }
     func shutdown() async {}
+    /// Bring the live connection up without paying for a full snapshot —
+    /// keep-warm only wants the connect side effect of a fetch.
+    func warmUp() async { _ = try? await fetch() }
 }
 
 /// Transport-level failure. Thrown rather than decoded, so `LiveMapViewModel`

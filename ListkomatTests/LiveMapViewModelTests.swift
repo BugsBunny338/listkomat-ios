@@ -5,23 +5,15 @@ import XCTest
 /// shared-source registry treat a live source (#12: eager connect + warm socket).
 private actor SpyVehicleSource: VehicleSource {
     nonisolated let maintainsConnection: Bool
-    private let shutdownDuration: TimeInterval
     private(set) var fetchCount = 0
     private(set) var shutdownCount = 0
 
-    init(maintainsConnection: Bool = true, shutdownDuration: TimeInterval = 0) {
+    init(maintainsConnection: Bool = true) {
         self.maintainsConnection = maintainsConnection
-        self.shutdownDuration = shutdownDuration
     }
 
     func fetch() async throws -> [Vehicle] { fetchCount += 1; return [] }
-
-    func shutdown() async {
-        if shutdownDuration > 0 {
-            try? await Task.sleep(nanoseconds: UInt64(shutdownDuration * 1_000_000_000))
-        }
-        shutdownCount += 1
-    }
+    func shutdown() { shutdownCount += 1 }
 }
 
 @MainActor
@@ -122,15 +114,61 @@ final class LiveMapViewModelTests: XCTestCase {
         XCTAssertEqual(late, 1, "an idle socket must eventually be closed (battery/data)")
     }
 
-    func testStopReleaseNowClosesImmediately() async throws {
-        // scenePhase .background — the pre-#12 behavior of closing right away.
+    // MARK: App backgrounding (central, interest-independent close)
+
+    func testBackgroundingClosesSocketDespiteKeepWarmInterest() async throws {
+        // SwiftUI does not cancel .task on scenePhase changes — the central
+        // background close must not be blocked by a screen's standing interest.
         let spy = SpyVehicleSource()
-        let vm = makeVM(spy)
-        vm.start()
-        vm.stop(releaseNow: true)
+        LiveSources.inject(spy, for: "brno")
+        let screen = Task { await LiveSources.keepWarm(cityKey: "brno") }
+        try await Task.sleep(nanoseconds: 150_000_000)
+        LiveSources.closeAllForBackground()
         try await Task.sleep(nanoseconds: 300_000_000)
         let closed = await spy.shutdownCount
-        XCTAssertEqual(closed, 1, "backgrounding must release the socket without the grace period")
+        XCTAssertEqual(closed, 1, "backgrounding must close the socket even while a screen holds interest")
+        screen.cancel()
+    }
+
+    func testBackgroundingClosesSocketUnderOpenMap() async throws {
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        let vm = makeVM(LiveSources.source(for: "brno"))
+        vm.start()
+        LiveSources.closeAllForBackground()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        let closed = await spy.shutdownCount
+        XCTAssertEqual(closed, 1, "backgrounding from the map must close the socket immediately")
+        vm.stop()
+    }
+
+    func testBackgroundCloseOrphansPendingGraceShutdown() async throws {
+        // A grace shutdown scheduled before backgrounding must not fire a
+        // second close after the central one already ran.
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        let vm = makeVM(LiveSources.source(for: "brno"))
+        vm.start()
+        vm.stop()   // schedules the 0.5 s grace shutdown
+        LiveSources.closeAllForBackground()
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        let closed = await spy.shutdownCount
+        XCTAssertEqual(closed, 1, "the pending grace shutdown must be orphaned by the background close")
+    }
+
+    // MARK: Deinit backstop
+
+    func testViewModelDeinitReleasesInterest() async throws {
+        // SwiftUI can discard a @StateObject without firing onDisappear; the
+        // view model must not take its interest to the grave.
+        let spy = SpyVehicleSource()
+        var vm: LiveMapViewModel? = makeVM(spy)
+        vm?.start()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        vm = nil
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        let closed = await spy.shutdownCount
+        XCTAssertEqual(closed, 1, "a deallocated view model must release its interest")
     }
 
     func testNewViewModelRescuesSocketFromPreviousViewModelsRelease() async throws {
@@ -162,24 +200,4 @@ final class LiveMapViewModelTests: XCTestCase {
         XCTAssertEqual(closed, 1, "double start() must not leave the socket retained forever")
     }
 
-    func testRetainDuringShutdownHopReconnects() async throws {
-        // A retain can land while the release is already inside the source's
-        // shutdown (actor hop) — too late to cancel. The registry must heal by
-        // reconnecting instead of leaving the live map on a dead socket.
-        let spy = SpyVehicleSource(shutdownDuration: 0.3)
-        let vm1 = makeVM(spy)
-        vm1.start()
-        let before = await spy.fetchCount
-        vm1.stop(releaseNow: true)              // shutdown starts its 0.3 s hop
-        try await Task.sleep(nanoseconds: 100_000_000)
-        let vm2 = makeVM(spy)
-        vm2.start()                             // lands mid-shutdown
-        try await Task.sleep(nanoseconds: 800_000_000)
-        let closed = await spy.shutdownCount
-        let after = await spy.fetchCount
-        XCTAssertEqual(closed, 1)
-        XCTAssertGreaterThan(after, before + 1,
-                             "a retain racing the shutdown hop must trigger a reconnect fetch")
-        vm2.stop()
-    }
 }

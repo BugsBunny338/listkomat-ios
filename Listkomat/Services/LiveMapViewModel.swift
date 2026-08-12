@@ -22,6 +22,16 @@ final class LiveMapViewModel: ObservableObject {
         self.seedStopNames = stopNames
     }
 
+    deinit {
+        // SwiftUI can discard a @StateObject without firing onDisappear —
+        // don't take a retained interest (and thus the socket) to the grave.
+        pollTask?.cancel()
+        if holdsInterest {
+            let source = source
+            Task { @MainActor in LiveSources.release(source) }
+        }
+    }
+
     /// Build the view model for a city: its shared live source + bundled stops.
     /// Prague has no numeric stop-names map — destinations come from the feed.
     /// New live-map cities also need a source kind in `LiveSources.makeSource`.
@@ -55,14 +65,14 @@ final class LiveMapViewModel: ObservableObject {
     /// Stops polling and drops this view model's interest in the source. With
     /// no interest left, the connection is kept warm for the grace period so a
     /// quick reopen paints instantly (#12), then released — Brno's stream is
-    /// chatty, so an abandoned socket would keep burning data. Pass
-    /// `releaseNow` on app backgrounding to skip the grace period.
-    func stop(releaseNow: Bool = false) {
+    /// chatty, so an abandoned socket would keep burning data. (App
+    /// backgrounding is handled centrally by `LiveSources`, not here.)
+    func stop() {
         pollTask?.cancel()
         pollTask = nil
         if holdsInterest {
             holdsInterest = false
-            LiveSources.release(source, after: releaseNow ? 0 : nil)
+            LiveSources.release(source)
         }
     }
 
