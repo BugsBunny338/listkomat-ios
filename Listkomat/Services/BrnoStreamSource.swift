@@ -96,6 +96,9 @@ actor BrnoStreamSource: VehicleSource {
 
     init(session: URLSession = .shared) { self.session = session }
 
+    /// The socket accumulates the vehicle set between fetches — worth warming.
+    nonisolated var maintainsConnection: Bool { true }
+
     // MARK: Stream URL (annual rollover, like the old layer name)
 
     static func streamName(year: Int) -> String { "stream_kordis_\(year % 100)" }

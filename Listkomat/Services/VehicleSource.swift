@@ -6,12 +6,17 @@ import Foundation
 /// connection survives the map view's lifecycle.
 protocol VehicleSource: AnyObject {
     func fetch() async throws -> [Vehicle]
+    /// True for sources that hold a live connection accumulating state between
+    /// fetches (Brno's stream). Drives keep-warm: warming a stateless poller
+    /// would just be a wasted fetch.
+    var maintainsConnection: Bool { get }
     /// Release any live connection while the map is off-screen. Optional —
     /// polling sources have nothing to release.
     func shutdown() async
 }
 
 extension VehicleSource {
+    var maintainsConnection: Bool { false }
     func shutdown() async {}
 }
 

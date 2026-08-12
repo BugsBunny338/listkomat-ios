@@ -80,7 +80,9 @@ struct LiveMapView: View {
             .onDisappear { vm.stop() }
             .onChange(of: scenePhase) { phase in
                 if phase == .active { vm.start() }          // resume on return
-                else if phase == .background { vm.stop() }  // pause while backgrounded
+                // Backgrounding closes the socket right away — the keep-warm
+                // grace period is for map close/reopen, not for leaving the app.
+                else if phase == .background { vm.stop(releaseNow: true) }
             }
     }
 

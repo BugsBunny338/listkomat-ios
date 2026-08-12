@@ -10,14 +10,11 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
-    /// Seconds an idle source is kept warm after `stop()` before its connection
-    /// is released (#12). Var for tests.
-    var idleShutdownDelay: TimeInterval = 120
-
     let source: VehicleSource
     private let seedStops: [Stop]
     private let seedStopNames: [Int: String]
     private var pollTask: Task<Void, Never>?
+    private var holdsInterest = false
 
     init(source: VehicleSource, stops: [Stop], stopNames: [Int: String]) {
         self.source = source
@@ -27,19 +24,23 @@ final class LiveMapViewModel: ObservableObject {
 
     /// Build the view model for a city: its shared live source + bundled stops.
     /// Prague has no numeric stop-names map — destinations come from the feed.
+    /// New live-map cities also need a source kind in `LiveSources.makeSource`.
     static func make(for city: City) -> LiveMapViewModel {
+        let source = LiveSources.source(for: city.key)
         switch city.key {
         case "praha":
-            return LiveMapViewModel(source: LiveSources.source(for: city.key),
-                                    stops: StopsStore.prague(), stopNames: [:])
+            return LiveMapViewModel(source: source, stops: StopsStore.prague(), stopNames: [:])
         default: // "brno"
-            return LiveMapViewModel(source: LiveSources.source(for: city.key),
-                                    stops: StopsStore.brno(), stopNames: StopNamesStore.brno())
+            return LiveMapViewModel(source: source, stops: StopsStore.brno(),
+                                    stopNames: StopNamesStore.brno())
         }
     }
 
     func start() {
-        LiveSources.cancelPendingShutdown(of: source)   // back within the grace period
+        if !holdsInterest {   // onAppear and scenePhase can both call start()
+            holdsInterest = true
+            LiveSources.retain(source)
+        }
         if stops.isEmpty { stops = seedStops }
         if stopNames.isEmpty { stopNames = seedStopNames }
         pollTask?.cancel()
@@ -51,14 +52,18 @@ final class LiveMapViewModel: ObservableObject {
         }
     }
 
-    /// Stops polling. The source's connection is kept warm for
-    /// `idleShutdownDelay` so a quick reopen paints instantly (#12), then
-    /// released — Brno's stream is chatty, so an abandoned socket would keep
-    /// burning data.
-    func stop() {
+    /// Stops polling and drops this view model's interest in the source. With
+    /// no interest left, the connection is kept warm for the grace period so a
+    /// quick reopen paints instantly (#12), then released — Brno's stream is
+    /// chatty, so an abandoned socket would keep burning data. Pass
+    /// `releaseNow` on app backgrounding to skip the grace period.
+    func stop(releaseNow: Bool = false) {
         pollTask?.cancel()
         pollTask = nil
-        LiveSources.scheduleShutdown(of: source, after: idleShutdownDelay)
+        if holdsInterest {
+            holdsInterest = false
+            LiveSources.release(source, after: releaseNow ? 0 : nil)
+        }
     }
 
     private func refresh() async {
