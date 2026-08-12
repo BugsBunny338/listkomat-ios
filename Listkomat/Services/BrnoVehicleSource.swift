@@ -106,8 +106,12 @@ enum BrnoVehicleSource {
 /// NOTE: the public FeatureServer was retired upstream 2026-08-10 (404) — the
 /// app now uses `BrnoStreamSource` (#6). Kept because the queryable layer may
 /// return as `Kordis_26_polohy_int`; if it does, this needs only a URL change.
-struct BrnoLiveSource: VehicleSource {
-    var session: URLSession = .shared
+final class BrnoLiveSource: VehicleSource, Sendable {
+    let session: URLSession
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     func fetch() async throws -> [Vehicle] {
         // Same URL every poll, so bypass the cache or we'd get stale (static) data.

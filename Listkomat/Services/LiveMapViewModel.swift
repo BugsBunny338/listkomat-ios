@@ -10,7 +10,11 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
-    private let source: VehicleSource
+    /// Seconds an idle source is kept warm after `stop()` before its connection
+    /// is released (#12). Var for tests.
+    var idleShutdownDelay: TimeInterval = 120
+
+    let source: VehicleSource
     private let seedStops: [Stop]
     private let seedStopNames: [Int: String]
     private var pollTask: Task<Void, Never>?
@@ -21,20 +25,21 @@ final class LiveMapViewModel: ObservableObject {
         self.seedStopNames = stopNames
     }
 
-    /// Build the view model for a city: its live source + bundled stops.
+    /// Build the view model for a city: its shared live source + bundled stops.
     /// Prague has no numeric stop-names map — destinations come from the feed.
     static func make(for city: City) -> LiveMapViewModel {
         switch city.key {
         case "praha":
-            return LiveMapViewModel(source: PragueLiveSource(),
+            return LiveMapViewModel(source: LiveSources.source(for: city.key),
                                     stops: StopsStore.prague(), stopNames: [:])
         default: // "brno"
-            return LiveMapViewModel(source: BrnoStreamSource(),
+            return LiveMapViewModel(source: LiveSources.source(for: city.key),
                                     stops: StopsStore.brno(), stopNames: StopNamesStore.brno())
         }
     }
 
     func start() {
+        LiveSources.cancelPendingShutdown(of: source)   // back within the grace period
         if stops.isEmpty { stops = seedStops }
         if stopNames.isEmpty { stopNames = seedStopNames }
         pollTask?.cancel()
@@ -46,10 +51,14 @@ final class LiveMapViewModel: ObservableObject {
         }
     }
 
+    /// Stops polling. The source's connection is kept warm for
+    /// `idleShutdownDelay` so a quick reopen paints instantly (#12), then
+    /// released — Brno's stream is chatty, so an abandoned socket would keep
+    /// burning data.
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-        Task { [source] in await source.shutdown() }   // close the stream socket
+        LiveSources.scheduleShutdown(of: source, after: idleShutdownDelay)
     }
 
     private func refresh() async {

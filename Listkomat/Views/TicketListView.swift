@@ -34,6 +34,10 @@ struct TicketListView: View {
                 .buttonStyle(.bordered)
                 .tint(accent)
                 .padding(.bottom, 12)
+                // Eager connect (#12): Brno's stream accumulates vehicles only
+                // as each one reports, so start it while the user is still on
+                // the ticket list and the map opens already populated.
+                .task(id: city.key) { await LiveSources.warmUp(cityKey: city.key) }
             }
             List {
                 Section {
