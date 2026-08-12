@@ -80,7 +80,9 @@ struct LiveMapView: View {
             .onDisappear { vm.stop() }
             .onChange(of: scenePhase) { phase in
                 if phase == .active { vm.start() }          // resume on return
-                else if phase == .background { vm.stop() }  // pause while backgrounded
+                // Pause polling while backgrounded; the socket itself is closed
+                // centrally by LiveSources on didEnterBackground.
+                else if phase == .background { vm.stop() }
             }
     }
 

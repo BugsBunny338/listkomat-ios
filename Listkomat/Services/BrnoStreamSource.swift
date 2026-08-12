@@ -96,6 +96,13 @@ actor BrnoStreamSource: VehicleSource {
 
     init(session: URLSession = .shared) { self.session = session }
 
+    /// The socket accumulates the vehicle set between fetches — worth warming.
+    nonisolated var maintainsConnection: Bool { true }
+
+    /// Connect-only warm-up: skips `fetch()`'s snapshot build (filter + sort of
+    /// the whole vehicle dictionary), which keep-warm would just discard.
+    func warmUp() async { try? await ensureConnected() }
+
     // MARK: Stream URL (annual rollover, like the old layer name)
 
     static func streamName(year: Int) -> String { "stream_kordis_\(year % 100)" }
