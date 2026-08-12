@@ -11,7 +11,7 @@ WHY LÍSTKOMAT
 NICE TOUCHES
 • Based on your location, the app offers tickets for the city you're in (your location never leaves the device)
 • Ticket-validity countdown on the Lock Screen and in the Dynamic Island (Live Activity)
-• Live map of trams, buses and trolleybuses in Brno
+• Live map of trams, buses and trolleybuses in Prague and Brno
 • Optional visual themes
 
 GOOD TO KNOW
