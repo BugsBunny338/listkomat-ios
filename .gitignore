@@ -36,3 +36,7 @@ fastlane/test_output
 # Python bytecode (scripts/)
 __pycache__/
 *.pyc
+
+# Claude Code local state (CLAUDE.md itself IS tracked)
+.claude/settings.local.json
+.claude/worktrees/
