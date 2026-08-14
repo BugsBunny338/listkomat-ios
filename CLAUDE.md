@@ -19,9 +19,15 @@ and build settings; never hand-edit `Listkomat.xcodeproj`.
 
 ```sh
 xcodegen generate                     # required after any project.yml change / fresh clone
-xcodebuild -scheme Listkomat -destination 'platform=iOS Simulator,name=iPhone 16' build
-xcodebuild -scheme Listkomat -destination 'platform=iOS Simulator,name=iPhone 16' test
+xcodebuild -scheme Listkomat -destination 'generic/platform=iOS Simulator' build
+xcrun simctl list devices available | grep iPhone     # pick a name that actually exists
+xcodebuild -scheme Listkomat -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
+
+Don't paste a simulator name from memory — the installed set changes with every
+Xcode release, and `xcodebuild` fails outright on a device that isn't there.
+Building takes `generic/platform=iOS Simulator`, but testing needs a real device
+name, so list them first.
 
 - Targets: `Listkomat` (app), `ListkomatWidgets` (Live Activity), `ListkomatTests`,
   with shared code in `Shared/`.
