@@ -1,0 +1,22 @@
+# XcodeBuildMCP workflow registration.
+#
+# By default the server registers only `session-management` + `simulator`
+# (24 of 82 tools). That covers build/launch/screenshot but leaves out tap,
+# gestures and typing — so sheets, alerts and buttons can't be driven end to
+# end, which is how the presentation-timing bugs in PR #21 reached review
+# unverified.
+#
+# `ui-automation` needs the axe helper (brew tap cameroncooke/axe && brew
+# install axe); `xcodebuildmcp://doctor` reports whether it's present.
+#
+# Deliberately NOT stored here: session defaults (project/scheme/simulator).
+# Simulator UDIDs are machine-local, so they don't belong in a tracked file —
+# set them per session with session_set_defaults instead.
+#
+# Read from the server process's working directory only; there is no upward
+# search, so this has to sit in the repo root the session was started from.
+schemaVersion: 1
+enabledWorkflows:
+  - session-management
+  - simulator
+  - ui-automation
