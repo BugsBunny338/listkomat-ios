@@ -157,7 +157,13 @@ struct ContentView: View {
         // TimelineView so the banner flips from pending → active on its own at
         // validFrom while the app is open (no push needed in-app).
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
-            let pending = ctx.date < active.validFrom
+            // `ctx.date` is the current *schedule entry*, which lags real time by up to
+            // a tick. `confirmNow()` re-anchors validFrom to the tap instant, so
+            // comparing against the entry alone left "Potvrdit nyní" on screen for up to
+            // a second after a successful tap — inviting the second tap that #19 is
+            // about, which would re-anchor the ticket's window again. Take whichever
+            // clock is further along.
+            let pending = active.isPending(at: max(ctx.date, .now))
             HStack(spacing: 12) {
                 Image(systemName: "tram.fill")
                     .foregroundStyle(theme.accent)
