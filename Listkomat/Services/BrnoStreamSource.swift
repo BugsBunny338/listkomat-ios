@@ -88,6 +88,8 @@ actor BrnoStreamSource: VehicleSource {
     private var applyCount = 0
     private var decodeFailureStreak = 0
     private let session: URLSession
+    /// When the socket last delivered anything — drives the stall check.
+    private var lastMessageAt = Date.distantPast
 
     /// Consecutive undecodable messages that force a reconnect. A reconnect's
     /// first message is decoded strictly, so persistent schema drift surfaces
@@ -103,18 +105,49 @@ actor BrnoStreamSource: VehicleSource {
     /// the whole vehicle dictionary), which keep-warm would just discard.
     func warmUp() async { try? await ensureConnected() }
 
-    // MARK: Stream URL (annual rollover, like the old layer name)
+    // MARK: Stream URL
 
-    static func streamName(year: Int) -> String { "stream_kordis_\(year % 100)" }
+    /// The year-less stream KORDIS actually feeds. Upstream history, so the next
+    /// break is diagnosable: the `Kordis_26_polohy` FeatureServer went 404 on
+    /// 2026-08-10 (#6) → `stream_kordis_26`, which itself went silent on
+    /// 2026-08-29 (still listed by /ags4/rest/services, upgrade accepted, but
+    /// zero messages in 90 s and the server then closes the socket). There is no
+    /// annual rollover any more — this name carries no year.
+    ///
+    /// If it breaks again, list the live candidates with
+    /// `curl 'https://gis.brno.cz/ags4/rest/services?f=json'` and connect to each
+    /// `/geoevent/ws/services/<name>/StreamServer/subscribe` — being registered
+    /// there does NOT mean it carries data.
+    static let streamName = "Kordis_stream"
 
     /// The dataset docs print an https://gis.brno.cz/ags4/rest/… URL, but that
     /// form rejects the WebSocket upgrade — only this /geoevent/ws/ path works.
-    static func currentStreamURL(now: Date = Date(),
-                                 calendar: Calendar = Calendar(identifier: .gregorian)) -> URL {
-        let year = calendar.component(.year, from: now)
-        return URL(string: "wss://gis.brno.cz/geoevent/ws/services/"
-            + "\(streamName(year: year))/StreamServer/subscribe")!
+    /// The `/subscribe` suffix is required: the URL the service metadata
+    /// advertises (bare `/StreamServer`) upgrades fine but never sends anything.
+    static func currentStreamURL() -> URL {
+        URL(string: "wss://gis.brno.cz/geoevent/ws/services/"
+            + "\(streamName)/StreamServer/subscribe")!
     }
+
+    /// How long to wait for the first message before calling the stream dead.
+    ///
+    /// Must stay comfortably above the feed's batch period: KORDIS does not
+    /// stream continuously — it emits the full ~330-vehicle snapshot in one
+    /// burst every ~28 s (measured 27.9/27.9/27.9 s on 2026-08-29). Connecting
+    /// just after a burst means waiting nearly a full period for the next one,
+    /// so the old 10 s deadline failed the fetch on a perfectly healthy stream.
+    static let firstMessageTimeout: TimeInterval = 40
+
+    /// How long to let a burst drain before the first fetch reads the snapshot,
+    /// so the map paints the whole fleet instead of the slice that arrived first.
+    /// One burst takes 0.4–2.2 s to deliver (measured 2026-08-29).
+    static let burstSettleDelay: TimeInterval = 2.5
+
+    /// Silence on an ESTABLISHED socket that means the feed died under us.
+    /// Three missed bursts (~28 s each), and deliberately below
+    /// `freshnessLimit` (120 s) so the reconnect — and the toast, if the feed
+    /// really is gone — happens before the last positions age off the map.
+    static let stallTimeout: TimeInterval = 90
 
     // MARK: VehicleSource
 
@@ -137,25 +170,50 @@ actor BrnoStreamSource: VehicleSource {
     /// calling start()) share one in-flight connect instead of each opening a
     /// socket and leaking the loser.
     private func ensureConnected() async throws {
-        if let task, task.state == .running { return }
-        let inFlight = connectTask ?? Task { try await self.openConnection() }
+        // Join an in-flight connect BEFORE the running-socket shortcut below:
+        // the socket is assigned while the burst is still draining, so a fetch
+        // that skipped ahead would read a half-filled snapshot and paint a
+        // partial fleet for a whole poll interval.
+        if let inFlight = connectTask {
+            try await inFlight.value
+            return
+        }
+        if let task, task.state == .running, !isStalled { return }
+        let inFlight = Task { try await self.openConnection() }
         connectTask = inFlight
+        // Clear only OUR attempt: a shutdown mid-connect nils connectTask and a
+        // later attempt may already own it, and this one's unwinding must not
+        // evict its successor (which would leave the next fetch opening a
+        // second socket).
+        defer { if connectTask == inFlight { connectTask = nil } }
         try await inFlight.value
     }
 
+    /// True when the socket is up but the feed stopped talking. A silent server
+    /// that never closes the connection would otherwise leave `receive()`
+    /// blocked forever and `task.state == .running`, so every poll would take
+    /// the shortcut above and the map would sit empty (past `freshnessLimit`)
+    /// with no toast and no reconnect — exactly the silently-empty map the
+    /// strict first decode exists to prevent, just arriving later. Forcing a
+    /// reconnect makes the dead feed surface as a failed fetch instead.
+    private var isStalled: Bool {
+        Date().timeIntervalSince(lastMessageAt) > Self.stallTimeout
+    }
+
     private func openConnection() async throws {
-        defer { connectTask = nil }   // runs on the actor at this attempt's end
         task?.cancel(with: .goingAway, reason: nil)
         let t = session.webSocketTask(with: Self.currentStreamURL())
         t.resume()
         do {
-            // Await the first message inline, decoded STRICTLY: fails fast when
-            // the host is unreachable, the upgrade hangs, or the schema drifted
-            // — all surface as a failed fetch (toast), never a silently empty
-            // map. The feed sends many messages per second, so 10 s = "down".
-            let first = try await firstMessage(t, timeout: 10)
+            // Await the first message inline, decoded STRICTLY: an open socket
+            // is NOT proof of a live feed — the retired stream_kordis_26 still
+            // accepts the upgrade and then says nothing. Reaching the deadline,
+            // failing to parse, or a drifted schema all surface as a failed
+            // fetch (toast), never a silently empty map.
+            let first = try await firstMessage(t, timeout: Self.firstMessageTimeout)
             guard let data = payload(of: first) else { throw URLError(.cannotParseResponse) }
             snapshot.apply(try BrnoStreamDecoder.decode(data))
+            lastMessageAt = Date()
         } catch {
             t.cancel(with: .goingAway, reason: nil)
             throw error
@@ -163,8 +221,10 @@ actor BrnoStreamSource: VehicleSource {
         task = t
         receiveLoop(on: t)
         // Let the initial burst land so the first fetch paints a populated map
-        // instead of flashing "Žádná vozidla v okolí" until the next poll.
-        try? await Task.sleep(nanoseconds: 800_000_000)
+        // instead of flashing "Žádná vozidla v okolí" until the next poll —
+        // which, with a ~28 s batch period, would leave a near-empty map on
+        // screen for half a minute.
+        try? await Task.sleep(nanoseconds: UInt64(Self.burstSettleDelay * 1_000_000_000))
     }
 
     private func firstMessage(_ t: URLSessionWebSocketTask,
@@ -216,6 +276,9 @@ actor BrnoStreamSource: VehicleSource {
     }
 
     private func apply(_ msg: URLSessionWebSocketTask.Message) {
+        // Anything arriving proves the feed is still talking, decodable or not
+        // (persistent garbage is what `decodeFailureCutoff` below is for).
+        lastMessageAt = Date()
         // A lone malformed message is dropped, but a persistent streak means
         // schema drift: force a reconnect, whose strict first decode fails the
         // next fetch and shows the failure toast instead of an empty map.

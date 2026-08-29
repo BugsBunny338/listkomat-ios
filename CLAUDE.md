@@ -29,6 +29,23 @@ Xcode release, and `xcodebuild` fails outright on a device that isn't there.
 Building takes `generic/platform=iOS Simulator`, but testing needs a real device
 name, so list them first.
 
+### Two traps when several sessions run at once
+
+Jiri often has several Claude sessions working this repo in parallel, each in
+its own `.claude/worktrees/*`. Worktrees isolate files — they do **not** isolate
+these two, and both cost far more time to diagnose than to avoid:
+
+- **The simulator is shared machine-wide.** Concurrent `xcodebuild test` runs on
+  the same device kill each other's test host: `Test crashed with signal kill`
+  landing on a *different* test each run, or `Early unexpected exit … never
+  finished bootstrapping` with zero tests run. Pick a device no other session is
+  using (prefer a `Shutdown` one over the already-booted default) and pin it.
+  Re-run on a device of your own before concluding your change broke anything.
+- **`git stash` is repo-global, not per-worktree.** `stash@{N}` is one shared
+  stack, so a concurrent session's `pop` can apply *your* work into *its* tree
+  and drop it from yours. Don't stash here: commit to your branch, or
+  `git diff > patchfile`. For a clean baseline, use a throwaway worktree.
+
 - Targets: `Listkomat` (app), `ListkomatWidgets` (Live Activity), `ListkomatTests`,
   with shared code in `Shared/`.
 - iOS 16.2 deployment target, Swift 5 language mode (bump to 6 once it builds clean).
