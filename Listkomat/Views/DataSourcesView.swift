@@ -10,10 +10,12 @@ struct DataSourcesView: View {
         NavigationStack {
             List {
                 Section("Legenda") {
-                    // Metro is Prague-only; hide it from Brno's legend.
-                    ForEach(VehicleKind.allCases.filter { brno ? $0 != .metro : true }, id: \.self) { kind in
+                    // Metro and the Vltava ferries are Prague-only; hide both from Brno's legend.
+                    ForEach(VehicleKind.allCases.filter {
+                        brno ? ($0 != .metro && $0 != .ferry) : true
+                    }, id: \.self) { kind in
                         HStack(spacing: 12) {
-                            Circle().fill(kind.color).frame(width: 16, height: 16)
+                            legendSwatch(kind)
                             Text(kind.displayName(brno: brno))
                             Spacer()
                         }
@@ -49,5 +51,35 @@ struct DataSourcesView: View {
         }
         .tint(accent)   // sheets present in a fresh environment — re-apply the accent
         .presentationDetents([.medium])
+    }
+
+    /// Metro shows one lettered dot per line; every other kind shows a single dot.
+    /// Both sit in the same fixed width so the labels line up.
+    @ViewBuilder
+    private func legendSwatch(_ kind: VehicleKind) -> some View {
+        HStack(spacing: 4) {
+            if kind == .metro {
+                ForEach(["A", "B", "C"], id: \.self) { line in
+                    metroDot(line)
+                }
+            } else {
+                Circle()
+                    .fill(TransitPalette.fill(for: kind, line: ""))
+                    .frame(width: 16, height: 16)
+            }
+        }
+        .frame(width: 56, alignment: .leading)   // 3 × 16 + 2 × 4, so rows align
+    }
+
+    /// One metro line's swatch: its colour, with its letter in the readable ink.
+    private func metroDot(_ line: String) -> some View {
+        let style = TransitPalette.style(for: .metro, line: line)
+        return ZStack {
+            Circle().fill(style.fill)
+            Text(line)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(style.glyph)
+        }
+        .frame(width: 16, height: 16)
     }
 }

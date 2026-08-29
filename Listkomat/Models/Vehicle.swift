@@ -22,18 +22,6 @@ enum VehicleKind: String, CaseIterable {
     func displayName(brno: Bool) -> String {
         (self == .tram && brno) ? "Šalina" : localizedName
     }
-
-    /// Marker color — distinct, refined transit palette.
-    var color: Color {
-        switch self {
-        case .tram: return Color(hex: 0xD7263D)        // crimson
-        case .metro: return Color(hex: 0xE0812B)       // amber (Prague only)
-        case .trolleybus: return Color(hex: 0x2A9D8F)  // teal-green
-        case .bus: return Color(hex: 0x2E6F95)         // steel blue
-        case .train: return Color(hex: 0x6A4C93)       // purple
-        case .ferry: return Color(hex: 0x03AED8)        // cyan (Prague ferries)
-        }
-    }
 }
 
 /// A live transit vehicle position, normalized across data sources (Brno now,
