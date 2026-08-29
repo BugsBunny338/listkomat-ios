@@ -3,7 +3,7 @@ import CoreLocation
 
 /// Kind of transit vehicle, for tinting the map marker.
 enum VehicleKind: String, CaseIterable {
-    case tram, metro, trolleybus, bus, train
+    case tram, metro, trolleybus, bus, train, ferry
 
     /// Localized name shown in callouts and the legend.
     var localizedName: String {
@@ -13,6 +13,7 @@ enum VehicleKind: String, CaseIterable {
         case .trolleybus: return String(localized: "Trolejbus")
         case .bus: return String(localized: "Autobus")
         case .train: return String(localized: "Vlak")
+        case .ferry: return String(localized: "Přívoz")
         }
     }
 
@@ -20,17 +21,6 @@ enum VehicleKind: String, CaseIterable {
     /// slang) — deliberately kept in every language.
     func displayName(brno: Bool) -> String {
         (self == .tram && brno) ? "Šalina" : localizedName
-    }
-
-    /// Marker color — distinct, refined transit palette.
-    var color: Color {
-        switch self {
-        case .tram: return Color(hex: 0xD7263D)        // crimson
-        case .metro: return Color(hex: 0xE0812B)       // amber (Prague only)
-        case .trolleybus: return Color(hex: 0x2A9D8F)  // teal-green
-        case .bus: return Color(hex: 0x2E6F95)         // steel blue
-        case .train: return Color(hex: 0x6A4C93)       // purple
-        }
     }
 }
 

@@ -163,7 +163,7 @@ struct TransitMapView: UIViewRepresentable {
             onSelect(SelectedVehicle(id: v.id,
                                      title: "\(v.kind.displayName(brno: brno)) \(v.line)",
                                      destination: v.destination,
-                                     color: v.kind.color))
+                                     color: TransitPalette.fill(for: v.kind, line: v.line)))
         }
 
         func mapView(_ map: MKMapView, didDeselect view: MKAnnotationView) {
@@ -195,7 +195,9 @@ struct TransitMapView: UIViewRepresentable {
         }
 
         private func style(_ view: MKMarkerAnnotationView, _ kind: VehicleKind, _ line: String) {
-            view.markerTintColor = UIColor(kind.color)
+            let marker = TransitPalette.style(for: kind, line: line)
+            view.markerTintColor = UIColor(marker.fill)
+            view.glyphTintColor = UIColor(marker.glyph)
             view.glyphText = line
             view.titleVisibility = .hidden        // no floating label; number stays in the bubble
             view.subtitleVisibility = .hidden

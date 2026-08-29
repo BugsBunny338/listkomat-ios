@@ -426,6 +426,16 @@
         }
       }
     },
+    "Přívoz" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ferry"
+          }
+        }
+      }
+    },
     "Režim" : {
       "localizations" : {
         "en" : {
