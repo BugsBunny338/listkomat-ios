@@ -68,8 +68,8 @@ final class LiveActivityController: ObservableObject {
         Task {
             // staleDate = now → widget is immediately stale → flips to the valid layout.
             await activity.update(ActivityContent(state: new, staleDate: now))
-            // Reconcile: no-op on success, but if the activity was ended/dismissed out
-            // from under us the optimistic `active` is corrected (banner ↔ widget agree).
+            // Reconcile existence only — see `reconciled(local:snapshot:)`. Reading the
+            // updated content back here is NOT safe: it lags the update we just made.
             syncState()
         }
     }
@@ -86,14 +86,28 @@ final class LiveActivityController: ObservableObject {
         }
     }
 
+    /// ActivityKit's snapshot is authoritative for whether an activity *exists*; this
+    /// controller's own writes are authoritative for its *content*.
+    ///
+    /// `activity.content.state` does not reflect an update the instant
+    /// `await activity.update(...)` returns — measured on the simulator, the read-back
+    /// still carried the pre-update `validFrom`. Reconciling content against that
+    /// snapshot pushed a just-confirmed ticket back to "čeká na potvrzovací SMS" and
+    /// cost the user a second tap (#19). Nothing but this controller ever changes an
+    /// activity's content (there is no push backend), so keeping the local value is
+    /// safe — while an activity that has ended or been dismissed still clears the banner.
+    static func reconciled(local: ActiveTicket?, snapshot: ActiveTicket?) -> ActiveTicket? {
+        guard snapshot != nil else { return nil }   // ended/dismissed → banner goes away
+        return local ?? snapshot                    // fresh launch adopts what's running
+    }
+
     private func syncState() {
-        if let activity = Activity<TicketActivityAttributes>.activities.first {
-            active = ActiveTicket(cityName: activity.attributes.cityName,
-                                  ticketLabel: activity.attributes.ticketLabel,
-                                  validFrom: activity.content.state.validFrom)
-        } else {
-            active = nil
+        let snapshot = Activity<TicketActivityAttributes>.activities.first.map {
+            ActiveTicket(cityName: $0.attributes.cityName,
+                         ticketLabel: $0.attributes.ticketLabel,
+                         validFrom: $0.content.state.validFrom)
         }
+        active = Self.reconciled(local: active, snapshot: snapshot)
     }
 
     /// Keep `active` in sync when activities start, end, or expire while the app is open.
