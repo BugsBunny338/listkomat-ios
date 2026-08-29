@@ -1,5 +1,6 @@
 import SwiftUI
 import MessageUI
+import StoreKit
 
 /// The list of tickets for the current city, headed by the city's landmark icon
 /// (teal, no tile). Tapping a ticket opens a pre-filled SMS to that city's number.
@@ -12,6 +13,21 @@ struct TicketListView: View {
 
     @State private var pending: Ticket?
     @State private var cannotSend = false
+    @State private var sendFailed = false
+    @State private var showingSimInfo = false
+    /// nil until StoreKit answers; ForeignSimNotice treats that as "unknown", not "foreign".
+    @State private var storefrontCountry: String?
+
+    /// The one-time note is dismissed for good once tapped away (issue #15).
+    @AppStorage("foreignSimNoticeDismissed") private var foreignSimNoticeDismissed = false
+
+    private var showsForeignSimNotice: Bool {
+        ForeignSimNotice.shouldShow(
+            uiLanguage: Bundle.main.preferredLocalizations.first,
+            storefrontCountry: storefrontCountry,
+            dismissed: foreignSimNoticeDismissed
+        )
+    }
 
     private var formattedDate: String {
         let parts = updatedAt.split(separator: "-")
@@ -41,6 +57,7 @@ struct TicketListView: View {
                 // after the grace period.
                 .task(id: city.key) { await LiveSources.keepWarm(cityKey: city.key) }
             }
+            if showsForeignSimNotice { foreignSimNotice }
             List {
                 Section {
                     ForEach(city.tickets) { ticket in
@@ -50,7 +67,16 @@ struct TicketListView: View {
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
-                        Text("Funguje s českou SIM kartou.")
+                        // Permanent entry point to the full explanation — the
+                        // one-time note above can be dismissed, this can't.
+                        Button { showingSimInfo = true } label: {
+                            HStack(spacing: 4) {
+                                Text("Funguje s českou SIM kartou.")
+                                Text("Více").underline()
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(accent)
                         if isOffline {
                             Label("Offline – zobrazen uložený ceník (k \(formattedDate))", systemImage: "wifi.slash")
                                 .foregroundStyle(.orange)
@@ -62,11 +88,21 @@ struct TicketListView: View {
             }
         }
         .background(Color(.systemGroupedBackground))
+        // Storefront is the second half of the "probably foreign" heuristic. It
+        // needs no IAP setup or permission, and it only ever adds a note.
+        .task {
+            storefrontCountry = await Storefront.current?.countryCode
+        }
         .sheet(item: $pending) { ticket in
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
                 pending = nil
                 if case .sent = result {
                     liveActivity.start(city: city, ticket: ticket, accent: accent)
+                }
+                // A failed send is the one doomed purchase we *can* see — a
+                // silent failure here is what earns 1★ reviews (issue #15).
+                if case .failed = result {
+                    sendFailed = true
                 }
                 #if targetEnvironment(simulator)
                 // The simulator can't actually send SMS, so start the Live
@@ -80,6 +116,46 @@ struct TicketListView: View {
         } message: {
             Text("Toto zařízení neumí posílat SMS (např. iPad bez SIM).")
         }
+        .alert("SMS se nepodařilo odeslat", isPresented: $sendFailed) {
+            Button("Více informací") { showingSimInfo = true }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Lístek se nekoupil, nic se nestrhlo. Prémiové SMS fungují jen ze SIM karty českého operátora — ze zahraniční SIM v roamingu se lístek koupit nedá.")
+        }
+        .sheet(isPresented: $showingSimInfo) {
+            SimRequirementView(accent: accent)
+        }
+    }
+
+    /// One-time, dismissible note for users the heuristic flags as probably
+    /// foreign. Never blocks: the buttons below stay fully usable.
+    private var foreignSimNotice: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.bubble")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Nákup vyžaduje SIM kartu českého operátora")
+                    .font(.brandBold(14, relativeTo: .footnote))
+                Text("Lístky se kupují prémiovou SMS. Ze zahraniční SIM v roamingu nedorazí.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Více informací") { showingSimInfo = true }
+                    .font(.footnote.weight(.semibold))
+                    .tint(accent)
+            }
+            Spacer(minLength: 0)
+            Button {
+                foreignSimNoticeDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Zavřít upozornění")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.orange.opacity(0.12))
     }
 
     private var header: some View {

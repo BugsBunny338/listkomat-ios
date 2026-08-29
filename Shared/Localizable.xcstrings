@@ -14,6 +14,146 @@
         }
       }
     },
+    "Jak nákup funguje" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How buying works"
+          }
+        }
+      }
+    },
+    "Lístek koupíte odesláním předvyplněné SMS. Platbu vyúčtuje váš mobilní operátor, neplatíte přes App Store." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You buy a ticket by sending a pre-filled SMS. Your mobile operator bills it — nothing goes through the App Store."
+          }
+        }
+      }
+    },
+    "Lístek se nekoupil, nic se nestrhlo. Prémiové SMS fungují jen ze SIM karty českého operátora — ze zahraniční SIM v roamingu se lístek koupit nedá." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No ticket was bought and nothing was charged. Premium SMS works only from a Czech operator's SIM — you can't buy a ticket from a foreign SIM in roaming."
+          }
+        }
+      }
+    },
+    "Lístky se kupují prémiovou SMS. Ze zahraniční SIM v roamingu nedorazí." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickets are bought by premium SMS. They never arrive on a foreign SIM in roaming."
+          }
+        }
+      }
+    },
+    "Nákup vyžaduje SIM kartu českého operátora" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buying requires a Czech operator's SIM"
+          }
+        }
+      }
+    },
+    "Placení SMS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paying by SMS"
+          }
+        }
+      }
+    },
+    "Potřebujete českou SIM kartu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You need a Czech SIM card"
+          }
+        }
+      }
+    },
+    "Prémiové SMS umí zpracovat jen čeští operátoři (O2, T‑Mobile, Vodafone a jejich virtuální sítě). Předplacená karta stačí." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only Czech operators can process premium SMS (O2, T‑Mobile, Vodafone and the networks running on them). A prepaid card is enough."
+          }
+        }
+      }
+    },
+    "SMS se nepodařilo odeslat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SMS couldn't be sent"
+          }
+        }
+      }
+    },
+    "SMS se obvykle tváří, že odešla, ale lístek nedorazí. Appka se to nemá jak dozvědět — iOS jí nedovolí číst příchozí SMS — proto raději upozorňujeme dopředu." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The message usually looks like it was sent, but no ticket arrives. The app has no way of knowing — iOS won't let it read incoming SMS — so we would rather tell you up front."
+          }
+        }
+      }
+    },
+    "Více" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "Více informací" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Learn more"
+          }
+        }
+      }
+    },
+    "Zahraniční SIM v roamingu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foreign SIM roaming"
+          }
+        }
+      }
+    },
+    "Zavřít upozornění" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss notice"
+          }
+        }
+      }
+    },
     "→ %@" : {
       "shouldTranslate" : false
     },
