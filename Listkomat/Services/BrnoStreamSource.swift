@@ -144,10 +144,21 @@ actor BrnoStreamSource: VehicleSource {
     static let burstSettleDelay: TimeInterval = 2.5
 
     /// Silence on an ESTABLISHED socket that means the feed died under us.
-    /// Three missed bursts (~28 s each), and deliberately below
-    /// `freshnessLimit` (120 s) so the reconnect — and the toast, if the feed
-    /// really is gone — happens before the last positions age off the map.
-    static let stallTimeout: TimeInterval = 90
+    ///
+    /// Sized so the WHOLE recovery fits inside `freshnessLimit` (120 s), not
+    /// just its start: detection can lag by up to one poll, and the reconnect
+    /// it triggers then blocks `fetch()` for `firstMessageTimeout` before it
+    /// can throw. So the budget is
+    ///
+    ///     stallTimeout + pollInterval + firstMessageTimeout < freshnessLimit
+    ///     70 + 8 + 40 = 118 < 120
+    ///
+    /// which puts the toast on screen while the last positions are still
+    /// fresh, instead of leaving stale markers up with no warning for the gap
+    /// in between. Still above two missed bursts (~28 s each) so an ordinary
+    /// hiccup in the feed doesn't churn the connection.
+    /// `testStallBudgetFitsInsideFreshness` pins the arithmetic.
+    static let stallTimeout: TimeInterval = 70
 
     // MARK: VehicleSource
 
@@ -214,6 +225,12 @@ actor BrnoStreamSource: VehicleSource {
             guard let data = payload(of: first) else { throw URLError(.cannotParseResponse) }
             snapshot.apply(try BrnoStreamDecoder.decode(data))
             lastMessageAt = Date()
+            // Fresh socket, fresh streak. A reconnect forced by
+            // `decodeFailureCutoff` would otherwise start at the cutoff, so the
+            // first bad frame on the new socket would tear it down again —
+            // a reconnect loop driven by one malformed message per burst
+            // rather than by real schema drift.
+            decodeFailureStreak = 0
         } catch {
             t.cancel(with: .goingAway, reason: nil)
             throw error

@@ -10,6 +10,12 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
 
+    /// How often the map re-reads the source. Also the worst-case lag between
+    /// a stream stalling and the source noticing, which is why
+    /// `BrnoStreamSource.stallTimeout` is sized against it — nonisolated so
+    /// that budget can be asserted without hopping to the main actor.
+    nonisolated static let pollInterval: TimeInterval = 8
+
     let source: VehicleSource
     private let seedStops: [Stop]
     private let seedStopNames: [Int: String]
@@ -57,7 +63,7 @@ final class LiveMapViewModel: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                try? await Task.sleep(nanoseconds: UInt64(Self.pollInterval * 1_000_000_000))
             }
         }
     }

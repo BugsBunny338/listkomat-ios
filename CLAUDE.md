@@ -29,6 +29,20 @@ Xcode release, and `xcodebuild` fails outright on a device that isn't there.
 Building takes `generic/platform=iOS Simulator`, but testing needs a real device
 name, so list them first.
 
+- Targets: `Listkomat` (app), `ListkomatWidgets` (Live Activity), `ListkomatTests`,
+  with shared code in `Shared/`.
+- iOS 16.2 deployment target, Swift 5 language mode (bump to 6 once it builds clean).
+- Team `35AS7FL468`, bundle prefix `cz.flipcom`, automatic signing.
+- `Listkomat/Info.plist` is generated too — edit the `info.properties` block in
+  `project.yml`. Localized Info.plist strings are authoritative in
+  `Listkomat/InfoPlist.xcstrings` (cs + en); the `project.yml` values are only a
+  fallback, so change both.
+
+For anything interactive — building to a simulator, driving the UI, reading logs
+— prefer the available agentic iOS tooling over hand-rolled `xcodebuild`
+invocations. If a tool that would obviously help isn't installed, ask for it
+rather than hand-hacking around its absence.
+
 ### Two traps when several sessions run at once
 
 Jiri often has several Claude sessions working this repo in parallel, each in
@@ -45,20 +59,6 @@ these two, and both cost far more time to diagnose than to avoid:
   stack, so a concurrent session's `pop` can apply *your* work into *its* tree
   and drop it from yours. Don't stash here: commit to your branch, or
   `git diff > patchfile`. For a clean baseline, use a throwaway worktree.
-
-- Targets: `Listkomat` (app), `ListkomatWidgets` (Live Activity), `ListkomatTests`,
-  with shared code in `Shared/`.
-- iOS 16.2 deployment target, Swift 5 language mode (bump to 6 once it builds clean).
-- Team `35AS7FL468`, bundle prefix `cz.flipcom`, automatic signing.
-- `Listkomat/Info.plist` is generated too — edit the `info.properties` block in
-  `project.yml`. Localized Info.plist strings are authoritative in
-  `Listkomat/InfoPlist.xcstrings` (cs + en); the `project.yml` values are only a
-  fallback, so change both.
-
-For anything interactive — building to a simulator, driving the UI, reading logs
-— prefer the available agentic iOS tooling over hand-rolled `xcodebuild`
-invocations. If a tool that would obviously help isn't installed, ask for it
-rather than hand-hacking around its absence.
 
 ## Release
 

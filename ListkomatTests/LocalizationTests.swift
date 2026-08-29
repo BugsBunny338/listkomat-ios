@@ -64,6 +64,11 @@ final class LocalizationTests: XCTestCase {
         // Pins vehicle-name translations locale-independently (VehicleModelTests
         // can't — localizedName resolves per the test host's language).
         XCTAssertEqual(en["Tramvaj"], "Tram")
+        // Cold-start card: the hint explains a ~30 s wait, so it has to read as
+        // a sentence in both languages, not a truncated label.
+        XCTAssertEqual(en["Připojuji se k živým datům…"], "Connecting to live data…")
+        XCTAssertEqual(en["Brno vysílá polohy vozidel přibližně jednou za 30 sekund."],
+                       "Brno broadcasts vehicle positions about once every 30 seconds.")
     }
 
     func testInfoPlistLocationUsageLocalized() throws {
