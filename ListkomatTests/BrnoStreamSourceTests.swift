@@ -45,6 +45,16 @@ final class BrnoStreamSourceTests: XCTestCase {
         XCTAssertGreaterThan(BrnoStreamSource.firstMessageTimeout, 30)
     }
 
+    func testStallTimeoutReconnectsBeforeTheMapGoesEmpty() {
+        // A silent-but-open socket must be detected while the last positions are
+        // still on screen: below freshnessLimit means the reconnect (and the
+        // toast, if the feed really died) beats the map emptying itself.
+        XCTAssertLessThan(BrnoStreamSource.stallTimeout, BrnoVehicleSource.freshnessLimit)
+        // ...but above a couple of missed ~28 s bursts, so an ordinary gap in
+        // the feed doesn't churn the connection.
+        XCTAssertGreaterThan(BrnoStreamSource.stallTimeout, 56)
+    }
+
     func testDecodesCurrentStreamMessage() throws {
         let update = try BrnoStreamDecoder.decode(Data(tramMessage.utf8))
         XCTAssertEqual(update.id, "1837")

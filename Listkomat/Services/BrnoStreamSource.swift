@@ -88,6 +88,8 @@ actor BrnoStreamSource: VehicleSource {
     private var applyCount = 0
     private var decodeFailureStreak = 0
     private let session: URLSession
+    /// When the socket last delivered anything — drives the stall check.
+    private var lastMessageAt = Date.distantPast
 
     /// Consecutive undecodable messages that force a reconnect. A reconnect's
     /// first message is decoded strictly, so persistent schema drift surfaces
@@ -141,6 +143,12 @@ actor BrnoStreamSource: VehicleSource {
     /// One burst takes 0.4–2.2 s to deliver (measured 2026-08-29).
     static let burstSettleDelay: TimeInterval = 2.5
 
+    /// Silence on an ESTABLISHED socket that means the feed died under us.
+    /// Three missed bursts (~28 s each), and deliberately below
+    /// `freshnessLimit` (120 s) so the reconnect — and the toast, if the feed
+    /// really is gone — happens before the last positions age off the map.
+    static let stallTimeout: TimeInterval = 90
+
     // MARK: VehicleSource
 
     func fetch() async throws -> [Vehicle] {
@@ -162,14 +170,37 @@ actor BrnoStreamSource: VehicleSource {
     /// calling start()) share one in-flight connect instead of each opening a
     /// socket and leaking the loser.
     private func ensureConnected() async throws {
-        if let task, task.state == .running { return }
-        let inFlight = connectTask ?? Task { try await self.openConnection() }
+        // Join an in-flight connect BEFORE the running-socket shortcut below:
+        // the socket is assigned while the burst is still draining, so a fetch
+        // that skipped ahead would read a half-filled snapshot and paint a
+        // partial fleet for a whole poll interval.
+        if let inFlight = connectTask {
+            try await inFlight.value
+            return
+        }
+        if let task, task.state == .running, !isStalled { return }
+        let inFlight = Task { try await self.openConnection() }
         connectTask = inFlight
+        // Clear only OUR attempt: a shutdown mid-connect nils connectTask and a
+        // later attempt may already own it, and this one's unwinding must not
+        // evict its successor (which would leave the next fetch opening a
+        // second socket).
+        defer { if connectTask == inFlight { connectTask = nil } }
         try await inFlight.value
     }
 
+    /// True when the socket is up but the feed stopped talking. A silent server
+    /// that never closes the connection would otherwise leave `receive()`
+    /// blocked forever and `task.state == .running`, so every poll would take
+    /// the shortcut above and the map would sit empty (past `freshnessLimit`)
+    /// with no toast and no reconnect — exactly the silently-empty map the
+    /// strict first decode exists to prevent, just arriving later. Forcing a
+    /// reconnect makes the dead feed surface as a failed fetch instead.
+    private var isStalled: Bool {
+        Date().timeIntervalSince(lastMessageAt) > Self.stallTimeout
+    }
+
     private func openConnection() async throws {
-        defer { connectTask = nil }   // runs on the actor at this attempt's end
         task?.cancel(with: .goingAway, reason: nil)
         let t = session.webSocketTask(with: Self.currentStreamURL())
         t.resume()
@@ -182,6 +213,7 @@ actor BrnoStreamSource: VehicleSource {
             let first = try await firstMessage(t, timeout: Self.firstMessageTimeout)
             guard let data = payload(of: first) else { throw URLError(.cannotParseResponse) }
             snapshot.apply(try BrnoStreamDecoder.decode(data))
+            lastMessageAt = Date()
         } catch {
             t.cancel(with: .goingAway, reason: nil)
             throw error
@@ -244,6 +276,9 @@ actor BrnoStreamSource: VehicleSource {
     }
 
     private func apply(_ msg: URLSessionWebSocketTask.Message) {
+        // Anything arriving proves the feed is still talking, decodable or not
+        // (persistent garbage is what `decodeFailureCutoff` below is for).
+        lastMessageAt = Date()
         // A lone malformed message is dropped, but a persistent streak means
         // schema drift: force a reconnect, whose strict first decode fails the
         // next fetch and shows the failure toast instead of an empty map.
