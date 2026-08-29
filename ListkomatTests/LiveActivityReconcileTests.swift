@@ -1,3 +1,4 @@
+import ActivityKit
 import XCTest
 @testable import Listkomat
 
@@ -48,5 +49,34 @@ final class LiveActivityReconcileTests: XCTestCase {
 
     func testNoActivityAndNoLocalStateStaysEmpty() {
         XCTAssertNil(LiveActivityController.reconciled(local: nil, snapshot: nil))
+    }
+
+    // MARK: - Which activities the banner represents
+
+    /// `Activity.activities` keeps an activity after it ends until it is dismissed
+    /// (verified on the simulator), so those must not count as a live ticket.
+    func testEndedAndDismissedActivitiesAreNotLive() {
+        XCTAssertFalse(LiveActivityController.isLive(.ended))
+        XCTAssertFalse(LiveActivityController.isLive(.dismissed))
+    }
+
+    /// ⚠️ Guards a trap: this app repurposes `staleDate` as a phase flag and
+    /// `confirmNow()` sets it to now, so a *confirmed* ticket's activity is `.stale`.
+    /// Narrowing this predicate to `== .active` would blank the banner on every
+    /// confirmation.
+    func testStaleActivityIsStillLive() {
+        XCTAssertTrue(LiveActivityController.isLive(.active))
+        XCTAssertTrue(LiveActivityController.isLive(.stale))
+    }
+
+    // MARK: - Banner pending boundary
+
+    /// The banner must compare against the wall clock, not only the TimelineView
+    /// schedule entry, which can lag by up to a tick.
+    func testIsPendingBoundary() {
+        let t = ticket(validFrom: sentAt)
+        XCTAssertTrue(t.isPending(at: sentAt.addingTimeInterval(-0.5)))
+        XCTAssertFalse(t.isPending(at: sentAt))                          // valid exactly at validFrom
+        XCTAssertFalse(t.isPending(at: sentAt.addingTimeInterval(0.5)))
     }
 }
