@@ -31,13 +31,20 @@ struct TicketListView: View {
             case .deviceCannotSendSMS:
                 return "Toto zařízení neumí posílat SMS (např. iPad bez SIM)."
             case .sendFailed:
-                return "Lístek se nekoupil, nic se nestrhlo. Prémiové SMS fungují jen ze SIM karty českého operátora — ze zahraniční SIM v roamingu se lístek koupit nedá."
+                // `.failed` means the message never went out (no signal, tunnel,
+                // airplane mode) — NOT the roaming case, which reports `.sent`
+                // and then quietly never delivers a ticket. Don't misattribute it
+                // to the SIM; the "Více informací" button carries that story.
+                return "Zpráva neodešla — nic se nestrhlo. Zkuste to prosím znovu, až budete mít signál."
             }
         }
     }
 
     @State private var pending: Ticket?
     @State private var activeAlert: PurchaseAlert?
+    /// Dismissal clears `activeAlert`, but the title argument re-evaluates during
+    /// the outgoing animation — keep the last kind so it can't blank mid-fade.
+    @State private var lastAlert: PurchaseAlert = .deviceCannotSendSMS
     /// Raised by the compose result, acted on once the compose sheet has gone.
     @State private var sendFailedAwaitingDismiss = false
     @State private var showingSimInfo = false
@@ -100,10 +107,11 @@ struct TicketListView: View {
                         Button { showingSimInfo = true } label: {
                             Text("Funguje s českou SIM kartou.")
                                 + Text(verbatim: " ")
-                                + Text("Více").underline()
+                                // Only the link is tinted — the sentence keeps the
+                                // footer's secondary treatment.
+                                + Text("Více").underline().foregroundColor(accent)
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(accent)
                         if isOffline {
                             Label("Offline – zobrazen uložený ceník (k \(formattedDate))", systemImage: "wifi.slash")
                                 .foregroundStyle(.orange)
@@ -118,7 +126,11 @@ struct TicketListView: View {
         // Storefront is the second half of the "probably foreign" heuristic. It
         // needs no IAP setup or permission, and it only ever adds a note.
         .task {
-            storefrontCountry = await Storefront.current?.countryCode
+            let resolved = await Storefront.current?.countryCode
+            // Animate the insertion. The notice appears above the ticket rows, and
+            // a silent shove while someone is reaching for a row could land the tap
+            // on a different ticket — which is a real premium-SMS charge.
+            withAnimation(.easeInOut(duration: 0.25)) { storefrontCountry = resolved }
         }
         .sheet(item: $pending, onDismiss: presentSendFailureIfNeeded) { ticket in
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
@@ -141,7 +153,7 @@ struct TicketListView: View {
                 #endif
             }
         }
-        .alert(activeAlert?.title ?? "", isPresented: alertIsPresented, presenting: activeAlert) { kind in
+        .alert(lastAlert.title, isPresented: alertIsPresented, presenting: activeAlert) { kind in
             if kind == .sendFailed {
                 Button("Více informací") { showSimInfoAfterAlert() }
             }
@@ -158,11 +170,16 @@ struct TicketListView: View {
         Binding(get: { activeAlert != nil }, set: { if !$0 { activeAlert = nil } })
     }
 
+    private func present(_ alert: PurchaseAlert) {
+        lastAlert = alert
+        activeAlert = alert
+    }
+
     /// Show the send-failure alert once the compose sheet is actually gone.
     private func presentSendFailureIfNeeded() {
         guard sendFailedAwaitingDismiss else { return }
         sendFailedAwaitingDismiss = false
-        activeAlert = .sendFailed
+        present(.sendFailed)
     }
 
     /// Opening the sheet straight from an alert button races the alert's own
@@ -194,7 +211,11 @@ struct TicketListView: View {
                 Image(systemName: "xmark")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    // The glyph alone is ~13pt; pad it out to a tappable target.
+                    .padding(10)
+                    .contentShape(Rectangle())
             }
+            .padding(-10)   // keep the visual inset, grow only the hit region
             .accessibilityLabel("Zavřít upozornění")
         }
         .padding(.horizontal, 16)
@@ -224,7 +245,7 @@ struct TicketListView: View {
         if MessageComposeView.canSendText {
             pending = ticket
         } else {
-            activeAlert = .deviceCannotSendSMS
+            present(.deviceCannotSendSMS)
         }
     }
 
