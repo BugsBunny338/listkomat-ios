@@ -1,0 +1,73 @@
+import XCTest
+import SwiftUI
+@testable import Listkomat
+
+final class TransitPaletteTests: XCTestCase {
+
+    // MARK: Metro is coloured per line
+
+    func testMetroLinesUseTheOfficialColours() {
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "A").rgbHex, 0x00A05A)
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "B").rgbHex, 0xFFCE00)
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "C").rgbHex, 0xE1252B)
+    }
+
+    func testMetroLinesAreMutuallyDistinct() {
+        let fills = ["A", "B", "C"].map { TransitPalette.fill(for: .metro, line: $0).rgbHex }
+        XCTAssertEqual(Set(fills).count, 3)
+    }
+
+    /// A feed anomaly must degrade to the pre-2.4 amber, never to an uncoloured pin.
+    func testUnknownMetroLineFallsBackToAmber() {
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "D").rgbHex, 0xE0812B)
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "").rgbHex, 0xE0812B)
+        XCTAssertEqual(TransitPalette.fill(for: .metro, line: "a").rgbHex, 0xE0812B)
+    }
+
+    // MARK: Every other kind ignores the line
+
+    func testNonMetroKindsIgnoreTheLine() {
+        for kind in VehicleKind.allCases where kind != .metro {
+            XCTAssertEqual(TransitPalette.fill(for: kind, line: "1").rgbHex,
+                           TransitPalette.fill(for: kind, line: "A").rgbHex,
+                           "\(kind) must not depend on the line")
+        }
+    }
+
+    func testRecessiveKindsAreMutuallyDistinct() {
+        let kinds = VehicleKind.allCases.filter { $0 != .metro }
+        let fills = kinds.map { TransitPalette.fill(for: $0, line: "1").rgbHex }
+        XCTAssertEqual(Set(fills).count, kinds.count)
+    }
+
+    // MARK: The glyph letter stays legible
+
+    /// MapKit draws the glyph white by default, which measures 1.49:1 on the
+    /// official metro yellow. Every fill must pair with a glyph at WCAG AA.
+    func testEveryGlyphPairingMeetsWCAGAA() {
+        var fills = ["A", "B", "C"].map { TransitPalette.style(for: .metro, line: $0) }
+        fills += VehicleKind.allCases.filter { $0 != .metro }
+            .map { TransitPalette.style(for: $0, line: "1") }
+
+        for style in fills {
+            let ratio = Color.contrastRatio(style.fill.relativeLuminance,
+                                            style.glyph.relativeLuminance)
+            XCTAssertGreaterThanOrEqual(
+                ratio, 4.5,
+                "fill \(String(format: "%06X", style.fill.rgbHex)) fails AA at \(ratio)")
+        }
+    }
+
+    func testGlyphPicksTheHigherContrastInk() {
+        // Yellow is the case that motivated the rule.
+        XCTAssertEqual(TransitPalette.style(for: .metro, line: "B").glyph.rgbHex, 0x000000)
+        // Red keeps the conventional white letter.
+        XCTAssertEqual(TransitPalette.style(for: .metro, line: "C").glyph.rgbHex, 0xFFFFFF)
+    }
+
+    func testRelativeLuminanceEndpoints() {
+        XCTAssertEqual(Color.white.relativeLuminance, 1.0, accuracy: 0.001)
+        XCTAssertEqual(Color.black.relativeLuminance, 0.0, accuracy: 0.001)
+        XCTAssertEqual(Color.contrastRatio(1.0, 0.0), 21.0, accuracy: 0.01)
+    }
+}
