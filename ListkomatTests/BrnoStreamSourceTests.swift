@@ -14,14 +14,48 @@ final class BrnoStreamSourceTests: XCTestCase {
     "TimeUpdated":1786451030883,"globalid":"{8C5B80BD}"}}
     """
 
-    func testStreamURLRollsOverByYear() {
-        XCTAssertEqual(BrnoStreamSource.streamName(year: 2026), "stream_kordis_26")
-        XCTAssertEqual(BrnoStreamSource.streamName(year: 2027), "stream_kordis_27")
+    /// A real message from the CURRENT stream (Kordis_stream), captured
+    /// 2026-08-29 — tram line 4 in Brno. Note the integral `Bearing`/`Delay`
+    /// (the old fixture had `-1.0`/`4.0`): the feed emits both forms.
+    private let tramMessage = """
+    {"geometry":{"x":16.62566,"y":49.204418,"spatialReference":{"wkid":4326}},"attributes":\
+    {"ID":1837,"IDB":0,"IDC":0,"VType":0,"LType":0,"Lat":49.204418,"Lng":16.62566,\
+    "Bearing":45,"LineID":4,"LineName":"4","RouteID":4160,"Course":"00405","LF":"true",\
+    "Delay":2,"LastStopID":1676,"FinalStopID":1014,"IsInactive":"false",\
+    "TimeUpdated":1788028227359,"globalid":"{E1EA7CF6}"}}
+    """
+
+    func testStreamURLTargetsTheYearlessKordisStream() {
+        // No annual rollover any more: stream_kordis_26 was still registered but
+        // silent on 2026-08-29, and the live feed's name carries no year. A year
+        // appearing in this URL again is the regression that broke the map twice.
+        XCTAssertEqual(BrnoStreamSource.streamName, "Kordis_stream")
         // The /ags4/rest/... URL printed in the docs does not upgrade to WS;
-        // only the /geoevent/ws/... form works.
+        // only the /geoevent/ws/... form works, and only with /subscribe (the
+        // bare /StreamServer the metadata advertises upgrades but stays silent).
         XCTAssertEqual(
-            BrnoStreamSource.currentStreamURL(now: Date(timeIntervalSince1970: 1_786_451_030)).absoluteString,
-            "wss://gis.brno.cz/geoevent/ws/services/stream_kordis_26/StreamServer/subscribe")
+            BrnoStreamSource.currentStreamURL().absoluteString,
+            "wss://gis.brno.cz/geoevent/ws/services/Kordis_stream/StreamServer/subscribe")
+    }
+
+    func testFirstMessageTimeoutExceedsFeedBatchPeriod() {
+        // KORDIS emits the whole fleet in one burst every ~28 s, so a deadline
+        // below that fails the fetch on a healthy stream (the "Živá data
+        // dočasně nedostupná" toast the 10 s deadline produced).
+        XCTAssertGreaterThan(BrnoStreamSource.firstMessageTimeout, 30)
+    }
+
+    func testDecodesCurrentStreamMessage() throws {
+        let update = try BrnoStreamDecoder.decode(Data(tramMessage.utf8))
+        XCTAssertEqual(update.id, "1837")
+        let v = try XCTUnwrap(update.vehicle)
+        XCTAssertEqual(v.line, "4")
+        XCTAssertEqual(v.kind, .tram)                         // VType 0
+        XCTAssertEqual(v.bearing, 45)
+        XCTAssertEqual(v.destinationId, 1014)
+        XCTAssertEqual(v.delay, 2)
+        XCTAssertEqual(v.coordinate.latitude, 49.204418, accuracy: 0.000001)
+        XCTAssertEqual(v.coordinate.longitude, 16.62566, accuracy: 0.000001)
     }
 
     func testDecodesSingleUpdateMessage() throws {
