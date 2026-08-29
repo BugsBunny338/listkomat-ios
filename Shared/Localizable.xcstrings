@@ -177,6 +177,16 @@
         }
       }
     },
+    "Brno vysílá polohy vozidel přibližně jednou za 30 sekund." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brno broadcasts vehicle positions about once every 30 seconds."
+          }
+        }
+      }
+    },
     "Ceník platný k %@" : {
       "localizations" : {
         "en" : {
@@ -333,16 +343,6 @@
         }
       }
     },
-    "Načítám vozidla…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading vehicles…"
-          }
-        }
-      }
-    },
     "Najít nejbližší město" : {
       "localizations" : {
         "en" : {
@@ -422,6 +422,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Confirm now"
+          }
+        }
+      }
+    },
+    "Připojuji se k živým datům…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting to live data…"
           }
         }
       }

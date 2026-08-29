@@ -8,6 +8,7 @@ struct LiveMapView: View {
     @State private var showingSources = false
     @State private var selected: SelectedVehicle?
     @State private var recenterNonce = 0
+    @State private var connectIsSlow = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeId") private var themeId = AppTheme.default.id
 
@@ -41,14 +42,7 @@ struct LiveMapView: View {
                 if let sel = selected { vehicleCard(sel) }
             }
             .overlay(alignment: .center) {
-                if !vm.didLoadOnce {
-                    VStack(spacing: 10) {
-                        ProgressView().tint(accent)
-                        Text("Načítám vozidla…").font(.footnote).foregroundStyle(.secondary)
-                    }
-                    .padding(18)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                }
+                if !vm.didLoadOnce { connectingCard }
             }
             .overlay(alignment: .center) {
                 if vm.didLoadOnce && vm.vehicles.isEmpty && !vm.loadFailed {
@@ -84,6 +78,44 @@ struct LiveMapView: View {
                 // centrally by LiveSources on didEnterBackground.
                 else if phase == .background { vm.stop() }
             }
+    }
+
+    /// Seconds of waiting before the cold start is explained rather than just
+    /// spun at. Short enough to land well inside a slow connect, long enough
+    /// that a warm reopen (which paints almost immediately) never shows it.
+    private static let slowConnectHint: TimeInterval = 5
+
+    /// Shown until the first vehicles arrive. Brno's stream does not trickle —
+    /// it broadcasts the whole fleet in one burst roughly every 30 s, so a
+    /// connect landing just after a burst genuinely waits for the next one
+    /// (30.1 s measured against the live feed). That wait is normal, but an
+    /// unexplained half-minute of spinner reads as a hang, so after a few
+    /// seconds we say why. Prague polls on demand and never waits like this,
+    /// hence the Brno-only hint.
+    private var connectingCard: some View {
+        VStack(spacing: 10) {
+            ProgressView().tint(accent)
+            Text("Připojuji se k živým datům…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            if connectIsSlow && city.key == "brno" {
+                Text("Brno vysílá polohy vozidel přibližně jednou za 30 sekund.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: 240)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .animation(.easeInOut(duration: 0.25), value: connectIsSlow)
+        .task {
+            // Cancelled with the card the moment the first fetch returns, so a
+            // fast connect leaves connectIsSlow false and the hint never shows.
+            try? await Task.sleep(nanoseconds: UInt64(Self.slowConnectHint * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            connectIsSlow = true
+        }
     }
 
     /// Bottom info card for a tapped vehicle: type + line, and where it's heading.
