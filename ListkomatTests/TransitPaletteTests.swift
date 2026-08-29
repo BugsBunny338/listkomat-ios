@@ -26,6 +26,14 @@ final class TransitPaletteTests: XCTestCase {
 
     // MARK: Every other kind ignores the line
 
+    func testNonMetroKindsUseTheSearchedColours() {
+        XCTAssertEqual(TransitPalette.fill(for: .tram, line: "1").rgbHex, 0xD872A5)
+        XCTAssertEqual(TransitPalette.fill(for: .trolleybus, line: "1").rgbHex, 0x276F5D)
+        XCTAssertEqual(TransitPalette.fill(for: .ferry, line: "1").rgbHex, 0x03AED8)
+        XCTAssertEqual(TransitPalette.fill(for: .bus, line: "1").rgbHex, 0x3F72C6)
+        XCTAssertEqual(TransitPalette.fill(for: .train, line: "1").rgbHex, 0x7E4587)
+    }
+
     func testNonMetroKindsIgnoreTheLine() {
         for kind in VehicleKind.allCases where kind != .metro {
             XCTAssertEqual(TransitPalette.fill(for: kind, line: "1").rgbHex,
@@ -48,6 +56,9 @@ final class TransitPaletteTests: XCTestCase {
         var fills = ["A", "B", "C"].map { TransitPalette.style(for: .metro, line: $0) }
         fills += VehicleKind.allCases.filter { $0 != .metro }
             .map { TransitPalette.style(for: $0, line: "1") }
+        // The unrecognized-line fallback (amber) renders on the real feed-anomaly
+        // path and must be contrast-checked like every other renderable fill.
+        fills.append(TransitPalette.style(for: .metro, line: "D"))
 
         for style in fills {
             let ratio = Color.contrastRatio(style.fill.relativeLuminance,
@@ -69,5 +80,12 @@ final class TransitPaletteTests: XCTestCase {
         XCTAssertEqual(Color.white.relativeLuminance, 1.0, accuracy: 0.001)
         XCTAssertEqual(Color.black.relativeLuminance, 0.0, accuracy: 0.001)
         XCTAssertEqual(Color.contrastRatio(1.0, 0.0), 21.0, accuracy: 0.01)
+    }
+
+    /// Anchors the sRGB linearization curve at a midtone. White/black endpoints
+    /// are satisfied by any monotone function, so without this a regression that
+    /// drops the linearization would leave every other test green.
+    func testRelativeLuminanceIsLinearizedNotRaw() {
+        XCTAssertEqual(Color(hex: 0x3F72C6).relativeLuminance, 0.1717, accuracy: 0.001)
     }
 }

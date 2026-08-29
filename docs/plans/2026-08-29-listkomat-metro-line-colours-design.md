@@ -167,11 +167,16 @@ resolved fill; the legend's metro row renders three lettered dots.
 
 New `ListkomatTests/TransitPaletteTests.swift`:
 
-- Each kind maps to its expected fill; metro A, B and C are mutually distinct.
+- Each kind maps to its expected fill, pinned by hex; metro A, B and C are
+  mutually distinct.
 - A metro vehicle on an unknown line falls back to amber.
-- The glyph rule returns ≥4.5:1 contrast for all eight fills — the test computes
-  the ratio rather than asserting a hardcoded black/white, so a future palette
+- The glyph rule returns ≥4.5:1 contrast for all nine renderable fills — the
+  eight kinds plus the unrecognized-metro-line amber fallback — computing the
+  ratio rather than asserting a hardcoded black/white, so a future palette
   edit that breaks legibility fails the build.
+- `relativeLuminance` is pinned at a midtone (not just the white/black
+  endpoints, which any monotone function satisfies), so a regression that
+  drops the sRGB linearization fails the build.
 - Non-metro kinds ignore `line` (same style for `"1"` and `"A"`).
 
 Updated:
