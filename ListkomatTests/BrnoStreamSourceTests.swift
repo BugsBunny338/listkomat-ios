@@ -45,11 +45,19 @@ final class BrnoStreamSourceTests: XCTestCase {
         XCTAssertGreaterThan(BrnoStreamSource.firstMessageTimeout, 30)
     }
 
-    func testStallTimeoutReconnectsBeforeTheMapGoesEmpty() {
-        // A silent-but-open socket must be detected while the last positions are
-        // still on screen: below freshnessLimit means the reconnect (and the
-        // toast, if the feed really died) beats the map emptying itself.
-        XCTAssertLessThan(BrnoStreamSource.stallTimeout, BrnoVehicleSource.freshnessLimit)
+    func testStallBudgetFitsInsideFreshness() {
+        // Detecting a silent-but-open socket is only half the job: detection can
+        // lag a poll, and the reconnect it triggers then blocks fetch() for the
+        // whole first-message deadline before it can throw. The user-visible
+        // promise — a toast while the last positions are still fresh, rather
+        // than stale markers sitting there unflagged — holds only if the SUM
+        // fits inside freshnessLimit. Asserting just `stallTimeout <
+        // freshnessLimit` would pass at 90 s and still miss by 16 s.
+        let worstCase = BrnoStreamSource.stallTimeout
+            + LiveMapViewModel.pollInterval
+            + BrnoStreamSource.firstMessageTimeout
+        XCTAssertLessThan(worstCase, BrnoVehicleSource.freshnessLimit,
+                          "stall recovery must finish before the map's positions age out")
         // ...but above a couple of missed ~28 s bursts, so an ordinary gap in
         // the feed doesn't churn the connection.
         XCTAssertGreaterThan(BrnoStreamSource.stallTimeout, 56)
