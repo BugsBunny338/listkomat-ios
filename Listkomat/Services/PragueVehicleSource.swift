@@ -39,6 +39,7 @@ enum PragueVehicleSource {
         case 0: return .tram
         case 1: return .metro
         case 2: return .train
+        case 4: return .ferry
         case 11: return .trolleybus
         default: return .bus      // 3 and any future code
         }

@@ -23,6 +23,7 @@ final class PragueVehicleSourceTests: XCTestCase {
         XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 1), .metro)
         XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 2), .train)
         XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 3), .bus)
+        XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 4), .ferry)
         XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 11), .trolleybus)
         XCTAssertEqual(PragueVehicleSource.kind(forRouteType: 99), .bus)
     }
