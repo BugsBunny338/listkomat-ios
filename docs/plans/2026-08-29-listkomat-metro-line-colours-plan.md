@@ -93,15 +93,37 @@ The `default: return .bus` line stays — `route_type` 3 and any future code sti
 ```bash
 python3 - <<'EOF'
 import json
+from collections import OrderedDict
+
 p = 'Shared/Localizable.xcstrings'
-d = json.load(open(p))
-d['strings']['Přívoz'] = {
-    "localizations": {"en": {"stringUnit": {"state": "translated", "value": "Ferry"}}}
-}
-json.dump(d, open(p, 'w'), ensure_ascii=False, indent=2, sort_keys=True)
-open(p, 'a').write('\n')
+d = json.load(open(p), object_pairs_hook=OrderedDict)
+
+entry = OrderedDict([('localizations', OrderedDict([
+    ('en', OrderedDict([('stringUnit', OrderedDict([
+        ('state', 'translated'), ('value', 'Ferry')]))]))]))])
+
+# Insert after "Potvrdit nyní", where Czech collation puts it (Po... < Př...).
+# Preserving key order keeps the diff to the one inserted entry.
+out = OrderedDict()
+for k, v in d['strings'].items():
+    out[k] = v
+    if k == 'Potvrdit nyní':
+        out['Přívoz'] = entry
+d['strings'] = out
+
+with open(p, 'w') as f:
+    json.dump(d, f, ensure_ascii=False, indent=2, separators=(',', ' : '))
+    f.write('\n')
 EOF
 ```
+
+Do not use `json.dump`'s default separators or `sort_keys=True` — they
+re-serialize the whole catalog in a different style from Xcode's own
+(`"key": value` instead of `"key" : value`, plus alphabetical reordering),
+producing an unreviewable ~700-line diff for a one-key addition and
+guaranteeing Xcode rewrites the file again on its next save. The ordered
+insertion plus `separators=(',', ' : ')` above keeps the diff to the
+inserted entry only.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
