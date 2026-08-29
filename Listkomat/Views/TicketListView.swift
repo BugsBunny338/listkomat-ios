@@ -11,9 +11,35 @@ struct TicketListView: View {
     let liveActivity: LiveActivityController
     let accent: Color
 
+    /// Both of the screen's alerts go through one `.alert` modifier: SwiftUI
+    /// drops the second of two attached to the same view.
+    private enum PurchaseAlert: Identifiable {
+        case deviceCannotSendSMS
+        case sendFailed
+
+        var id: Self { self }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .deviceCannotSendSMS: return "SMS nelze odeslat"
+            case .sendFailed: return "SMS se nepodařilo odeslat"
+            }
+        }
+
+        var message: LocalizedStringKey {
+            switch self {
+            case .deviceCannotSendSMS:
+                return "Toto zařízení neumí posílat SMS (např. iPad bez SIM)."
+            case .sendFailed:
+                return "Lístek se nekoupil, nic se nestrhlo. Prémiové SMS fungují jen ze SIM karty českého operátora — ze zahraniční SIM v roamingu se lístek koupit nedá."
+            }
+        }
+    }
+
     @State private var pending: Ticket?
-    @State private var cannotSend = false
-    @State private var sendFailed = false
+    @State private var activeAlert: PurchaseAlert?
+    /// Raised by the compose result, acted on once the compose sheet has gone.
+    @State private var sendFailedAwaitingDismiss = false
     @State private var showingSimInfo = false
     /// nil until StoreKit answers; ForeignSimNotice treats that as "unknown", not "foreign".
     @State private var storefrontCountry: String?
@@ -69,11 +95,12 @@ struct TicketListView: View {
                         Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
                         // Permanent entry point to the full explanation — the
                         // one-time note above can be dismissed, this can't.
+                        // Concatenated rather than an HStack so the sentence and
+                        // the link stay one wrapping run at accessibility sizes.
                         Button { showingSimInfo = true } label: {
-                            HStack(spacing: 4) {
-                                Text("Funguje s českou SIM kartou.")
-                                Text("Více").underline()
-                            }
+                            Text("Funguje s českou SIM kartou.")
+                                + Text(verbatim: " ")
+                                + Text("Více").underline()
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(accent)
@@ -93,7 +120,7 @@ struct TicketListView: View {
         .task {
             storefrontCountry = await Storefront.current?.countryCode
         }
-        .sheet(item: $pending) { ticket in
+        .sheet(item: $pending, onDismiss: presentSendFailureIfNeeded) { ticket in
             MessageComposeView(recipient: city.smsNumber, body: ticket.code) { result in
                 pending = nil
                 if case .sent = result {
@@ -101,8 +128,11 @@ struct TicketListView: View {
                 }
                 // A failed send is the one doomed purchase we *can* see — a
                 // silent failure here is what earns 1★ reviews (issue #15).
+                // Only flag it: raising the alert here would ask UIKit to present
+                // it while the compose sheet is still dismissing, which silently
+                // drops the alert. onDismiss fires when the way is clear.
                 if case .failed = result {
-                    sendFailed = true
+                    sendFailedAwaitingDismiss = true
                 }
                 #if targetEnvironment(simulator)
                 // The simulator can't actually send SMS, so start the Live
@@ -111,20 +141,34 @@ struct TicketListView: View {
                 #endif
             }
         }
-        .alert("SMS nelze odeslat", isPresented: $cannotSend) {
+        .alert(activeAlert?.title ?? "", isPresented: alertIsPresented, presenting: activeAlert) { kind in
+            if kind == .sendFailed {
+                Button("Více informací") { showSimInfoAfterAlert() }
+            }
             Button("OK", role: .cancel) {}
-        } message: {
-            Text("Toto zařízení neumí posílat SMS (např. iPad bez SIM).")
-        }
-        .alert("SMS se nepodařilo odeslat", isPresented: $sendFailed) {
-            Button("Více informací") { showingSimInfo = true }
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Lístek se nekoupil, nic se nestrhlo. Prémiové SMS fungují jen ze SIM karty českého operátora — ze zahraniční SIM v roamingu se lístek koupit nedá.")
+        } message: { kind in
+            Text(kind.message)
         }
         .sheet(isPresented: $showingSimInfo) {
             SimRequirementView(accent: accent)
         }
+    }
+
+    private var alertIsPresented: Binding<Bool> {
+        Binding(get: { activeAlert != nil }, set: { if !$0 { activeAlert = nil } })
+    }
+
+    /// Show the send-failure alert once the compose sheet is actually gone.
+    private func presentSendFailureIfNeeded() {
+        guard sendFailedAwaitingDismiss else { return }
+        sendFailedAwaitingDismiss = false
+        activeAlert = .sendFailed
+    }
+
+    /// Opening the sheet straight from an alert button races the alert's own
+    /// dismissal; hop a turn of the main loop so UIKit is idle first.
+    private func showSimInfoAfterAlert() {
+        Task { @MainActor in showingSimInfo = true }
     }
 
     /// One-time, dismissible note for users the heuristic flags as probably
@@ -180,7 +224,7 @@ struct TicketListView: View {
         if MessageComposeView.canSendText {
             pending = ticket
         } else {
-            cannotSend = true
+            activeAlert = .deviceCannotSendSMS
         }
     }
 
