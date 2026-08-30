@@ -5,11 +5,12 @@ vehicle map. Personal/portfolio project — not a money-maker. The user-facing
 overview, repo family table and doc links live in [README.md](README.md); this
 file is the working context that isn't obvious from the code.
 
-**Start sessions from this directory** (`~/prj/listkomat`), not from `~/prj`.
-Memory is keyed by session cwd, and the Lístkomat memories — release state,
-GitHub/proxy references, working rules — live in this repo's store. Starting
-from `~/prj` gets you the personal-projects store instead, which no longer
-carries anything Lístkomat.
+**Start sessions from the family hub** (`~/prj/listkomat`) — this repo now
+lives one level down, at `~/prj/listkomat/listkomat-ios`, next to the Android,
+catalog and web siblings. The hub's CLAUDE.md carries the family table and
+cross-repo rules; memory is keyed to the hub path and holds release state,
+GitHub/proxy references and working rules. Never start from `~/prj` (wrong
+memory store) or from inside a repo (misses the hub context and MCP configs).
 
 ## Build, test, run
 
