@@ -20,3 +20,4 @@ enabledWorkflows:
   - session-management
   - simulator
   - ui-automation
+  - device
