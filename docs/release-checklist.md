@@ -31,6 +31,13 @@ by Apple from opted-in users, with no privacy-label cost.
 So the habit is simply: **a day or two after each release, open Xcode → Organizer**
 and check two tabs.
 
+Most of that is also available headlessly — run `python3 scripts/asc_health.py`
+for Power & Performance metrics, per-build diagnostic signatures (hangs, disk
+writes, launches) and crash counts, without opening Xcode. It needs the **Admin**
+API key; see the script's docstring for why there are two keys. Symbolicated
+crash *stacks* have no API, so those still mean opening Organizer — but the
+script tells you whether there is anything worth opening it for.
+
 - **Crashes** — symbolicated, grouped stack traces from opted-in App Store users
   (~1–2 day lag). Look for any new signature that appeared with this version.
   When a friend says *"it crashed the other day doing X,"* this is where you look
