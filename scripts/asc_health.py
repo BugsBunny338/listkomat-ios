@@ -58,11 +58,18 @@ def token(key_id):
                       key, algorithm="ES256", headers={"kid": key_id, "typ": "JWT"})
 
 
-def call(method, path, key_id, body=None, accept=None, raw=False):
+def call(method, path, key_id, body=None, accept=None, raw=False, auth=True):
+    """-> (status, payload). Non-2xx yields the decoded error body, not bytes.
+
+    `auth=False` for pre-signed download URLs: they carry their own credentials
+    in the query string, object storage rejects a request that also sends an
+    Authorization header, and the ASC token has no business leaving Apple's API
+    host anyway.
+    """
     url = path if path.startswith("http") else BASE + path
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Authorization", "Bearer " + token(key_id))
+    if auth:   req.add_header("Authorization", "Bearer " + token(key_id))
     if data:   req.add_header("Content-Type", "application/json")
     if accept: req.add_header("Accept", accept)
     try:
@@ -73,6 +80,10 @@ def call(method, path, key_id, body=None, accept=None, raw=False):
         try: payload = json.loads(payload)
         except Exception: pass
         return e.code, payload
+    except (urllib.error.URLError, OSError) as e:
+        # Timeouts and TLS hiccups shouldn't end the whole report — synthesise a
+        # status so the caller prints one failed line and carries on.
+        return 0, {"errors": [{"detail": f"network error: {e}"}]}
 
 
 def _detail(payload):
@@ -88,6 +99,12 @@ def metrics():
     if s != 200:
         print(f"  HTTP {s}: {_detail(r)}")
         return
+    # Insights first: they are the actionable part, and they must not be skipped
+    # by the empty-productData early return below (which is the normal state).
+    ins = r.get("insights") or {}
+    for kind in ("regressions", "trendingUp"):
+        for i in ins.get(kind, []):
+            print(f"  !! {kind}: {i.get('metric')} {i.get('summaryString', '')}")
     data = r.get("productData", [])
     if not data:
         print("  no data — below Apple's aggregation threshold (expected at this scale)")
@@ -97,27 +114,22 @@ def metrics():
             print(f"  · {cat.get('identifier')}")
             for m in cat.get("metrics", []):
                 print(f"      {m.get('identifier')} ({m.get('unit')})")
-    ins = r.get("insights") or {}
-    for kind in ("regressions", "trendingUp"):
-        for i in ins.get(kind, []):
-            print(f"  !! {kind}: {i.get('metric')} {i.get('summaryString', '')}")
 
 
 # ----------------------------------------------------------- diagnostics ----
 def diagnostics(limit=3):
     print("\n== Diagnostic signatures ==")
-    # This endpoint returns builds unordered and rejects `sort` outright
-    # ("The parameter 'sort' can not be used with this request"), so page wide
-    # and pick the newest here. Old builds 404 on diagnosticSignatures once
-    # Apple stops retaining their diagnostics, which is why order matters.
-    s, r = call("GET", f"/v1/apps/{APP_ID}/builds?limit=50", SUBMIT_KEY)
+    # Server-side newest-first. Note the endpoint shape: the /v1/apps/{id}/builds
+    # relationship rejects `sort` ("The parameter 'sort' can not be used with
+    # this request"), but the top-level /v1/builds with filter[app] accepts it —
+    # same form asc_submit.py uses. Order matters because Apple stops retaining
+    # diagnostics for old builds, which then 404.
+    s, r = call("GET", f"/v1/builds?filter[app]={APP_ID}&limit={limit}&sort=-version",
+                SUBMIT_KEY)
     if s != 200:
-        print(f"  cannot list builds: HTTP {s}")
+        print(f"  cannot list builds: HTTP {s} {_detail(r)}")
         return
-    newest = sorted(r.get("data", []),
-                    key=lambda b: b["attributes"].get("uploadedDate") or "",
-                    reverse=True)[:limit]
-    for b in newest:
+    for b in r.get("data", []):
         ver = b["attributes"].get("version")
         for dtype in ("HANGS", "DISK_WRITES", "LAUNCHES"):
             s2, r2 = call("GET", f"/v1/builds/{b['id']}/diagnosticSignatures"
@@ -216,35 +228,61 @@ def _dump(report_id, name, max_instances=3):
             url = seg["attributes"].get("url")
             if not url:
                 continue
-            s3, blob = call("GET", url, ANALYTICS_KEY, raw=True)
+            # Pre-signed URL: no Authorization header (see call()).
+            s3, blob = call("GET", url, ANALYTICS_KEY, raw=True, auth=False)
+            if s3 != 200 or not isinstance(blob, bytes):
+                # On a non-200, `call` returns a decoded error body, not bytes —
+                # feeding that to gzip/decode would abort the whole run.
+                print(f"      {date}: download HTTP {s3} {_detail(blob)[:80]}")
+                continue
             try: text = gzip.decompress(blob).decode()
-            except Exception: text = blob.decode(errors="replace")
+            except (OSError, EOFError, UnicodeDecodeError):
+                text = blob.decode(errors="replace")  # some segments arrive uncompressed
             rows = [l for l in text.splitlines() if l.strip()]
-            print(f"      {date}: {len(rows) - 1} row(s)")
+            print(f"      {date}: {max(0, len(rows) - 1)} row(s)")
             for line in rows[:10]:
                 print("         ", line[:200])
 
 
 # ----------------------------------------------------------------- probe ----
 def probe():
+    """Print what each key can do; -> {'submit': bool, 'analytics': bool} usability.
+
+    Callers must honour this: every other section opens a .p8 to mint a token, so
+    running them with a missing key file raises FileNotFoundError mid-report.
+    """
     print("== Key capabilities ==")
-    for label, key in (("submit   ", SUBMIT_KEY), ("analytics", ANALYTICS_KEY)):
+    usable = {}
+    for label, name, key in (("submit   ", "submit", SUBMIT_KEY),
+                             ("analytics", "analytics", ANALYTICS_KEY)):
         if not os.path.exists(_key_path(key)):
             print(f"  {label} {key}: .p8 MISSING at {_key_path(key)}")
+            usable[name] = False
             continue
         s, _ = call("GET", "/v1/apps?limit=1", key)
         s2, r2 = call("GET", f"/v1/apps/{APP_ID}/analyticsReportRequests?limit=1", key)
         extra = "" if s2 == 200 else " (" + _detail(r2)[:60] + ")"
         print(f"  {label} {key}: auth HTTP {s}, analytics HTTP {s2}{extra}")
+        usable[name] = True
+    return usable
 
 
 if __name__ == "__main__":
     if "--probe" in sys.argv:
         probe()
     elif "--setup" in sys.argv:
-        setup()
+        if os.path.exists(_key_path(ANALYTICS_KEY)):
+            setup()
+        else:
+            sys.exit(f"analytics key .p8 missing at {_key_path(ANALYTICS_KEY)}")
     else:
-        probe()
-        metrics()
-        diagnostics()
-        crashes()
+        usable = probe()
+        if usable.get("submit"):
+            metrics()
+            diagnostics()
+        else:
+            print("\n(skipping metrics and diagnostics — submit key .p8 missing)")
+        if usable.get("analytics"):
+            crashes()
+        else:
+            print("\n(skipping crash counts — analytics key .p8 missing)")
