@@ -1,1 +1,1 @@
-sms,jízdenka,mhd,lístek,doprava,tramvaj,autobus,šalina,brno,praha,ostrava,plzeň
+jízdenka,mhd,lístek,jízdné,doprava,tramvaj,šalina,autobus,trolejbus,metro,praha,brno,ostrava,plzeň
