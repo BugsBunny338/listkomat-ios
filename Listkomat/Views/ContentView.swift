@@ -235,7 +235,7 @@ struct ContentView: View {
     private var emptySubtitle: String? {
         if location.isFarFromAllCities {
             if let key = location.nearestCityKey,
-               let name = store.city(forKey: key)?.name,
+               let name = store.city(forKey: key)?.localizedName,
                let dist = location.nearestDistanceKm {
                 return String(localized: "Nejbližší podporované město (\(name)) je ~\(Int(dist)) km daleko. Vyberte město ručně.")
             }

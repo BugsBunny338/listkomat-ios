@@ -39,8 +39,8 @@ final class LiveActivityController: ObservableObject {
         let timeline = TicketTimeline.make(sentAt: Date(),
                                            durationSeconds: Double(ticket.durationMinutes) * 60)
         let attributes = TicketActivityAttributes(
-            cityName: city.name,
-            ticketLabel: ticket.duration,
+            cityName: city.localizedName,
+            ticketLabel: ticket.localizedDuration,
             priceKc: ticket.priceKc,
             accentHex: accent.rgbHex
         )
@@ -55,7 +55,7 @@ final class LiveActivityController: ObservableObject {
             let activity = try Activity.request(
                 attributes: attributes,
                 content: ActivityContent(state: state, staleDate: timeline.validFrom))
-            active = ActiveTicket(cityName: city.name, ticketLabel: ticket.duration,
+            active = ActiveTicket(cityName: city.localizedName, ticketLabel: ticket.localizedDuration,
                                   validFrom: timeline.validFrom)
             generation += 1
             observeLifecycle(of: activity)

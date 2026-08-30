@@ -48,7 +48,7 @@ struct CityPickerView: View {
                     .foregroundStyle(selected ? Color.white : accent)
             }
             .aspectRatio(1, contentMode: .fit)
-            Text(city.name)
+            Text(city.localizedName)
                 .font(.brandBold(13, relativeTo: .caption))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)

@@ -61,7 +61,7 @@ struct LiveMapView: View {
                         .padding(.top, 4)
                 }
             }
-            .navigationTitle("Živá mapa – \(city.name)")
+            .navigationTitle("Živá mapa – \(city.localizedName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

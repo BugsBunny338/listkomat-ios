@@ -231,14 +231,14 @@ struct TicketListView: View {
                 .scaledToFit()
                 .frame(height: 92)
                 .foregroundStyle(accent)
-            Text(city.name)
+            Text(city.localizedName)
                 .font(.brandBold(22, relativeTo: .title2))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 24)
         .padding(.bottom, 14)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(city.name)
+        .accessibilityLabel(city.localizedName)
     }
 
     private func tap(_ ticket: Ticket) {
@@ -253,14 +253,14 @@ struct TicketListView: View {
     private func row(_ ticket: Ticket) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Lístek na \(ticket.duration)")
+                Text("Lístek na \(ticket.localizedDuration)")
                     .font(.brandBold(18, relativeTo: .headline))
                 Spacer()
                 Text("\(ticket.priceKc) Kč")
                     .font(.brandBold(18, relativeTo: .headline))
                     .foregroundStyle(accent)
             }
-            if let note = ticket.note, !note.isEmpty {
+            if let note = ticket.localizedNote {
                 Text(note)
                     .font(.caption)
                     .foregroundStyle(.secondary)
