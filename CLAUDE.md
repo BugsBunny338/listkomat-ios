@@ -88,9 +88,15 @@ bite most often:
   new changes into the next version, unless the user explicitly says to swap it.
 
 `fastlane/` is metadata + screenshots only — there is no Fastfile and no lanes.
-Only `release_notes.txt` is read by our own tooling; the rest of the metadata
-(description, keywords, subtitle) is still reference copy that ASC does not pull
-from here.
+`asc_new_version.py` pushes `release_notes.txt`, `description.txt`,
+`keywords.txt` and `subtitle.txt` per locale, so **these files are the source of
+truth — edit them, never the ASC web UI.** A web-UI edit is silently overwritten
+on the next release (and that is exactly how the Czech subtitle and keywords
+drifted before 2.5). Screenshots are still uploaded by hand.
+
+Subtitle is product-page copy, so it only moves between submissions: while a
+release is in review the script skips it with a note and the release continues.
+Re-run after approval to land a subtitle change.
 
 ## Observability — deliberately minimal
 

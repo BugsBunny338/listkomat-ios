@@ -18,8 +18,17 @@ the human judgement that wraps them.
   scrutiny; reuse/adapt `docs/appstore-review-notes-*.txt`.
 
 Nothing here needs the ASC web UI. `scripts/release.sh` creates the version
-record and uploads the notes before it archives, so a missing version bump or an
-empty release-notes file stops the run in seconds instead of after the upload.
+record and uploads the store copy before it archives, so a missing version bump
+or an empty release-notes file stops the run in seconds instead of after the
+upload.
+
+- **Store copy lives in `fastlane/metadata/`, not in the web UI.** Description,
+  keywords and subtitle are pushed alongside the notes, and only fields that
+  actually differ are sent. Editing them in ASC instead means the next release
+  silently overwrites your edit — check `git diff` there, not the browser.
+- **A subtitle change needs a gap between submissions.** It is product-page copy,
+  so while a release is in review the script skips it and says so. Re-run
+  `python3 scripts/asc_new_version.py` once the release is approved.
 
 ## While in review
 
