@@ -1,0 +1,17 @@
+App Store "What's New" — Lístkomat 2.4
+(written fresh for this release, not carried over from 2.3)
+
+Headline: the Brno live map is working again — the upstream feed was retired a
+second time, without notice — plus official metro line colours in Prague.
+
+--- Czech (primary) ---
+• Živá mapa Brna zase funguje — město bez ohlášení vypnulo dosavadní zdroj dat, přešli jsme na nový.
+• Linky pražského metra mají na mapě své barvy — A zelenou, B žlutou, C červenou.
+• Tlačítko „Potvrdit nyní" u čekajícího lístku reaguje hned na první klepnutí.
+• Aplikace nově rovnou vysvětlí, že nákup lístku vyžaduje SIM kartu českého operátora.
+
+--- English ---
+• The Brno live map works again — the city retired the previous data source without notice, so we moved to the new one.
+• Prague metro lines now carry their own colours on the map — A green, B yellow, C red.
+• The "Confirm now" button on a pending ticket responds to the first tap.
+• The app now explains up front that buying a ticket requires a Czech operator's SIM.

@@ -1,2 +1,4 @@
-• Živá mapa v Brně se připojuje okamžitě — vozidla vidíte hned po otevření města
-• Lístkomat je nově dostupný v App Store po celém světě
+• Živá mapa Brna zase funguje — město bez ohlášení vypnulo dosavadní zdroj dat, přešli jsme na nový.
+• Linky pražského metra mají na mapě své barvy — A zelenou, B žlutou, C červenou.
+• Tlačítko „Potvrdit nyní" u čekajícího lístku reaguje hned na první klepnutí.
+• Aplikace nově rovnou vysvětlí, že nákup lístku vyžaduje SIM kartu českého operátora.
