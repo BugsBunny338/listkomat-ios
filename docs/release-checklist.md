@@ -10,9 +10,16 @@ the human judgement that wraps them.
   upload), `MARKETING_VERSION` for a new user-facing version.
 - **Write fresh "What's New."** Don't carry the previous release's notes over —
   deliberately describe what actually changed this time. (See
-  `docs/appstore-whatsnew-*.txt` for the house style.)
+  `docs/appstore-whatsnew-*.txt` for the house style.) Write the shipping copy
+  into `fastlane/metadata/<locale>/release_notes.txt` for **every** locale —
+  `scripts/asc_new_version.py` uploads it and the release fails on an empty
+  file, so there is no way to ship last release's notes by accident.
 - **Reviewer notes if the SMS flow is in play** — premium-SMS apps get extra
   scrutiny; reuse/adapt `docs/appstore-review-notes-*.txt`.
+
+Nothing here needs the ASC web UI. `scripts/release.sh` creates the version
+record and uploads the notes before it archives, so a missing version bump or an
+empty release-notes file stops the run in seconds instead of after the upload.
 
 ## While in review
 

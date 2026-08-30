@@ -62,10 +62,19 @@ these two, and both cost far more time to diagnose than to avoid:
 
 ## Release
 
-`scripts/release.sh` does archive → export → upload → submit in one shot
-(`--no-submit` to stop after upload). It needs `xcodegen`, Xcode CLT, and an App
-Store Connect API key in `~/.appstoreconnect/private_keys/` (see
-`scripts/asc_submit.py`). `ASC_NOTES=<file-or-text>` attaches reviewer notes.
+`scripts/release.sh` does version record + What's New → archive → export →
+upload → submit in one shot (`--no-submit` to stop after upload). It needs
+`xcodegen`, Xcode CLT, and an App Store Connect API key in
+`~/.appstoreconnect/private_keys/` (see `scripts/asc_submit.py`).
+`ASC_NOTES=<file-or-text>` attaches reviewer notes.
+
+**"What's New" is never typed into the ASC web UI.** Write it to
+`fastlane/metadata/<locale>/release_notes.txt` — `scripts/asc_new_version.py`
+creates the App Store version record and uploads the notes from there, and runs
+first so a missing bump fails in seconds rather than after the upload. Versions
+default to `releaseType=AFTER_APPROVAL` (auto-release on approval, as every
+version since 2.0); `ASC_RELEASE_TYPE=MANUAL` holds it instead. That script
+refuses to edit a version already in review unless you pass `--force`.
 
 Bump both in `project.yml` before running: `CURRENT_PROJECT_VERSION` (+1 for
 every upload, must be unique) and `MARKETING_VERSION` (new user-facing version).
@@ -79,6 +88,9 @@ bite most often:
   new changes into the next version, unless the user explicitly says to swap it.
 
 `fastlane/` is metadata + screenshots only — there is no Fastfile and no lanes.
+Only `release_notes.txt` is read by our own tooling; the rest of the metadata
+(description, keywords, subtitle) is still reference copy that ASC does not pull
+from here.
 
 ## Observability — deliberately minimal
 
