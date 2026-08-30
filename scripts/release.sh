@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# One-shot App Store release for Lístkomat: archive -> export -> upload -> submit.
+# One-shot App Store release for Lístkomat:
+#   version record + What's New -> archive -> export -> upload -> submit.
 #
 # Human habits around a release (fresh What's New, don't cancel in-review, check
 # Xcode Organizer after): see docs/release-checklist.md.
@@ -16,6 +17,11 @@
 # To include a reviewer message, set ASC_NOTES to a file path or text, e.g.:
 #   ASC_NOTES=docs/appstore-review-reply-5.1.1.txt scripts/release.sh
 #
+# "What's New" is NOT typed into the ASC web UI — write it to
+# fastlane/metadata/<locale>/release_notes.txt and scripts/asc_new_version.py
+# uploads it, along with creating the version record itself (releaseType
+# AFTER_APPROVAL by default; ASC_RELEASE_TYPE=MANUAL to hold the release).
+#
 # Requires: xcodegen, Xcode CLT, an App Store Connect API key (.p8) in
 # ~/.appstoreconnect/private_keys/ — see scripts/asc_submit.py.
 set -euo pipefail
@@ -23,6 +29,15 @@ cd "$(dirname "$0")/.."
 
 echo "==> xcodegen generate"
 xcodegen generate >/dev/null
+
+# Deliberately FIRST, before the ~6 minutes of archive+export+upload: this is the
+# step that fails when MARKETING_VERSION was not bumped, and finding that out
+# after a build has already been uploaded wastes the whole run. It creates the
+# App Store version record and uploads "What's New" from fastlane/metadata —
+# neither of which altool or asc_submit.py does. Idempotent, so re-running a
+# failed release is safe.
+echo "==> ensure App Store version + What's New"
+python3 scripts/asc_new_version.py
 
 echo "==> archive"
 rm -rf build/Listkomat.xcarchive build/export
