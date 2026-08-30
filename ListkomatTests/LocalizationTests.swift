@@ -45,10 +45,33 @@ final class LocalizationTests: XCTestCase {
         return try XCTUnwrap(NSDictionary(contentsOfFile: path) as? [String: String])
     }
 
+    /// Plural entries compile to a .stringsdict rather than into .strings, so a
+    /// key with variations is absent from `stringsTable` and would otherwise
+    /// read as untranslated.
+    private func pluralTable(for localization: String, table: String = "Localizable") -> [String: Any] {
+        guard let path = appBundle.path(forResource: table, ofType: "stringsdict",
+                                        inDirectory: nil, forLocalization: localization),
+              let dict = NSDictionary(contentsOfFile: path) as? [String: Any]
+        else { return [:] }
+        return dict
+    }
+
+    /// Every literal in one .stringsdict entry, flattened — the key naming the
+    /// plural variable is compiler-generated, so the shape isn't worth pinning.
+    private func pluralValues(_ entry: Any?) -> Set<String> {
+        switch entry {
+        case let string as String: return [string]
+        case let dict as [String: Any]: return dict.values.reduce(into: []) { $0.formUnion(pluralValues($1)) }
+        default: return []
+        }
+    }
+
     func testEveryTranslatableKeyHasEnglish() throws {
         let catalog = try loadCatalogKeys()
         let en = try stringsTable(for: "en")
-        let missing = catalog.translatable.subtracting(en.keys)
+        let missing = catalog.translatable
+            .subtracting(en.keys)
+            .subtracting(pluralTable(for: "en").keys)
         XCTAssertTrue(missing.isEmpty, "Keys missing English translation: \(missing.sorted())")
         XCTAssertFalse(en.values.contains(""), "English table contains empty translations")
         // A truncated catalog would make the subset check pass vacuously.
@@ -69,6 +92,26 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(en["Připojuji se k živým datům…"], "Connecting to live data…")
         XCTAssertEqual(en["Brno vysílá polohy vozidel přibližně jednou za 30 sekund."],
                        "Brno broadcasts vehicle positions about once every 30 seconds.")
+    }
+
+    /// Ticket durations are formatted from `durationMinutes`, so both languages
+    /// need real plural forms — the Czech ones accusative, because they always
+    /// follow "Lístek na …". Compiled tables are checked rather than the source
+    /// catalog: a plural entry that fails to compile is exactly the failure this
+    /// has to catch.
+    func testDurationPluralsCompileForBothLanguages() throws {
+        for (localization, expected) in [
+            ("en", ["%lld minute", "%lld minutes", "%lld hour", "%lld hours"]),
+            ("cs", ["%lld minutu", "%lld minuty", "%lld minut",
+                    "%lld hodinu", "%lld hodiny", "%lld hodin"]),
+        ] {
+            let plurals = pluralTable(for: localization)
+            let values = pluralValues(plurals["%lld minut"]).union(pluralValues(plurals["%lld hodin"]))
+            XCTAssertFalse(values.isEmpty, "no duration plurals compiled for \(localization)")
+            for form in expected {
+                XCTAssertTrue(values.contains(form), "\(localization) is missing the form \(form)")
+            }
+        }
     }
 
     func testInfoPlistLocationUsageLocalized() throws {
