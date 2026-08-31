@@ -13,6 +13,13 @@ struct ContentView: View {
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
+    /// Last city whose live map the user actually opened, written by
+    /// `LiveMapView`. Read here purely as a prefetch hint (#31) — it never
+    /// decides what's on screen, so a user who has moved cities loses one
+    /// speculative burst, not a correct city screen.
+    @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
+
+    @Environment(\.scenePhase) private var scenePhase
 
     private var theme: AppTheme { AppTheme.resolve(themeId) }
 
@@ -115,6 +122,11 @@ struct ContentView: View {
                     location.start()
                 }
             }
+            .onChange(of: scenePhase) { phase in
+                // Foregrounding is the same cold case as launch: the central
+                // background close drops every socket behind us.
+                if phase == .active { prefetchLiveSource() }
+            }
             .task { await store.refresh() }
         }
         .overlay(RainLayer(trigger: rainNonce))
@@ -140,7 +152,30 @@ struct ContentView: View {
         rainNonce += 1
     }
 
+    /// Start filling the live snapshot as early as the app can (#31).
+    ///
+    /// The city screen's keep-warm can only start once `currentCity` resolves,
+    /// which waits on a CoreLocation fix or a manual pick — seconds we could
+    /// have spent connected. This doesn't wait for either. It is aimed at the
+    /// last live-map city the user saw rather than fired at every city: one
+    /// KORDIS burst is ~320 KB, far too much to spend speculatively on a city
+    /// the user doesn't travel in. With nothing remembered yet (first launch)
+    /// we spend nothing and the city screen's keep-warm takes it from there.
+    /// Re-resolved against the current catalog every time, never trusted from
+    /// storage alone: `liveMapDisabled` is the remote kill switch for a broken
+    /// feed, and a prefetch that skipped this check would keep opening the socket
+    /// on every launch with no way to stop it short of an App Store release. It
+    /// also keeps a stale key for a removed city from reaching
+    /// `LiveSources.makeSource`, whose default branch is Brno's stream.
+    private func prefetchLiveSource() {
+        guard let city = store.city(forKey: lastLiveCityKey), city.showsLiveMap else { return }
+        LiveSources.prefetch(cityKey: city.key)
+    }
+
     private func handleAppear() {
+        // onAppear rather than only scenePhase: the scene is already .active at
+        // launch, so onChange never fires for it.
+        prefetchLiveSource()
         switch location.authorization {
         case .notDetermined:
             showingPrimer = true

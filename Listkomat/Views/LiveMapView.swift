@@ -11,6 +11,11 @@ struct LiveMapView: View {
     @State private var connectIsSlow = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeId") private var themeId = AppTheme.default.id
+    /// Records that this city's live map was actually opened, so the next launch
+    /// prefetches it (#31). Written here rather than when a city merely resolves:
+    /// a burst is ~320 KB, and someone who checks ticket prices while passing
+    /// through Brno should not pay it on every launch forever after.
+    @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
 
     init(city: City) {
         self.city = city
@@ -24,7 +29,8 @@ struct LiveMapView: View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
                        initialCenter: city.coordinate, brno: city.key == "brno",
                        stopNames: vm.stopNames, onSelect: { selected = $0 },
-                       recenter: recenterNonce, accent: accent)
+                       recenter: recenterNonce, accent: accent,
+                       stale: vm.showsRetainedPositions)
             .ignoresSafeArea()                       // map floats under the translucent top bar
             .overlay(alignment: .bottomTrailing) {
                 Button { recenterNonce += 1 } label: {
@@ -42,7 +48,10 @@ struct LiveMapView: View {
                 if let sel = selected { vehicleCard(sel) }
             }
             .overlay(alignment: .center) {
-                if !vm.didLoadOnce { connectingCard }
+                // Retained positions take the spinner's place: once there is a
+                // (grey) fleet on screen, `didLoadOnce` no longer decides whether
+                // the user is looking at an empty map.
+                if !vm.didLoadOnce && vm.vehicles.isEmpty { connectingCard }
             }
             .overlay(alignment: .center) {
                 if vm.didLoadOnce && vm.vehicles.isEmpty && !vm.loadFailed {
@@ -52,13 +61,14 @@ struct LiveMapView: View {
                         .background(.regularMaterial, in: Capsule())
                 }
             }
+            // One top slot, two things that can claim it. The failure wins: it
+            // explains both why the data is old AND that it isn't coming yet,
+            // which the "last known positions" wording alone would not.
             .overlay(alignment: .top) {
                 if vm.loadFailed {
-                    Text("Živá data dočasně nedostupná")
-                        .font(.footnote.weight(.medium))
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(.thinMaterial, in: Capsule())
-                        .padding(.top, 4)
+                    banner(Text("Živá data dočasně nedostupná"))
+                } else if vm.showsRetainedPositions {
+                    banner(Text("Poslední známé polohy · aktualizuji…"))
                 }
             }
             .navigationTitle("Živá mapa – \(city.localizedName)")
@@ -70,7 +80,10 @@ struct LiveMapView: View {
                 }
             }
             .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno", accent: accent) }
-            .onAppear { vm.start() }
+            .onAppear {
+                vm.start()
+                lastLiveCityKey = city.key
+            }
             .onDisappear { vm.stop() }
             .onChange(of: scenePhase) { phase in
                 if phase == .active { vm.start() }          // resume on return
@@ -78,6 +91,15 @@ struct LiveMapView: View {
                 // centrally by LiveSources on didEnterBackground.
                 else if phase == .background { vm.stop() }
             }
+    }
+
+    /// The top status pill — failure, or "these positions aren't live yet".
+    private func banner(_ text: Text) -> some View {
+        text
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(.thinMaterial, in: Capsule())
+            .padding(.top, 4)
     }
 
     /// Seconds of waiting before the cold start is explained rather than just
@@ -121,7 +143,10 @@ struct LiveMapView: View {
     /// Bottom info card for a tapped vehicle: type + line, and where it's heading.
     private func vehicleCard(_ sel: SelectedVehicle) -> some View {
         HStack(spacing: 12) {
-            Circle().fill(sel.color).frame(width: 14, height: 14)
+            // Follows the map: grey while the set is retained, and it turns
+            // colour with everything else the moment live data lands.
+            Circle().fill(vm.showsRetainedPositions ? TransitPalette.staleFill : sel.color)
+                .frame(width: 14, height: 14)
             VStack(alignment: .leading, spacing: 2) {
                 Text(sel.title).font(.brandBold(17, relativeTo: .headline))
                 if let dest = sel.destination {

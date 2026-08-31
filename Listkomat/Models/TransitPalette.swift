@@ -49,9 +49,16 @@ enum TransitPalette {
         }
     }
 
+    /// Fill for positions retained from an earlier connection (#31). One neutral
+    /// grey for every kind, deliberately outside the palette above: the map must
+    /// read as "not live yet" at a glance, and because Brno delivers the whole
+    /// fleet in a single burst, the moment live data lands the entire map flips
+    /// from this to colour at once — which is what tells the user it arrived.
+    static let staleFill = Color(hex: 0x8E8E93)
+
     /// Fill plus the ink the line letter should be drawn in.
-    static func style(for kind: VehicleKind, line: String) -> MarkerStyle {
-        let fill = fill(for: kind, line: line)
+    static func style(for kind: VehicleKind, line: String, stale: Bool = false) -> MarkerStyle {
+        let fill = stale ? staleFill : fill(for: kind, line: line)
         return MarkerStyle(fill: fill, glyph: fill.readableGlyph)
     }
 }

@@ -1,19 +1,48 @@
 import XCTest
+import CoreLocation
 @testable import Listkomat
 
 /// Records lifecycle calls so tests can assert how the view model and the
-/// shared-source registry treat a live source (#12: eager connect + warm socket).
+/// shared-source registry treat a live source (#12: eager connect + warm socket;
+/// #31: launch prefetch + retained positions).
 private actor SpyVehicleSource: VehicleSource {
     nonisolated let maintainsConnection: Bool
     private(set) var fetchCount = 0
     private(set) var shutdownCount = 0
+    private var live: [Vehicle] = []
+    private var retained: [Vehicle] = []
+    private var failing = false
+    private var fetchDelay: TimeInterval = 0
 
     init(maintainsConnection: Bool = true) {
         self.maintainsConnection = maintainsConnection
     }
 
-    func fetch() async throws -> [Vehicle] { fetchCount += 1; return [] }
+    func setLive(_ vehicles: [Vehicle]) { live = vehicles }
+    func setRetained(_ vehicles: [Vehicle]) { retained = vehicles }
+    func setFailing(_ value: Bool) { failing = value }
+    /// Holds `fetch()` open so a test can observe what the map shows *before*
+    /// live data lands — the whole window #31 is about.
+    func setFetchDelay(_ seconds: TimeInterval) { fetchDelay = seconds }
+
+    func fetch() async throws -> [Vehicle] {
+        fetchCount += 1
+        if fetchDelay > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(fetchDelay * 1_000_000_000))
+        }
+        if failing { throw VehicleSourceError.httpStatus(500) }
+        return live
+    }
     func shutdown() { shutdownCount += 1 }
+    func retainedVehicles() -> [Vehicle] { retained }
+}
+
+private func testVehicle(_ id: String, line: String = "1",
+                         updatedAt: Date = Date()) -> Vehicle {
+    Vehicle(id: id,
+            coordinate: CLLocationCoordinate2D(latitude: 49.195, longitude: 16.607),
+            bearing: nil, line: line, kind: .tram, updatedAt: updatedAt,
+            destinationId: nil, destinationName: nil)
 }
 
 @MainActor
@@ -200,4 +229,190 @@ final class LiveMapViewModelTests: XCTestCase {
         XCTAssertEqual(closed, 1, "double start() must not leave the socket retained forever")
     }
 
+    // MARK: Retained positions (#31 — grey now, colour when the burst lands)
+
+    func testRetainedPositionsPaintBeforeTheFirstLiveFetchReturns() async throws {
+        let spy = SpyVehicleSource()
+        await spy.setRetained([testVehicle("a"), testVehicle("b")])
+        await spy.setFetchDelay(5)   // the ~30 s wait for the next KORDIS burst
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(vm.vehicles.count, 2,
+                       "a cold open must show the fleet we still hold, not a spinner")
+        XCTAssertTrue(vm.showsRetainedPositions)
+        XCTAssertFalse(vm.didLoadOnce, "nothing live has arrived yet")
+        vm.stop()
+    }
+
+    func testFirstLiveFetchReplacesRetainedPositionsWholesale() async throws {
+        let spy = SpyVehicleSource()
+        await spy.setRetained([testVehicle("gone"), testVehicle("still-here")])
+        await spy.setLive([testVehicle("still-here")])
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 400_000_000)
+        XCTAssertEqual(vm.vehicles.map(\.id), ["still-here"],
+                       "a retained vehicle that has gone inactive must not linger as a ghost")
+        XCTAssertFalse(vm.showsRetainedPositions, "live data must clear the grey treatment")
+        vm.stop()
+    }
+
+    func testRetainedPositionsStayOnScreenThroughAFailedColdOpen() async throws {
+        let spy = SpyVehicleSource()
+        await spy.setRetained([testVehicle("a")])
+        await spy.setFailing(true)
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 400_000_000)
+        XCTAssertEqual(vm.vehicles.count, 1,
+                       "the last known fleet under the failure banner beats an empty map")
+        XCTAssertTrue(vm.loadFailed)
+        XCTAssertTrue(vm.showsRetainedPositions,
+                      "a failed fetch must not silently promote retained positions to live")
+        vm.stop()
+    }
+
+    func testRestartDoesNotReplaceLiveDataWithRetainedPositions() async throws {
+        // onAppear and scenePhase both call start(); returning to a map that is
+        // already live must not grey it out again.
+        let spy = SpyVehicleSource()
+        await spy.setLive([testVehicle("live")])
+        await spy.setRetained([testVehicle("old")])
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(vm.showsRetainedPositions)
+        vm.start()
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(vm.vehicles.map(\.id), ["live"])
+        XCTAssertFalse(vm.showsRetainedPositions)
+        vm.stop()
+    }
+
+    func testMapWithNoRetainedPositionsStillShowsTheConnectingState() async throws {
+        let spy = SpyVehicleSource()
+        await spy.setFetchDelay(5)
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertTrue(vm.vehicles.isEmpty)
+        XCTAssertFalse(vm.showsRetainedPositions,
+                       "with nothing held, the view must fall through to the connecting card")
+        vm.stop()
+    }
+
+    // MARK: Launch prefetch (#31 — one burst, then let go)
+
+    func testPrefetchFillsTheSnapshotThenReleasesTheSocket() async throws {
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        LiveSources.prefetch(cityKey: "brno")
+        try await Task.sleep(nanoseconds: 400_000_000)
+        let fetched = await spy.fetchCount
+        XCTAssertGreaterThanOrEqual(fetched, 1,
+                                    "prefetch must connect before the user asks for the map")
+        let closed = await spy.shutdownCount
+        XCTAssertEqual(closed, 1,
+                       "one burst, then let go — a held socket costs ~320 KB every ~30 s")
+    }
+
+    func testPrefetchLeavesTheSocketToAScreenThatTookInterest() async throws {
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        let screen = Task { await LiveSources.keepWarm(cityKey: "brno") }
+        try await Task.sleep(nanoseconds: 150_000_000)
+        LiveSources.prefetch(cityKey: "brno")
+        try await Task.sleep(nanoseconds: 400_000_000)
+        let closed = await spy.shutdownCount
+        XCTAssertEqual(closed, 0, "prefetch must not close a socket a live screen is using")
+        screen.cancel()
+    }
+
+    func testPrefetchSkipsSourcesWithoutAConnection() async throws {
+        let spy = SpyVehicleSource(maintainsConnection: false)   // Prague-like poller
+        LiveSources.inject(spy, for: "praha")
+        LiveSources.prefetch(cityKey: "praha")
+        try await Task.sleep(nanoseconds: 300_000_000)
+        let fetched = await spy.fetchCount
+        XCTAssertEqual(fetched, 0,
+                       "Prague's first fetch already paints the full map — nothing to prefetch")
+    }
+
+    func testPrefetchLeavesAGraceWindowSocketAlone() async throws {
+        // Popping back from the map schedules the #12 grace shutdown, and
+        // ContentView's onAppear fires a prefetch in the same breath. Closing
+        // the socket then would throw away the warm reopen grace exists to buy.
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 150_000_000)
+        vm.stop()                                // schedules the 0.5 s grace shutdown
+        LiveSources.prefetch(cityKey: "brno")
+        try await Task.sleep(nanoseconds: 150_000_000)
+        let early = await spy.shutdownCount
+        XCTAssertEqual(early, 0, "prefetch must not pre-empt the keep-warm grace period")
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        let late = await spy.shutdownCount
+        XCTAssertEqual(late, 1, "the grace shutdown itself must still fire, exactly once")
+    }
+
+    // MARK: Resuming onto positions that aged while the app was away
+
+    func testResumeGreysPositionsThatAgedWhileBackgrounded() async throws {
+        // The map can be left open across backgrounding: the view model and its
+        // vehicles survive, so on return they must not still read as live.
+        let spy = SpyVehicleSource()
+        await spy.setLive([testVehicle("a", updatedAt: Date().addingTimeInterval(-300))])
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        vm.stop()
+        vm.start()   // scenePhase .active on return
+        XCTAssertTrue(vm.showsRetainedPositions,
+                      "five-minute-old positions must not be painted as live")
+        XCTAssertEqual(vm.vehicles.count, 1)
+        vm.stop()
+    }
+
+    func testResumeDiscardsPositionsOlderThanTheRetainedHorizon() async throws {
+        let spy = SpyVehicleSource()
+        await spy.setLive([testVehicle("a", updatedAt: Date().addingTimeInterval(-4000))])
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(vm.vehicles.count, 1)
+        vm.stop()
+        vm.start()   // returning the next morning
+        XCTAssertTrue(vm.vehicles.isEmpty, "last night's fleet must be dropped, not greyed")
+        XCTAssertFalse(vm.didLoadOnce, "and the map must go back to the connecting card")
+        vm.stop()
+    }
+
+    func testResumeLeavesFreshPositionsAlone() async throws {
+        // A control-centre bounce must not grey a map that is seconds old.
+        let spy = SpyVehicleSource()
+        await spy.setLive([testVehicle("a")])
+        let vm = makeVM(spy)
+        vm.start()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        vm.stop()
+        vm.start()
+        XCTAssertFalse(vm.showsRetainedPositions)
+        XCTAssertEqual(vm.vehicles.count, 1)
+        vm.stop()
+    }
+
+    func testPrefetchCooldownPreventsASecondBurst() async throws {
+        let spy = SpyVehicleSource()
+        LiveSources.inject(spy, for: "brno")
+        LiveSources.prefetch(cityKey: "brno")
+        try await Task.sleep(nanoseconds: 400_000_000)
+        LiveSources.prefetch(cityKey: "brno")   // a quick background/foreground cycle
+        try await Task.sleep(nanoseconds: 300_000_000)
+        let fetched = await spy.fetchCount
+        XCTAssertEqual(fetched, 1,
+                       "foreground churn must not buy a fresh ~320 KB burst each time")
+    }
 }

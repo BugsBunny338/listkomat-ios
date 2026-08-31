@@ -156,6 +156,23 @@ final class BrnoStreamSourceTests: XCTestCase {
         XCTAssertEqual(snap.vehicles(now: now).map(\.id), (1...20).reversed().map(String.init))
     }
 
+    func testRetainedPositionsOutliveFreshnessButNotThePruneHorizon() throws {
+        // #31: these are painted greyed while the first live burst is still in
+        // flight, so they must survive the live freshness rule — but not outlast
+        // the horizon at which `prune` discards them anyway, or a map reopened
+        // the next morning would show last night's fleet.
+        var snap = BrnoStreamSnapshot()
+        snap.apply(try BrnoStreamDecoder.decode(Data(busMessage.utf8)))
+        let sent = Date(timeIntervalSince1970: 1_786_451_030.883)
+        let limit = BrnoStreamSource.retainedLimit
+
+        XCTAssertGreaterThan(limit, BrnoVehicleSource.freshnessLimit,
+                             "retained positions exist precisely to outlive the live freshness rule")
+        XCTAssertEqual(snap.vehicles(now: sent.addingTimeInterval(300), fresherThan: limit).count, 1,
+                       "five minutes old is still worth showing greyed")
+        XCTAssertTrue(snap.vehicles(now: sent.addingTimeInterval(limit + 1), fresherThan: limit).isEmpty)
+    }
+
     func testSnapshotPruneEvictsAgedEntries() throws {
         var snap = BrnoStreamSnapshot()
         snap.apply(try BrnoStreamDecoder.decode(Data(busMessage.utf8)))

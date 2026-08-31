@@ -43,6 +43,10 @@ struct TransitMapView: UIViewRepresentable {
     var onSelect: (SelectedVehicle?) -> Void = { _ in }
     var recenter: Int = 0                // bump to re-center on the user / city
     var accent: Color = .brandTeal       // theme accent (stop rings)
+    /// Positions carried over from an earlier connection (#31): draw them grey
+    /// until live data replaces them, so nothing on the map claims to be current
+    /// when it isn't.
+    var stale: Bool = false
 
     func makeCoordinator() -> Coordinator { Coordinator(stops: stops, brno: brno, stopNames: stopNames, accent: accent) }
 
@@ -63,6 +67,9 @@ struct TransitMapView: UIViewRepresentable {
         context.coordinator.stopNames = stopNames   // loads after makeCoordinator, so refresh it here
         context.coordinator.onSelect = onSelect
         context.coordinator.accent = accent
+        // Before syncVehicles: it restyles the annotations it touches, which is
+        // what turns the whole map from grey to colour when the burst lands.
+        context.coordinator.stale = stale
         context.coordinator.syncVehicles(vehicles, on: map)
         context.coordinator.refreshStops(on: map)
         context.coordinator.applyRecenter(recenter, fallback: initialCenter, on: map)
@@ -75,6 +82,7 @@ struct TransitMapView: UIViewRepresentable {
         var stopNames: [Int: String]
         var onSelect: (SelectedVehicle?) -> Void = { _ in }
         var accent: Color
+        var stale = false
         private var vehicleAnn: [String: VehicleAnnotation] = [:]
         private var stopAnn: [String: StopAnnotation] = [:]
         private let stopZoomThreshold = 0.035   // show stops once span is tighter than this
@@ -163,6 +171,10 @@ struct TransitMapView: UIViewRepresentable {
             onSelect(SelectedVehicle(id: v.id,
                                      title: "\(v.kind.displayName(brno: brno)) \(v.line)",
                                      destination: v.destination,
+                                     // Always the vehicle's true colour. The card
+                                     // is a value captured at tap time, so greying
+                                     // it here would leave it grey after the fleet
+                                     // went live — the view applies the grey.
                                      color: TransitPalette.fill(for: v.kind, line: v.line)))
         }
 
@@ -195,7 +207,7 @@ struct TransitMapView: UIViewRepresentable {
         }
 
         private func style(_ view: MKMarkerAnnotationView, _ kind: VehicleKind, _ line: String) {
-            let marker = TransitPalette.style(for: kind, line: line)
+            let marker = TransitPalette.style(for: kind, line: line, stale: stale)
             view.markerTintColor = UIColor(marker.fill)
             view.glyphTintColor = UIColor(marker.glyph)
             view.glyphText = line

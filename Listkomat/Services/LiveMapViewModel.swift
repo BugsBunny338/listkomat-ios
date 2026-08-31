@@ -9,12 +9,26 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var stopNames: [Int: String] = [:]   // FinalStopID → destination name
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
+    /// True while `vehicles` holds positions carried over from an earlier
+    /// connection rather than a live fetch (#31). Drives the greyed markers and
+    /// the "last known positions" banner; cleared by the first successful fetch,
+    /// which replaces the whole set at once.
+    @Published private(set) var showsRetainedPositions = false
 
     /// How often the map re-reads the source. Also the worst-case lag between
     /// a stream stalling and the source noticing, which is why
     /// `BrnoStreamSource.stallTimeout` is sized against it — nonisolated so
     /// that budget can be asserted without hopping to the main actor.
     nonisolated static let pollInterval: TimeInterval = 8
+
+    /// Past this age, positions already on screen stop being presented as live.
+    /// Above both sources' freshness limits (Brno 120 s, Prague 180 s) so an
+    /// ordinary poll gap can never grey out a healthy map.
+    static let greyPositionsAfter: TimeInterval = 180
+
+    /// Past this they are dropped outright — the same horizon at which the Brno
+    /// source stops vouching for retained positions.
+    static let discardPositionsAfter: TimeInterval = BrnoStreamSource.retainedLimit
 
     let source: VehicleSource
     private let seedStops: [Stop]
@@ -59,13 +73,48 @@ final class LiveMapViewModel: ObservableObject {
         }
         if stops.isEmpty { stops = seedStops }
         if stopNames.isEmpty { stopNames = seedStopNames }
+        ageExistingPositions()
         pollTask?.cancel()
         pollTask = Task { [weak self] in
+            await self?.seedFromRetainedPositions()
             while !Task.isCancelled {
                 await self?.refresh()
                 try? await Task.sleep(nanoseconds: UInt64(Self.pollInterval * 1_000_000_000))
             }
         }
+    }
+
+    /// Re-judge positions that are already on screen when the map resumes.
+    ///
+    /// `start()` runs again on every return to foreground, and the view model
+    /// (with its `vehicles`) survives backgrounding — the map can be left open
+    /// overnight. Without this, last night's fleet stays painted in full colour
+    /// with no banner until the first fetch returns, which for Brno is up to
+    /// `firstMessageTimeout` plus a burst wait, and longer still if that fetch
+    /// fails (`refresh()` deliberately keeps the old set). Grey them, or drop
+    /// them past the horizon where the source itself stops vouching for them.
+    private func ageExistingPositions() {
+        guard let newest = vehicles.map(\.updatedAt).max() else { return }
+        let age = Date().timeIntervalSince(newest)
+        if age > Self.discardPositionsAfter {
+            vehicles = []
+            showsRetainedPositions = false
+            didLoadOnce = false   // back to the connecting card, not "no vehicles nearby"
+        } else if age > Self.greyPositionsAfter {
+            showsRetainedPositions = true
+        }
+    }
+
+    /// Paint whatever the source still holds from an earlier connection, so a
+    /// cold open shows the fleet (greyed) instead of a spinner while the first
+    /// burst is in flight (#31). Runs ahead of the first `refresh()` in the same
+    /// task, so it can never overwrite live data with older positions.
+    private func seedFromRetainedPositions() async {
+        guard vehicles.isEmpty else { return }   // a warm reopen already has live data
+        let retained = await source.retainedVehicles()
+        guard !retained.isEmpty, !didLoadOnce, vehicles.isEmpty else { return }
+        vehicles = retained
+        showsRetainedPositions = true
     }
 
     /// Stops polling and drops this view model's interest in the source. With
@@ -84,10 +133,16 @@ final class LiveMapViewModel: ObservableObject {
 
     private func refresh() async {
         do {
+            // Replace, never merge: a retained vehicle that has since gone
+            // inactive must disappear, not linger as a ghost that looks live.
             vehicles = try await source.fetch()
+            showsRetainedPositions = false
             loadFailed = false
         } catch {
-            loadFailed = true   // keep last vehicles on screen
+            // Keep the last vehicles on screen — including retained ones, which
+            // stay flagged as such. A failed cold open showing the last known
+            // fleet under the failure banner beats an empty map.
+            loadFailed = true
         }
         didLoadOnce = true
     }
