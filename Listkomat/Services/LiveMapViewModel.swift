@@ -21,6 +21,15 @@ final class LiveMapViewModel: ObservableObject {
     /// that budget can be asserted without hopping to the main actor.
     nonisolated static let pollInterval: TimeInterval = 8
 
+    /// Past this age, positions already on screen stop being presented as live.
+    /// Above both sources' freshness limits (Brno 120 s, Prague 180 s) so an
+    /// ordinary poll gap can never grey out a healthy map.
+    static let greyPositionsAfter: TimeInterval = 180
+
+    /// Past this they are dropped outright — the same horizon at which the Brno
+    /// source stops vouching for retained positions.
+    static let discardPositionsAfter: TimeInterval = BrnoStreamSource.retainedLimit
+
     let source: VehicleSource
     private let seedStops: [Stop]
     private let seedStopNames: [Int: String]
@@ -64,6 +73,7 @@ final class LiveMapViewModel: ObservableObject {
         }
         if stops.isEmpty { stops = seedStops }
         if stopNames.isEmpty { stopNames = seedStopNames }
+        ageExistingPositions()
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             await self?.seedFromRetainedPositions()
@@ -71,6 +81,27 @@ final class LiveMapViewModel: ObservableObject {
                 await self?.refresh()
                 try? await Task.sleep(nanoseconds: UInt64(Self.pollInterval * 1_000_000_000))
             }
+        }
+    }
+
+    /// Re-judge positions that are already on screen when the map resumes.
+    ///
+    /// `start()` runs again on every return to foreground, and the view model
+    /// (with its `vehicles`) survives backgrounding — the map can be left open
+    /// overnight. Without this, last night's fleet stays painted in full colour
+    /// with no banner until the first fetch returns, which for Brno is up to
+    /// `firstMessageTimeout` plus a burst wait, and longer still if that fetch
+    /// fails (`refresh()` deliberately keeps the old set). Grey them, or drop
+    /// them past the horizon where the source itself stops vouching for them.
+    private func ageExistingPositions() {
+        guard let newest = vehicles.map(\.updatedAt).max() else { return }
+        let age = Date().timeIntervalSince(newest)
+        if age > Self.discardPositionsAfter {
+            vehicles = []
+            showsRetainedPositions = false
+            didLoadOnce = false   // back to the connecting card, not "no vehicles nearby"
+        } else if age > Self.greyPositionsAfter {
+            showsRetainedPositions = true
         }
     }
 

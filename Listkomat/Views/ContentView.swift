@@ -13,9 +13,10 @@ struct ContentView: View {
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
-    /// Last city with a live map the user actually saw. Persisted purely as a
-    /// prefetch hint (#31) — it never decides what's on screen, so a user who
-    /// has moved cities loses one speculative burst, not a correct city screen.
+    /// Last city whose live map the user actually opened, written by
+    /// `LiveMapView`. Read here purely as a prefetch hint (#31) — it never
+    /// decides what's on screen, so a user who has moved cities loses one
+    /// speculative burst, not a correct city screen.
     @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
 
     @Environment(\.scenePhase) private var scenePhase
@@ -121,9 +122,6 @@ struct ContentView: View {
                     location.start()
                 }
             }
-            .onChange(of: currentCity?.key) { _ in
-                if let city = currentCity, city.showsLiveMap { lastLiveCityKey = city.key }
-            }
             .onChange(of: scenePhase) { phase in
                 // Foregrounding is the same cold case as launch: the central
                 // background close drops every socket behind us.
@@ -163,9 +161,15 @@ struct ContentView: View {
     /// KORDIS burst is ~320 KB, far too much to spend speculatively on a city
     /// the user doesn't travel in. With nothing remembered yet (first launch)
     /// we spend nothing and the city screen's keep-warm takes it from there.
+    /// Re-resolved against the current catalog every time, never trusted from
+    /// storage alone: `liveMapDisabled` is the remote kill switch for a broken
+    /// feed, and a prefetch that skipped this check would keep opening the socket
+    /// on every launch with no way to stop it short of an App Store release. It
+    /// also keeps a stale key for a removed city from reaching
+    /// `LiveSources.makeSource`, whose default branch is Brno's stream.
     private func prefetchLiveSource() {
-        guard !lastLiveCityKey.isEmpty else { return }
-        LiveSources.prefetch(cityKey: lastLiveCityKey)
+        guard let city = store.city(forKey: lastLiveCityKey), city.showsLiveMap else { return }
+        LiveSources.prefetch(cityKey: city.key)
     }
 
     private func handleAppear() {

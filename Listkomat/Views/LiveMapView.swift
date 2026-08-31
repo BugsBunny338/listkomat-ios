@@ -11,6 +11,11 @@ struct LiveMapView: View {
     @State private var connectIsSlow = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeId") private var themeId = AppTheme.default.id
+    /// Records that this city's live map was actually opened, so the next launch
+    /// prefetches it (#31). Written here rather than when a city merely resolves:
+    /// a burst is ~320 KB, and someone who checks ticket prices while passing
+    /// through Brno should not pay it on every launch forever after.
+    @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
 
     init(city: City) {
         self.city = city
@@ -75,7 +80,10 @@ struct LiveMapView: View {
                 }
             }
             .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno", accent: accent) }
-            .onAppear { vm.start() }
+            .onAppear {
+                vm.start()
+                lastLiveCityKey = city.key
+            }
             .onDisappear { vm.stop() }
             .onChange(of: scenePhase) { phase in
                 if phase == .active { vm.start() }          // resume on return
@@ -135,7 +143,10 @@ struct LiveMapView: View {
     /// Bottom info card for a tapped vehicle: type + line, and where it's heading.
     private func vehicleCard(_ sel: SelectedVehicle) -> some View {
         HStack(spacing: 12) {
-            Circle().fill(sel.color).frame(width: 14, height: 14)
+            // Follows the map: grey while the set is retained, and it turns
+            // colour with everything else the moment live data lands.
+            Circle().fill(vm.showsRetainedPositions ? TransitPalette.staleFill : sel.color)
+                .frame(width: 14, height: 14)
             VStack(alignment: .leading, spacing: 2) {
                 Text(sel.title).font(.brandBold(17, relativeTo: .headline))
                 if let dest = sel.destination {

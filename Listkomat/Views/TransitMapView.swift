@@ -171,11 +171,11 @@ struct TransitMapView: UIViewRepresentable {
             onSelect(SelectedVehicle(id: v.id,
                                      title: "\(v.kind.displayName(brno: brno)) \(v.line)",
                                      destination: v.destination,
-                                     // Grey here too while the set is retained —
-                                     // the card must not colour in a vehicle the
-                                     // map is still showing as not-yet-live.
-                                     color: TransitPalette.style(for: v.kind, line: v.line,
-                                                                 stale: stale).fill))
+                                     // Always the vehicle's true colour. The card
+                                     // is a value captured at tap time, so greying
+                                     // it here would leave it grey after the fleet
+                                     // went live — the view applies the grey.
+                                     color: TransitPalette.fill(for: v.kind, line: v.line)))
         }
 
         func mapView(_ map: MKMapView, didDeselect view: MKAnnotationView) {

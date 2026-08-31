@@ -45,6 +45,10 @@ enum LiveSources {
     /// the release its predecessor scheduled.
     private static var interest: [ObjectIdentifier: Int] = [:]
     private static var generation: [ObjectIdentifier: Int] = [:]
+    /// When each released source's grace window expires. Lets the launch
+    /// prefetch tell "idle socket nobody wants" from "socket being kept warm for
+    /// a reopen", which look identical through `interest` alone.
+    private static var graceUntil: [ObjectIdentifier: Date] = [:]
 
     /// Keep a city's source connected while the caller's task lives — run from
     /// the city screen via `.task`, so the stream is already accumulating
@@ -96,25 +100,52 @@ enum LiveSources {
     static func prefetch(cityKey: String) {
         let src = source(for: cityKey)
         guard src.maintainsConnection else { return }
+        let key = ObjectIdentifier(src)
+        // Only ever act on a socket nobody has an opinion about. A screen may be
+        // holding this one, or may have just stepped off it with its keep-warm
+        // grace window still running (#12) — in both cases the snapshot is being
+        // filled without us, and the shutdown below would throw away exactly the
+        // warm reopen that grace period exists to buy.
+        guard interest[key, default: 0] == 0, !isInGracePeriod(key) else { return }
         guard !prefetching.contains(cityKey) else { return }
         if let last = lastPrefetchAt[cityKey],
            Date().timeIntervalSince(last) < prefetchCooldown { return }
         prefetching.insert(cityKey)
         Task {
+            // Cleared however we leave, so a source that never returns can't
+            // wedge prefetch off for this city for the rest of the process.
+            defer {
+                prefetching.remove(cityKey)
+                lastPrefetchAt[cityKey] = Date()
+            }
+            // Hold interest while filling: a shutdown scheduled elsewhere would
+            // otherwise cut the burst in half and leave a partial fleet to paint.
+            retain(src)
             // Self-bounding: a dead feed fails on BrnoStreamSource's own
             // first-message deadline rather than hanging here. Failures are
             // silent — the map's poll loop is the only path that reports them.
             await src.warmUp()
-            prefetching.remove(cityKey)
-            lastPrefetchAt[cityKey] = Date()
-            // If a screen took interest while we were filling, it now owns the
-            // socket and the normal grace rules apply. Otherwise close it: this
-            // was one burst for the snapshot, not a standing subscription. A
-            // map opened in the gap reconnects on its own first fetch.
-            if interest[ObjectIdentifier(src), default: 0] == 0 {
-                await src.shutdown()
-            }
+            await releaseWithoutGrace(src)
         }
+    }
+
+    /// Hand back a prefetch's interest and close the socket if nothing else took
+    /// it meanwhile. Unlike `release`, no grace window: this was one burst to
+    /// fill the snapshot, not a session anyone is coming back to. A map opened in
+    /// the gap reconnects on its own first fetch.
+    private static func releaseWithoutGrace(_ source: VehicleSource) async {
+        let key = ObjectIdentifier(source)
+        interest[key] = max(0, (interest[key] ?? 0) - 1)
+        guard interest[key] == 0 else { return }   // a screen took over while we filled
+        generation[key, default: 0] += 1           // orphan anything scheduled meanwhile
+        graceUntil[key] = nil
+        await source.shutdown()
+    }
+
+    /// True while a released source is still inside its keep-warm grace window:
+    /// nothing holds interest, but the socket is up and spoken for.
+    private static func isInGracePeriod(_ key: ObjectIdentifier) -> Bool {
+        (graceUntil[key]?.timeIntervalSinceNow ?? 0) > 0
     }
 
     /// Register interest in `source`, keeping its connection up and invalidating
@@ -123,6 +154,7 @@ enum LiveSources {
         let key = ObjectIdentifier(source)
         interest[key, default: 0] += 1
         generation[key, default: 0] += 1
+        graceUntil[key] = nil   // the generation bump just orphaned that shutdown
     }
 
     /// Drop one interest in `source`. When the last interest goes, its
@@ -134,9 +166,11 @@ enum LiveSources {
         guard interest[key] == 0 else { return }
         generation[key, default: 0] += 1
         let gen = generation[key]
+        graceUntil[key] = Date().addingTimeInterval(idleShutdownDelay)
         Task {
             try? await Task.sleep(nanoseconds: UInt64(idleShutdownDelay * 1_000_000_000))
             guard generation[key] == gen, interest[key] == 0 else { return }
+            graceUntil[key] = nil
             await source.shutdown()
         }
     }
@@ -151,7 +185,12 @@ enum LiveSources {
     /// second close later.
     static func closeAllForBackground() {
         for src in cache.values where src.maintainsConnection {
-            generation[ObjectIdentifier(src), default: 0] += 1
+            let key = ObjectIdentifier(src)
+            generation[key, default: 0] += 1
+            // The socket is gone, so no grace window is left to protect — without
+            // this the foreground prefetch would mistake the stale marker for a
+            // live keep-warm and skip the one burst it exists to fetch.
+            graceUntil[key] = nil
             Task { await src.shutdown() }
         }
     }
@@ -177,6 +216,7 @@ enum LiveSources {
         // Bumping generations orphans any scheduled shutdown from a previous test.
         for key in generation.keys { generation[key]! += 1 }
         interest.removeAll()
+        graceUntil.removeAll()
         idleShutdownDelay = defaultIdleShutdownDelay
         prefetching.removeAll()
         lastPrefetchAt.removeAll()
