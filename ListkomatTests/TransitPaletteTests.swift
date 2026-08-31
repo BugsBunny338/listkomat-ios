@@ -59,6 +59,9 @@ final class TransitPaletteTests: XCTestCase {
         // The unrecognized-line fallback (amber) renders on the real feed-anomaly
         // path and must be contrast-checked like every other renderable fill.
         fills.append(TransitPalette.style(for: .metro, line: "D"))
+        // Retained positions (#31) draw the same line number on a grey bubble —
+        // greyed-out is not an excuse for an unreadable glyph.
+        fills.append(TransitPalette.style(for: .tram, line: "1", stale: true))
 
         for style in fills {
             let ratio = Color.contrastRatio(style.fill.relativeLuminance,

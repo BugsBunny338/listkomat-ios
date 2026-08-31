@@ -13,11 +13,18 @@ protocol VehicleSource: AnyObject {
     /// Release any live connection while the map is off-screen. Optional —
     /// polling sources have nothing to release.
     func shutdown() async
+    /// Positions the source is still holding from an earlier connection,
+    /// deliberately exempt from the freshness rule `fetch()` applies (#31).
+    /// The map paints these greyed while the first live burst is still in
+    /// flight, so a cold open shows the fleet instead of a spinner. Empty for
+    /// sources that keep no state between fetches.
+    func retainedVehicles() async -> [Vehicle]
 }
 
 extension VehicleSource {
     var maintainsConnection: Bool { false }
     func shutdown() async {}
+    func retainedVehicles() async -> [Vehicle] { [] }
     /// Bring the live connection up without paying for a full snapshot —
     /// keep-warm only wants the connect side effect of a fetch.
     func warmUp() async { _ = try? await fetch() }

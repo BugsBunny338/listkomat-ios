@@ -167,6 +167,25 @@ actor BrnoStreamSource: VehicleSource {
         return snapshot.vehicles()
     }
 
+    /// How old a retained position may be and still be worth painting greyed.
+    ///
+    /// Matched to `BrnoStreamSnapshot.prune`'s eviction horizon: past that the
+    /// entries are being discarded anyway, so a longer limit would only promise
+    /// data that isn't there. Ten minutes of drift is a few hundred metres —
+    /// wrong in the detail, right about which lines are running and roughly
+    /// where. The socket does NOT survive backgrounding (`closeAllForBackground`)
+    /// but the snapshot does, so this is also what stops a map reopened the
+    /// next morning from showing last night's fleet.
+    static let retainedLimit: TimeInterval = 600
+
+    /// Positions held from an earlier connection, ignoring `freshnessLimit`
+    /// (#31). Never merged with live data — the view model replaces this set
+    /// wholesale on the first successful fetch, so vehicles that have since
+    /// gone inactive can't linger as ghosts.
+    func retainedVehicles() -> [Vehicle] {
+        snapshot.vehicles(fresherThan: Self.retainedLimit)
+    }
+
     /// Close the socket while the map is off-screen; the next fetch reconnects.
     func shutdown() {
         connectTask?.cancel()

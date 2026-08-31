@@ -520,6 +520,16 @@
         }
       }
     },
+    "Poslední známé polohy · aktualizuji…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last known positions · updating…"
+          }
+        }
+      }
+    },
     "Potvrdit nyní" : {
       "localizations" : {
         "en" : {

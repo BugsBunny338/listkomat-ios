@@ -9,6 +9,11 @@ final class LiveMapViewModel: ObservableObject {
     @Published private(set) var stopNames: [Int: String] = [:]   // FinalStopID → destination name
     @Published private(set) var loadFailed = false
     @Published private(set) var didLoadOnce = false   // false until the first fetch returns
+    /// True while `vehicles` holds positions carried over from an earlier
+    /// connection rather than a live fetch (#31). Drives the greyed markers and
+    /// the "last known positions" banner; cleared by the first successful fetch,
+    /// which replaces the whole set at once.
+    @Published private(set) var showsRetainedPositions = false
 
     /// How often the map re-reads the source. Also the worst-case lag between
     /// a stream stalling and the source noticing, which is why
@@ -61,11 +66,24 @@ final class LiveMapViewModel: ObservableObject {
         if stopNames.isEmpty { stopNames = seedStopNames }
         pollTask?.cancel()
         pollTask = Task { [weak self] in
+            await self?.seedFromRetainedPositions()
             while !Task.isCancelled {
                 await self?.refresh()
                 try? await Task.sleep(nanoseconds: UInt64(Self.pollInterval * 1_000_000_000))
             }
         }
+    }
+
+    /// Paint whatever the source still holds from an earlier connection, so a
+    /// cold open shows the fleet (greyed) instead of a spinner while the first
+    /// burst is in flight (#31). Runs ahead of the first `refresh()` in the same
+    /// task, so it can never overwrite live data with older positions.
+    private func seedFromRetainedPositions() async {
+        guard vehicles.isEmpty else { return }   // a warm reopen already has live data
+        let retained = await source.retainedVehicles()
+        guard !retained.isEmpty, !didLoadOnce, vehicles.isEmpty else { return }
+        vehicles = retained
+        showsRetainedPositions = true
     }
 
     /// Stops polling and drops this view model's interest in the source. With
@@ -84,10 +102,16 @@ final class LiveMapViewModel: ObservableObject {
 
     private func refresh() async {
         do {
+            // Replace, never merge: a retained vehicle that has since gone
+            // inactive must disappear, not linger as a ghost that looks live.
             vehicles = try await source.fetch()
+            showsRetainedPositions = false
             loadFailed = false
         } catch {
-            loadFailed = true   // keep last vehicles on screen
+            // Keep the last vehicles on screen — including retained ones, which
+            // stay flagged as such. A failed cold open showing the last known
+            // fleet under the failure banner beats an empty map.
+            loadFailed = true
         }
         didLoadOnce = true
     }

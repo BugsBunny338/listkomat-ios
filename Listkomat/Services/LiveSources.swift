@@ -63,6 +63,60 @@ enum LiveSources {
         }
     }
 
+    // MARK: Launch prefetch (one burst, then let go)
+
+    /// Seconds before a finished prefetch may run again. Rapid
+    /// background/foreground cycling would otherwise buy a fresh burst each
+    /// time, and a snapshot this young is still worth painting anyway.
+    static var prefetchCooldown: TimeInterval = defaultPrefetchCooldown
+    private static let defaultPrefetchCooldown: TimeInterval = 120
+
+    private static var prefetching: Set<String> = []
+    private static var lastPrefetchAt: [String: Date] = [:]
+
+    /// Fill a city's snapshot at launch/foreground, before the user has reached
+    /// the city screen and before the map is anywhere in sight (#31).
+    ///
+    /// KORDIS sends nothing on subscribe and then emits the whole fleet in one
+    /// burst every ~30 s, so a map opened cold waits for the next burst no
+    /// matter how fast we connect. Connecting at launch spends that wait during
+    /// seconds the user is spending anyway — and if they never open the map, we
+    /// throw the snapshot away, which is the cheap outcome.
+    ///
+    /// Deliberately ONE burst, not a held-open socket: a burst measures ~320 KB
+    /// (807 messages × ~407 B, measured against the live feed 2026-08-31), so
+    /// keeping the stream up "just in case" would cost about a megabyte per
+    /// launch of data nobody asked for. `warmUp()` already returns only once
+    /// the first burst has landed and settled, so the snapshot is complete by
+    /// the time this releases it. What the user sees on a later map open is
+    /// that snapshot, greyed, courtesy of `retainedVehicles()`.
+    ///
+    /// Prague needs none of this and gets none: `maintainsConnection` is false
+    /// for a stateless poller whose first fetch already paints the full map.
+    static func prefetch(cityKey: String) {
+        let src = source(for: cityKey)
+        guard src.maintainsConnection else { return }
+        guard !prefetching.contains(cityKey) else { return }
+        if let last = lastPrefetchAt[cityKey],
+           Date().timeIntervalSince(last) < prefetchCooldown { return }
+        prefetching.insert(cityKey)
+        Task {
+            // Self-bounding: a dead feed fails on BrnoStreamSource's own
+            // first-message deadline rather than hanging here. Failures are
+            // silent — the map's poll loop is the only path that reports them.
+            await src.warmUp()
+            prefetching.remove(cityKey)
+            lastPrefetchAt[cityKey] = Date()
+            // If a screen took interest while we were filling, it now owns the
+            // socket and the normal grace rules apply. Otherwise close it: this
+            // was one burst for the snapshot, not a standing subscription. A
+            // map opened in the gap reconnects on its own first fetch.
+            if interest[ObjectIdentifier(src), default: 0] == 0 {
+                await src.shutdown()
+            }
+        }
+    }
+
     /// Register interest in `source`, keeping its connection up and invalidating
     /// any scheduled shutdown.
     static func retain(_ source: VehicleSource) {
@@ -124,5 +178,8 @@ enum LiveSources {
         for key in generation.keys { generation[key]! += 1 }
         interest.removeAll()
         idleShutdownDelay = defaultIdleShutdownDelay
+        prefetching.removeAll()
+        lastPrefetchAt.removeAll()
+        prefetchCooldown = defaultPrefetchCooldown
     }
 }

@@ -24,7 +24,8 @@ struct LiveMapView: View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
                        initialCenter: city.coordinate, brno: city.key == "brno",
                        stopNames: vm.stopNames, onSelect: { selected = $0 },
-                       recenter: recenterNonce, accent: accent)
+                       recenter: recenterNonce, accent: accent,
+                       stale: vm.showsRetainedPositions)
             .ignoresSafeArea()                       // map floats under the translucent top bar
             .overlay(alignment: .bottomTrailing) {
                 Button { recenterNonce += 1 } label: {
@@ -42,7 +43,10 @@ struct LiveMapView: View {
                 if let sel = selected { vehicleCard(sel) }
             }
             .overlay(alignment: .center) {
-                if !vm.didLoadOnce { connectingCard }
+                // Retained positions take the spinner's place: once there is a
+                // (grey) fleet on screen, `didLoadOnce` no longer decides whether
+                // the user is looking at an empty map.
+                if !vm.didLoadOnce && vm.vehicles.isEmpty { connectingCard }
             }
             .overlay(alignment: .center) {
                 if vm.didLoadOnce && vm.vehicles.isEmpty && !vm.loadFailed {
@@ -52,13 +56,14 @@ struct LiveMapView: View {
                         .background(.regularMaterial, in: Capsule())
                 }
             }
+            // One top slot, two things that can claim it. The failure wins: it
+            // explains both why the data is old AND that it isn't coming yet,
+            // which the "last known positions" wording alone would not.
             .overlay(alignment: .top) {
                 if vm.loadFailed {
-                    Text("Živá data dočasně nedostupná")
-                        .font(.footnote.weight(.medium))
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(.thinMaterial, in: Capsule())
-                        .padding(.top, 4)
+                    banner(Text("Živá data dočasně nedostupná"))
+                } else if vm.showsRetainedPositions {
+                    banner(Text("Poslední známé polohy · aktualizuji…"))
                 }
             }
             .navigationTitle("Živá mapa – \(city.localizedName)")
@@ -78,6 +83,15 @@ struct LiveMapView: View {
                 // centrally by LiveSources on didEnterBackground.
                 else if phase == .background { vm.stop() }
             }
+    }
+
+    /// The top status pill — failure, or "these positions aren't live yet".
+    private func banner(_ text: Text) -> some View {
+        text
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(.thinMaterial, in: Capsule())
+            .padding(.top, 4)
     }
 
     /// Seconds of waiting before the cold start is explained rather than just
