@@ -8,6 +8,7 @@ writes
     Listkomat/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png      iOS
     <android-repo>/app/src/main/res/drawable/ic_launcher_foreground.xml
     <android-repo>/play/assets/icon-512.png                           Play listing
+    <android-repo>/play/assets/feature-1024x500.png                   Play feature graphic
 
 and checks that the Android foreground stays inside the 66 dp safe circle.
 
@@ -38,6 +39,16 @@ TEAL = "#56C4CF"
 FILL = 0.77
 # Horizontal centre of the backpack body (straps excluded), in art units.
 BODY_CX = (13.57 + 81.19) / 2
+
+# Play feature graphic (px). Layout of the 2026-09-22 graphic it replaces:
+# ink title and dark-teal subtitle left, the art centred where its ticket was.
+FEATURE_W, FEATURE_H = 1024, 500
+FEATURE_INK, FEATURE_SUB = "#1F1F1F", "#0F464C"
+FEATURE_TITLE = ("Lístkomat", 78, 257, 78)             # text, cap height, baseline, left
+FEATURE_SUBTITLE = ("SMS jízdenky na MHD", 34, 333, 73)
+# The old ticket glyph was 300 x 184 px; the art gets the same bounding-box
+# area (the README's visual-weight measure), centred on the same point.
+FEATURE_ART_AREA, FEATURE_ART_CENTRE = 300 * 184, (810, 250)
 
 # Android adaptive icon geometry (dp).
 CANVAS, VISIBLE, SAFE_RADIUS = 108, 72, 33
@@ -131,17 +142,56 @@ def composition_svg(size, fill=FILL):
             ).format(s=size, teal=TEAL, tx=tx, ty=ty, sc=scale, body=body)
 
 
-def rasterize(svg_text, px, dest, alpha=False):
+def rasterize(svg_text, px, dest, alpha=False, height=None):
     with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False) as f:
         f.write(svg_text)
     try:
-        subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(px), "-o", dest, f.name], check=True)
+        subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(height or px), "-o", dest, f.name],
+                       check=True)
     finally:
         os.unlink(f.name)
     # The tile is opaque either way. App Store Connect rejects icons with an
     # alpha channel; Play asks for a 32-bit PNG, so that one keeps it.
     from PIL import Image
     Image.open(dest).convert("RGBA" if alpha else "RGB").save(dest, optimize=True)
+
+
+def text_path(text, cap_height, baseline, left):
+    """Outline `text` in Alte Haas Grotesk Bold, kerned, with its ink starting at `left`."""
+    from fontTools.pens.svgPathPen import SVGPathPen
+    from fontTools.pens.transformPen import TransformPen
+    from fontTools.ttLib import TTFont
+
+    font = TTFont(FONT)
+    glyphs, cmap, glyf = font.getGlyphSet(), font.getBestCmap(), font["glyf"]
+    kern = font["kern"].kernTables[0].kernTable
+    scale = cap_height / font["OS/2"].sCapHeight
+    names = [cmap[ord(c)] for c in text]
+    pen = SVGPathPen(glyphs, ntos=lambda v: ("%.2f" % v).rstrip("0").rstrip("."))
+    x = -glyf[names[0]].xMin  # font units; puts the first glyph's ink at `left`
+    for i, name in enumerate(names):
+        glyphs[name].draw(TransformPen(pen, (scale, 0, 0, -scale, left + x * scale, baseline)))
+        x += glyphs[name].width + (kern.get((name, names[i + 1]), 0) if i + 1 < len(names) else 0)
+    return pen.getCommands()
+
+
+def feature_svg():
+    """Play feature graphic: teal, title + subtitle left, the backpack right."""
+    root, w, h = load_backpack()
+    art_h = (FEATURE_ART_AREA * h / w) ** .5
+    cx, cy = FEATURE_ART_CENTRE
+    scale = art_h / h
+    tx, ty = cx - BODY_CX * scale, cy - art_h / 2
+    body = "\n".join("    " + ET.tostring(el, encoding="unicode").strip()
+                     .replace(' xmlns="%s"' % SVG_NS, "") for el in root)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">\n'
+            '  <rect width="{w}" height="{h}" fill="{teal}"/>\n'
+            '  <path fill="{ink}" d="{title}"/>\n'
+            '  <path fill="{sub}" d="{subtitle}"/>\n'
+            '  <g transform="translate({tx:.4f} {ty:.4f}) scale({sc:.6f})">\n{body}\n  </g>\n</svg>\n'
+            ).format(w=FEATURE_W, h=FEATURE_H, teal=TEAL, ink=FEATURE_INK, sub=FEATURE_SUB,
+                     title=text_path(*FEATURE_TITLE), subtitle=text_path(*FEATURE_SUBTITLE),
+                     tx=tx, ty=ty, sc=scale, body=body)
 
 
 def normalize_path(d):
@@ -237,7 +287,11 @@ def render(android_repo):
             f.write(android_foreground())
         rasterize(composition_svg(1024), 512, os.path.join(android_repo, "play/assets/icon-512.png"),
                   alpha=True)
-        print("wrote", android_repo, "ic_launcher_foreground.xml, play/assets/icon-512.png")
+        # Play wants the feature graphic without alpha.
+        rasterize(feature_svg(), FEATURE_W, os.path.join(android_repo, "play/assets/feature-1024x500.png"),
+                  height=FEATURE_H)
+        print("wrote", android_repo,
+              "ic_launcher_foreground.xml, play/assets/icon-512.png, play/assets/feature-1024x500.png")
 
 
 def main():

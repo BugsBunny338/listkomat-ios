@@ -41,6 +41,7 @@ Per platform:
 | iOS `AppIcon1024.png` | 1024 px teal square, art 788 px tall. Square corners — iOS masks. |
 | Play `icon-512.png` | the same composition at 512 px. Play masks the corners. |
 | Android `ic_launcher_foreground.xml` | 108 dp adaptive canvas, visible centre 72 dp → art 55.4 dp tall, centred at (54, 54). It reaches 30.3 dp from the centre, inside the 66 dp safe circle; `render.py` checks this. Background layer is `@color/ic_launcher_background` = `#56C4CF`; the `monochrome` layer reuses the foreground. |
+| Play `feature-1024x500.png` | 1024 × 500 teal, RGB. "Lístkomat" (ink `#1F1F1F`, cap height 78 px) over "SMS jízdenky na MHD" (`#0F464C`, 34 px), both Alte Haas Grotesk Bold outlined with kerning, left at x ≈ 75 — the layout of the first graphic. The art replaces its ticket glyph: same bounding-box area (300 × 184 px → art 257 px tall), centred on the same point (810, 250). |
 
 On real launchers (Galaxy A14 / One UI 6, Pixel 7 emulator / API 35), the
 art measures 78 % of the squircle and 76 % of the circle, centred to within
@@ -56,16 +57,18 @@ python3 Design/app-icon/render.py --android-repo ../listkomat-android
 ```
 
 This rewrites `icon-1024.svg` (the composition), the iOS `AppIcon1024.png`
-and, with `--android-repo`, the Android foreground vector and
-`play/assets/icon-512.png`. It reproduces the committed files byte for byte
+and, with `--android-repo`, the Android foreground vector,
+`play/assets/icon-512.png` and `play/assets/feature-1024x500.png`. It reproduces the committed files byte for byte
 with rsvg-convert 2.60.0 and Pillow 12.1.1 (Pillow re-encodes the PNGs). Other
 versions may antialias or compress differently; that is harmless, but commit
 the result from one set of versions. The iOS PNG is RGB (App Store Connect
-rejects alpha); the Play PNG is RGBA, as Play asks for a 32-bit PNG.
+rejects alpha); the Play icon PNG is RGBA, as Play asks for a 32-bit PNG;
+the feature graphic is RGB (Play takes no alpha there).
 
-The Play Console listing icon is **not** uploaded by any script: after
+The Play Console listing images are **not** uploaded by any script: after
 changing `icon-512.png`, upload it by hand in Play Console → Main store
-listing → App icon.
+listing → App icon; after changing `feature-1024x500.png`, in Store listings →
+Default → Common visual assets → Feature graphic.
 
 The Android vector keeps the SVG path data and transforms as `<group>`s
 (VectorDrawable scales stroke width with the group), so nothing is traced or
