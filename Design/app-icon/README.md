@@ -32,6 +32,8 @@ drawing (wider straps, shorter ticket), so matching its *height* alone
 and also gives the lowest pixel difference against it. Stroke width
 matches the 2016 icon at this size too (≈ 5 px at 180 px).
 
+![2016 icon, new icon, 2.x icon](comparison-2016.png)
+
 Per platform:
 
 | Output | Geometry |
@@ -39,6 +41,12 @@ Per platform:
 | iOS `AppIcon1024.png` | 1024 px teal square, art 788 px tall. Square corners — iOS masks. |
 | Play `icon-512.png` | the same composition at 512 px. Play masks the corners. |
 | Android `ic_launcher_foreground.xml` | 108 dp adaptive canvas, visible centre 72 dp → art 55.4 dp tall, centred at (54, 54). It reaches 30.3 dp from the centre, inside the 66 dp safe circle; `render.py` checks this. Background layer is `@color/ic_launcher_background` = `#56C4CF`; the `monochrome` layer reuses the foreground. |
+
+On real launchers (Galaxy A14 / One UI 6, Pixel 7 emulator / API 35), the
+art measures 78 % of the squircle and 76 % of the circle, centred to within
+1 px:
+
+![Android launcher masks](android-launchers.png)
 
 ## Regenerating
 
