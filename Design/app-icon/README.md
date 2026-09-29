@@ -21,8 +21,8 @@ edit `backpack.svg` directly from now on.
 
 The art (stroke outline included) is **77 % of the visible tile height**,
 centred vertically and centred horizontally on the backpack *body*. The straps
-are symmetric, so the body centre and the bounding-box centre differ by only
-0.15 art units.
+are near-symmetric: the body centre sits 0.19 art units off the centre of the
+stroked bounding box, which is invisible at any icon size.
 
 Why 77 %: the 2016 app shipped `icon60@3.png` with the art at 77 %, which
 is why it looked "bigger, more full" next to the 2.x icon (62 %, the 2016
@@ -58,8 +58,10 @@ python3 Design/app-icon/render.py --android-repo ../listkomat-android
 This rewrites `icon-1024.svg` (the composition), the iOS `AppIcon1024.png`
 and, with `--android-repo`, the Android foreground vector and
 `play/assets/icon-512.png`. It reproduces the committed files byte for byte
-with rsvg-convert 2.60.0. Other rsvg versions may antialias differently;
-that is harmless, but commit the result from one version.
+with rsvg-convert 2.60.0 and Pillow 12.1.1 (Pillow re-encodes the PNGs). Other
+versions may antialias or compress differently; that is harmless, but commit
+the result from one set of versions. The iOS PNG is RGB (App Store Connect
+rejects alpha); the Play PNG is RGBA, as Play asks for a 32-bit PNG.
 
 The Play Console listing icon is **not** uploaded by any script: after
 changing `icon-512.png`, upload it by hand in Play Console → Main store
@@ -67,7 +69,9 @@ listing → App icon.
 
 The Android vector keeps the SVG path data and transforms as `<group>`s
 (VectorDrawable scales stroke width with the group), so nothing is traced or
-flattened by hand.
+flattened by hand. `render.py` refuses transforms other than `translate(x y)`
+and path data it can't tokenise unambiguously (e.g. arc flags without
+separators), rather than emitting a wrong icon.
 
 ## Follow-ups
 
