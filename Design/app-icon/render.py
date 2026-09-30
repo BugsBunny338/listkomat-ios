@@ -8,6 +8,7 @@ writes
     Listkomat/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png      iOS
     <android-repo>/app/src/main/res/drawable/ic_launcher_foreground.xml
     <android-repo>/play/assets/icon-512.png                           Play listing
+    <android-repo>/play/assets/feature-1024x500.png                   Play feature graphic
 
 and checks that the Android foreground stays inside the 66 dp safe circle.
 
@@ -38,6 +39,20 @@ TEAL = "#56C4CF"
 FILL = 0.77
 # Horizontal centre of the backpack body (straps excluded), in art units.
 BODY_CX = (13.57 + 81.19) / 2
+
+# Play feature graphic (px). Layout of the 2026-09-22 graphic it replaces:
+# ink title and dark-teal subtitle left, the art centred where its ticket was.
+FEATURE_W, FEATURE_H = 1024, 500
+FEATURE_INK, FEATURE_SUB = "#1F1F1F", "#0F464C"
+# (text, cap height, baseline, left), measured from the old graphic's ink.
+FEATURE_TITLE = ("Lístkomat", 78, 258, 78)
+FEATURE_SUBTITLE = ("SMS jízdenky na MHD", 33, 333, 73)
+# The art sits where the old 300 x 184 px ticket glyph was centred. Its height
+# is set by eye: an outline drawing is much lighter than that solid glyph, so
+# neither the glyph's height nor its bounding-box area gives the same weight.
+FEATURE_ART_HEIGHT, FEATURE_ART_CENTRE = 256, (810, 250)
+# Minimum gap between the text block and the art, and to the canvas edges.
+FEATURE_MARGIN = 40
 
 # Android adaptive icon geometry (dp).
 CANVAS, VISIBLE, SAFE_RADIUS = 108, 72, 33
@@ -119,29 +134,97 @@ def placement(canvas, art_height, h):
     return scale, canvas / 2 - BODY_CX * scale, (canvas - h * scale) / 2
 
 
+def art_group(root, scale, tx, ty):
+    """The backpack as an SVG <g>, scaled and moved into place."""
+    body = "\n".join("    " + ET.tostring(el, encoding="unicode").strip()
+                     .replace(' xmlns="%s"' % SVG_NS, "") for el in root)
+    return '  <g transform="translate({:.4f} {:.4f}) scale({:.6f})">\n{}\n  </g>\n'.format(
+        tx, ty, scale, body)
+
+
 def composition_svg(size, fill=FILL):
     """Full-bleed teal square with the backpack centred at `fill` of the height."""
     root, w, h = load_backpack()
     scale, tx, ty = placement(size, size * fill, h)
-    body = "\n".join("    " + ET.tostring(el, encoding="unicode").strip()
-                     .replace(' xmlns="%s"' % SVG_NS, "") for el in root)
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="{s}" height="{s}" viewBox="0 0 {s} {s}">\n'
-            '  <rect width="{s}" height="{s}" fill="{teal}"/>\n'
-            '  <g transform="translate({tx:.4f} {ty:.4f}) scale({sc:.6f})">\n{body}\n  </g>\n</svg>\n'
-            ).format(s=size, teal=TEAL, tx=tx, ty=ty, sc=scale, body=body)
+            '  <rect width="{s}" height="{s}" fill="{teal}"/>\n{art}</svg>\n'
+            ).format(s=size, teal=TEAL, art=art_group(root, scale, tx, ty))
 
 
-def rasterize(svg_text, px, dest, alpha=False):
+def rasterize(svg_text, px, dest, alpha=False, height=None):
     with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False) as f:
         f.write(svg_text)
     try:
-        subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(px), "-o", dest, f.name], check=True)
+        subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(height or px), "-o", dest, f.name],
+                       check=True)
     finally:
         os.unlink(f.name)
-    # The tile is opaque either way. App Store Connect rejects icons with an
-    # alpha channel; Play asks for a 32-bit PNG, so that one keeps it.
+    # Opaque either way. App Store Connect rejects icons with an alpha channel
+    # and Play rejects it on the feature graphic; only the Play icon, a 32-bit
+    # PNG by Play's spec, passes alpha=True.
     from PIL import Image
     Image.open(dest).convert("RGBA" if alpha else "RGB").save(dest, optimize=True)
+
+
+def text_path(font, text, cap_height, baseline, left):
+    """Outline `text` in `font` with its ink starting at `left`.
+
+    Returns (path data, ink bounds as (x0, y0, x1, y1) in px). Applies the
+    legacy `kern` table if there is one; GPOS kerning is not read (none of it
+    applies to the current strings either).
+    """
+    from fontTools.pens.boundsPen import BoundsPen
+    from fontTools.pens.svgPathPen import SVGPathPen
+    from fontTools.pens.transformPen import TransformPen
+
+    glyphs, cmap = font.getGlyphSet(), font.getBestCmap()
+    kern = font["kern"].kernTables[0].kernTable if "kern" in font else {}
+    missing = [c for c in text if ord(c) not in cmap]
+    if missing:
+        sys.exit("font has no glyph for %r" % "".join(missing))
+    names = [cmap[ord(c)] for c in text]
+    scale = cap_height / font["OS/2"].sCapHeight
+    # Pen positions in font units, then shift so the ink starts at `left`.
+    xs, x = [], 0
+    for i, name in enumerate(names):
+        xs.append(x)
+        x += glyphs[name].width + (kern.get((name, names[i + 1]), 0) if i + 1 < len(names) else 0)
+    bounds = BoundsPen(glyphs)
+    for name, gx in zip(names, xs):
+        glyphs[name].draw(TransformPen(bounds, (1, 0, 0, 1, gx, 0)))
+    if bounds.bounds is None:
+        sys.exit("text %r has no ink" % text)
+    x0, y0, x1, y1 = bounds.bounds
+    origin = left - x0 * scale
+    pen = SVGPathPen(glyphs, ntos=lambda v: ("%.2f" % v).rstrip("0").rstrip("."))
+    for name, gx in zip(names, xs):
+        glyphs[name].draw(TransformPen(pen, (scale, 0, 0, -scale, origin + gx * scale, baseline)))
+    return pen.getCommands(), (left, baseline - y1 * scale, origin + x1 * scale, baseline - y0 * scale)
+
+
+def feature_svg():
+    """Play feature graphic: teal, title + subtitle left, the backpack right."""
+    from fontTools.ttLib import TTFont
+
+    font = TTFont(FONT)
+    title, title_box = text_path(font, *FEATURE_TITLE)
+    subtitle, subtitle_box = text_path(font, *FEATURE_SUBTITLE)
+    root, w, h = load_backpack()
+    scale = FEATURE_ART_HEIGHT / h
+    cx, cy = FEATURE_ART_CENTRE
+    tx, ty = cx - BODY_CX * scale, cy - FEATURE_ART_HEIGHT / 2
+    # Refuse a layout where the text runs into the art or anything leaves the canvas.
+    text_right = max(title_box[2], subtitle_box[2])
+    boxes = [title_box, subtitle_box, (tx, ty, tx + w * scale, ty + FEATURE_ART_HEIGHT)]
+    if any(b[0] < 0 or b[1] < FEATURE_MARGIN or b[2] > FEATURE_W or b[3] > FEATURE_H - FEATURE_MARGIN
+           for b in boxes) or text_right + FEATURE_MARGIN > tx:
+        sys.exit("feature graphic layout overlaps or leaves the canvas: %r" % boxes)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">\n'
+            '  <rect width="{w}" height="{h}" fill="{teal}"/>\n'
+            '  <path fill="{ink}" d="{title}"/>\n'
+            '  <path fill="{sub}" d="{subtitle}"/>\n{art}</svg>\n'
+            ).format(w=FEATURE_W, h=FEATURE_H, teal=TEAL, ink=FEATURE_INK, sub=FEATURE_SUB,
+                     title=title, subtitle=subtitle, art=art_group(root, scale, tx, ty))
 
 
 def normalize_path(d):
@@ -225,9 +308,10 @@ def check_safe_zone(tmpdir):
 
 
 def render(android_repo):
+    icon = composition_svg(1024)
     with open(os.path.join(HERE, "icon-1024.svg"), "w") as f:
-        f.write(composition_svg(1024))
-    rasterize(composition_svg(1024), 1024,
+        f.write(icon)
+    rasterize(icon, 1024,
               os.path.join(IOS_ROOT, "Listkomat/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png"))
     print("wrote icon-1024.svg, AppIcon1024.png")
     with tempfile.TemporaryDirectory() as tmp:
@@ -235,9 +319,13 @@ def render(android_repo):
     if android_repo:
         with open(os.path.join(android_repo, "app/src/main/res/drawable/ic_launcher_foreground.xml"), "w") as f:
             f.write(android_foreground())
-        rasterize(composition_svg(1024), 512, os.path.join(android_repo, "play/assets/icon-512.png"),
+        rasterize(icon, 512, os.path.join(android_repo, "play/assets/icon-512.png"),
                   alpha=True)
-        print("wrote", android_repo, "ic_launcher_foreground.xml, play/assets/icon-512.png")
+        # Play wants the feature graphic without alpha.
+        rasterize(feature_svg(), FEATURE_W, os.path.join(android_repo, "play/assets/feature-1024x500.png"),
+                  height=FEATURE_H)
+        print("wrote", android_repo,
+              "ic_launcher_foreground.xml, play/assets/icon-512.png, play/assets/feature-1024x500.png")
 
 
 def main():
