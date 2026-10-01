@@ -2,10 +2,12 @@ Lístkomat 2.5 — what changed in this update:
 • Ticket catalog data is now localized: with the device set to English, city
   names (e.g. "Prague"), ticket notes and validity durations appear in English.
   Durations are formatted in the app from the ticket's length in minutes.
-• The live map opens faster: vehicle positions are prefetched when the app
-  launches or returns to the foreground, and reopening the map shows the last
-  known positions in grey (with a "Poslední známé polohy · aktualizuji…" /
-  "Last known positions · updating…" note) until fresh data arrives.
+• The Brno live map opens faster: vehicle positions are prefetched when the app
+  launches or returns to the foreground, and opening the map before the next
+  update arrives shows the last known positions in grey (with a "Poslední známé
+  polohy · aktualizuji…" / "Last known positions · updating…" note) instead of
+  an empty map. Brno's open-data feed sends the whole fleet only about every
+  30 seconds, which is what this hides.
 • Refreshed app icon — the same backpack artwork, re-rendered larger in the tile.
 
 Purchase mechanism is UNCHANGED from previous approved versions: a ticket is
@@ -21,6 +23,7 @@ can open any city's "Živá mapa" to see it working.
 
 The quickest way to see this release's visible changes: set the device language
 to English — the city reads "Prague" and the ticket notes and durations are in
-English. Then open Prague's "Živá mapa" (Live map), go back, and reopen it — the
-last known vehicle positions appear immediately in grey, then turn to colour as
-fresh data lands.
+English. For the live map: with Brno selected, open "Živá mapa" (Live map) and
+wait for the vehicles, then send the app to the background for a few seconds,
+return, and reopen the map — the last known positions appear immediately in
+grey, then turn to colour when the next update lands (up to ~30 seconds).
