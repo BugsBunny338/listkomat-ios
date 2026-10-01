@@ -19,10 +19,15 @@ export function transform(geojson, nowIso) {
     const lp = p.last_position || {};
     const c = f.geometry && f.geometry.coordinates;
     if (!c || c.length !== 2 || g.trip_id == null) continue;
+    // Golemio sends these as strings since 2026-10-01; every shipped app build
+    // decodes numbers, so normalize here rather than in the clients.
+    const lat = Number(c[1]);
+    const lng = Number(c[0]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     vehicles.push({
       id: g.trip_id,
-      lat: c[1],
-      lng: c[0],
+      lat,
+      lng,
       brng: typeof lp.bearing === "number" ? lp.bearing : null,
       line: g.route_short_name ?? "",
       rt: typeof g.route_type === "number" ? g.route_type : 3,
@@ -42,9 +47,16 @@ export function transform(geojson, nowIso) {
 let cached = null; // { at: <ms>, body: <serialized payload> }
 let inFlight = null; // Promise<body> — shared by everyone waiting on one fetch
 
+// Upper bound on one upstream fetch, body included. Without it a single Golemio
+// request that never settles leaves `inFlight` pending for good, and every later
+// request in the isolate awaits it — the 2026-10-01 outage, which only a
+// redeploy cleared. Golemio normally answers in ~1 s. Env override for tests.
+const UPSTREAM_TIMEOUT_MS = 8000;
+
 async function loadUpstream(env) {
   const upstream = await fetch(GOLEMIO, {
     headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
+    signal: AbortSignal.timeout(Number(env.UPSTREAM_TIMEOUT_MS) || UPSTREAM_TIMEOUT_MS),
   });
   if (!upstream.ok) throw new Error(`golemio responded ${upstream.status}`);
   const geo = await upstream.json();

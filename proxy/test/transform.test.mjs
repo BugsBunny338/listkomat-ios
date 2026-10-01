@@ -71,3 +71,20 @@ test("bearing coerces non-number to null", () => {
   assert.equal(out.vehicles.length, 1);
   assert.equal(out.vehicles[0].brng, null);
 });
+
+// Golemio started sending coordinates as strings (seen live 2026-10-01). Both
+// apps decode lat/lng as numbers — every shipped build — so the proxy must emit
+// numbers whatever upstream sends, and drop what isn't a finite coordinate.
+test("string coordinates become numbers; non-numeric ones are dropped", () => {
+  const feature = (coordinates, trip_id) => ({
+    geometry: { coordinates },
+    properties: { trip: { gtfs: { trip_id, route_short_name: "9", route_type: 0 } } },
+  });
+  const out = transform(
+    { features: [feature(["14.50684", "50.05635"], "a"), feature(["x", "50.1"], "b")] },
+    "t",
+  );
+  assert.equal(out.vehicles.length, 1);
+  assert.strictEqual(out.vehicles[0].lat, 50.05635);
+  assert.strictEqual(out.vehicles[0].lng, 14.50684);
+});

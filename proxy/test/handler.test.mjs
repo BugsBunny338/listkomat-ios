@@ -25,7 +25,7 @@ function stubUpstream(reply = () => Response.json(GEO)) {
   const calls = [];
   globalThis.fetch = async (url, init) => {
     calls.push({ url, init });
-    return reply(calls.length);
+    return reply(calls.length, init);
   };
   return { calls, restore: () => { globalThis.fetch = real; } };
 }
@@ -98,6 +98,38 @@ test("upstream failure answers 502 and is not cached as success", async () => {
     assert.equal(good.status, 200, "a failure must not poison the cache");
     assert.equal((await good.json()).vehicles.length, 1);
   } finally {
+    up.restore();
+  }
+});
+
+// Production wedge, 2026-10-01: one Golemio fetch that never settled left the
+// shared in-flight promise pending forever, so every later request in that
+// isolate hung on it (0 ms CPU, client-side cancel) until a redeploy.
+test("a hung upstream times out to 502 and does not wedge later requests", { timeout: 5000 }, async () => {
+  const worker = await freshWorker();
+  const up = stubUpstream((call, init) =>
+    call === 1
+      ? new Promise((_, reject) =>   // never settles unless the caller aborts
+          init?.signal?.addEventListener("abort", () => reject(init.signal.reason)))
+      : Response.json(GEO),
+  );
+  const env = { ...ENV, UPSTREAM_TIMEOUT_MS: "50" };
+  const getWith = () =>
+    worker.fetch(new Request("https://proxy.test/prague/vehicles"), env, { waitUntil() {} });
+  // Node's AbortSignal.timeout timer is unref'd, so with only a hung promise
+  // pending the event loop would exit first; in Workers the open request keeps
+  // the isolate alive. Stand in for that — finitely, so a regression fails
+  // instead of hanging the run.
+  const keepAlive = setTimeout(() => {}, 2000);
+  try {
+    const hung = await getWith();
+    assert.equal(hung.status, 502);
+
+    const next = await getWith();
+    assert.equal(next.status, 200, "the timed-out fetch must release the in-flight slot");
+    assert.equal(up.calls.length, 2);
+  } finally {
+    clearTimeout(keepAlive);
     up.restore();
   }
 });
