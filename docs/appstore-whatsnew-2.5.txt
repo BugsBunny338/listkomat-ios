@@ -1,0 +1,16 @@
+App Store "What's New" — Lístkomat 2.5
+(written fresh for this release, not carried over from 2.4)
+
+Headline: the live map opens faster and shows the last known positions straight
+away; the catalog data (city names, ticket notes, durations) is now in English
+too; and a bolder app icon.
+
+--- Czech (primary) ---
+• Živá mapa se otevírá rychleji — polohy vozidel se načítají předem a při návratu na mapu hned vidíte ty poslední známé.
+• V angličtině jsou nově i názvy měst, poznámky u lístků a doby platnosti.
+• Ikona aplikace je větší a výraznější.
+
+--- English ---
+• The live map opens faster — vehicle positions load ahead of time, and coming back to the map shows the last known ones straight away.
+• City names, ticket notes and validity times are now in English too.
+• A bolder app icon that fills its tile better.
