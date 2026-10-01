@@ -19,10 +19,15 @@ export function transform(geojson, nowIso) {
     const lp = p.last_position || {};
     const c = f.geometry && f.geometry.coordinates;
     if (!c || c.length !== 2 || g.trip_id == null) continue;
+    // Golemio sends these as strings since 2026-10-01; every shipped app build
+    // decodes numbers, so normalize here rather than in the clients.
+    const lat = Number(c[1]);
+    const lng = Number(c[0]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     vehicles.push({
       id: g.trip_id,
-      lat: c[1],
-      lng: c[0],
+      lat,
+      lng,
       brng: typeof lp.bearing === "number" ? lp.bearing : null,
       line: g.route_short_name ?? "",
       rt: typeof g.route_type === "number" ? g.route_type : 3,
