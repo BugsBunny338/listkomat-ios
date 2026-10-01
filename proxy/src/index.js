@@ -42,9 +42,16 @@ export function transform(geojson, nowIso) {
 let cached = null; // { at: <ms>, body: <serialized payload> }
 let inFlight = null; // Promise<body> — shared by everyone waiting on one fetch
 
+// Upper bound on one upstream fetch, body included. Without it a single Golemio
+// request that never settles leaves `inFlight` pending for good, and every later
+// request in the isolate awaits it — the 2026-10-01 outage, which only a
+// redeploy cleared. Golemio normally answers in ~1 s. Env override for tests.
+const UPSTREAM_TIMEOUT_MS = 8000;
+
 async function loadUpstream(env) {
   const upstream = await fetch(GOLEMIO, {
     headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
+    signal: AbortSignal.timeout(Number(env.UPSTREAM_TIMEOUT_MS) || UPSTREAM_TIMEOUT_MS),
   });
   if (!upstream.ok) throw new Error(`golemio responded ${upstream.status}`);
   const geo = await upstream.json();
