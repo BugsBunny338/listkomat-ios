@@ -1,4 +1,3 @@
-• The Brno live map works again — the city retired the previous data source without notice, so we moved to the new one.
-• Prague metro lines now carry their own colours on the map — A green, B yellow, C red.
-• The "Confirm now" button on a pending ticket responds to the first tap.
-• The app now explains up front that buying a ticket requires a Czech operator's SIM.
+• The live map opens faster — vehicle positions load ahead of time, and coming back to the map shows the last known ones straight away.
+• City names, ticket notes and validity times are now in English too.
+• A bolder app icon that fills its tile better.

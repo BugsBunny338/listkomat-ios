@@ -1,4 +1,3 @@
-• Živá mapa Brna zase funguje — město bez ohlášení vypnulo dosavadní zdroj dat, přešli jsme na nový.
-• Linky pražského metra mají na mapě své barvy — A zelenou, B žlutou, C červenou.
-• Tlačítko „Potvrdit nyní" u čekajícího lístku reaguje hned na první klepnutí.
-• Aplikace nově rovnou vysvětlí, že nákup lístku vyžaduje SIM kartu českého operátora.
+• Živá mapa se otevírá rychleji — polohy vozidel se načítají předem a při návratu na mapu hned vidíte ty poslední známé.
+• V angličtině jsou nově i názvy měst, poznámky u lístků a doby platnosti.
+• Ikona aplikace je větší a výraznější.
