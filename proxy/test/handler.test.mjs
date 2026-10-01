@@ -134,6 +134,32 @@ test("a hung upstream times out to 502 and does not wedge later requests", { tim
   }
 });
 
+// The wedge that survived the abort timeout (2026-10-01, version 68c23509): in
+// Workers, I/O started by one request belongs to it. When that client goes away
+// the runtime cancels the fetch AND its AbortSignal timer, so the shared promise
+// never settles and nothing it owns can time it out. Model that as a fetch that
+// ignores its signal: every later waiter must still answer within its own
+// deadline, and a stale shared fetch must be replaced, not awaited forever.
+test("a shared fetch orphaned by its request never wedges later ones", { timeout: 5000 }, async () => {
+  const worker = await freshWorker();
+  const up = stubUpstream((call) =>
+    call === 1 ? new Promise(() => {}) : Response.json(GEO),   // call 1: never settles
+  );
+  const env = { ...ENV, UPSTREAM_TIMEOUT_MS: "50" };
+  const getWith = () =>
+    worker.fetch(new Request("https://proxy.test/prague/vehicles"), env, { waitUntil() {} });
+  try {
+    const first = await getWith();
+    assert.equal(first.status, 502, "the waiter's own deadline must fire");
+
+    const second = await getWith();
+    assert.equal(second.status, 200, "a stale shared fetch must be replaced");
+    assert.equal(up.calls.length, 2);
+  } finally {
+    up.restore();
+  }
+});
+
 test("a thrown upstream error answers 502", async () => {
   const worker = await freshWorker();
   const up = stubUpstream(() => { throw new Error("network down"); });

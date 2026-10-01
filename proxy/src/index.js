@@ -45,26 +45,40 @@ export function transform(geojson, nowIso) {
 // share the in-flight one. (On a custom domain the edge cache would front this,
 // but that would be an extra layer, not a replacement.)
 let cached = null; // { at: <ms>, body: <serialized payload> }
-let inFlight = null; // Promise<body> — shared by everyone waiting on one fetch
+let inFlight = null; // { promise: Promise<body>, at: <ms> } — one fetch, many waiters
 
-// Upper bound on one upstream fetch, body included. Without it a single Golemio
-// request that never settles leaves `inFlight` pending for good, and every later
-// request in the isolate awaits it — the 2026-10-01 outage, which only a
-// redeploy cleared. Golemio normally answers in ~1 s. Env override for tests.
+// Upper bound on one upstream fetch AND on any request's wait for it. Golemio
+// normally answers in ~1 s. Env override for tests.
+//
+// Both halves matter (the 2026-10-01 outage). In Workers, I/O started by one
+// request belongs to that request: when its client goes away the runtime cancels
+// the fetch and its AbortSignal timer with it, so the shared promise can stay
+// pending forever and nothing it owns will ever time it out. So every waiter
+// enforces the deadline with its own timer, and a shared fetch older than the
+// deadline is replaced rather than awaited.
 const UPSTREAM_TIMEOUT_MS = 8000;
 
-async function loadUpstream(env) {
+async function loadUpstream(env, timeoutMs) {
   const upstream = await fetch(GOLEMIO, {
     headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
-    signal: AbortSignal.timeout(Number(env.UPSTREAM_TIMEOUT_MS) || UPSTREAM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!upstream.ok) throw new Error(`golemio responded ${upstream.status}`);
   const geo = await upstream.json();
   return JSON.stringify(transform(geo, isoSeconds(new Date())));
 }
 
+// Rejects after `ms` on a timer owned by the calling request.
+function withDeadline(promise, ms) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("upstream deadline")), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname !== "/prague/vehicles") {
       return new Response("Not found", { status: 404 });
@@ -72,21 +86,27 @@ export default {
 
     if (cached && Date.now() - cached.at < TTL * 1000) return body(cached.body);
 
+    const timeoutMs = Number(env.UPSTREAM_TIMEOUT_MS) || UPSTREAM_TIMEOUT_MS;
+
     // Only a success updates `cached`, so a failed fetch is retried next request
     // rather than being served as an empty payload for the rest of the window.
-    if (!inFlight) {
-      inFlight = loadUpstream(env)
+    if (!inFlight || Date.now() - inFlight.at > timeoutMs) {
+      const entry = { at: Date.now() };
+      entry.promise = loadUpstream(env, timeoutMs)
         .then((fresh) => {
           cached = { at: Date.now(), body: fresh };
           return fresh;
         })
         .finally(() => {
-          inFlight = null;
+          if (inFlight === entry) inFlight = null;   // a replacement may own the slot now
         });
+      inFlight = entry;
+      // Lets the fetch finish for the other waiters if this client leaves first.
+      ctx?.waitUntil?.(entry.promise.catch(() => {}));
     }
 
     try {
-      return body(await inFlight);
+      return body(await withDeadline(inFlight.promise, timeoutMs));
     } catch {
       return json({ ts: isoSeconds(new Date()), vehicles: [] }, 502);
     }
