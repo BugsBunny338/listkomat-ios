@@ -160,6 +160,85 @@ test("a shared fetch orphaned by its request never wedges later ones", { timeout
   }
 });
 
+// Pins the module's clock; returns a mover and a restore fn.
+function fakeNow(start = 1_700_000_000_000) {
+  const real = Date.now;
+  let now = start;
+  Date.now = () => now;
+  return { advance: (ms) => { now += ms; }, restore: () => { Date.now = real; } };
+}
+
+const GEO2 = { features: [GEO.features[0], { ...GEO.features[0], properties: {
+  ...GEO.features[0].properties, trip: { gtfs: { trip_id: "y", route_short_name: "22", route_type: 0 } } } }] };
+
+// Peak-hour outage, 2026-10-19: parsing Golemio's payload exceeds the free
+// plan's CPU budget, and Cloudflare killed the refreshing request with 1102.
+// Serving the snapshot first keeps a killed refresh away from the client.
+test("a stale snapshot is served at once and refreshed in the background", async () => {
+  const worker = await freshWorker();
+  const clock = fakeNow();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const up = stubUpstream(async (call) => {
+    if (call === 1) return Response.json(GEO);
+    await gate;                       // the refresh is slow; the client must not wait for it
+    return Response.json(GEO2);
+  });
+  try {
+    assert.equal((await (await get(worker)).json()).vehicles.length, 1);
+
+    clock.advance(20_000);            // past the TTL, inside the stale window
+    const stale = await get(worker);
+    assert.equal(stale.status, 200);
+    assert.equal((await stale.json()).vehicles.length, 1, "the old snapshot, immediately");
+    assert.equal(up.calls.length, 2, "a background refresh was started");
+
+    release();
+    await new Promise((r) => setTimeout(r, 10));
+    clock.advance(1);
+    assert.equal((await (await get(worker)).json()).vehicles.length, 2, "the refresh landed");
+    assert.equal(up.calls.length, 2, "and was not repeated");
+  } finally {
+    clock.restore();
+    up.restore();
+  }
+});
+
+test("a failing background refresh never reaches the client", async () => {
+  const worker = await freshWorker();
+  const clock = fakeNow();
+  const up = stubUpstream((call) =>
+    call === 1 ? Response.json(GEO) : new Response("killed", { status: 500 }),
+  );
+  try {
+    await get(worker);
+    clock.advance(20_000);
+    const res = await get(worker);
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).vehicles.length, 1);
+  } finally {
+    clock.restore();
+    up.restore();
+  }
+});
+
+test("past the stale window the request waits for upstream again", async () => {
+  const worker = await freshWorker();
+  const clock = fakeNow();
+  const up = stubUpstream((call) =>
+    call === 1 ? Response.json(GEO) : new Response("down", { status: 500 }),
+  );
+  try {
+    await get(worker);
+    clock.advance(90_000);
+    const res = await get(worker);
+    assert.equal(res.status, 502, "a dead feed must surface, not frozen vehicles");
+  } finally {
+    clock.restore();
+    up.restore();
+  }
+});
+
 test("a thrown upstream error answers 502", async () => {
   const worker = await freshWorker();
   const up = stubUpstream(() => { throw new Error("network down"); });

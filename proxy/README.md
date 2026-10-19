@@ -52,6 +52,12 @@ Then set `PragueLiveSource.endpoint` in the app
   window — still far under 20 req/8 s. Moving to a custom domain would add the
   edge cache back on top; a Durable Object would collapse it to exactly one
   fetch globally. Neither is needed at hobby scale (YAGNI).
+- **CPU budget:** the free plan allows 10 ms of CPU per invocation and parsing
+  Golemio's peak-hour payload (~2,100 vehicles) costs ~17 ms, so Cloudflare kills
+  some refreshes with error 1102 (2026-10-19). A snapshot up to 60 s old is served
+  immediately and revalidated in the background, so a killed refresh never
+  becomes a client error; past 60 s the request waits for upstream again. The
+  per-request limit is 30 s on the paid plan, which would make this moot.
 - **Timestamps** are emitted at whole-second ISO-8601 precision (`isoSeconds`):
   the app parses with `ISO8601DateFormatter`, which rejects the milliseconds that
   `toISOString()` produces.

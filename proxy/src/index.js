@@ -58,6 +58,18 @@ let inFlight = null; // { promise: Promise<body>, at: <ms> } — one fetch, many
 // deadline is replaced rather than awaited.
 const UPSTREAM_TIMEOUT_MS = 8000;
 
+// Stale-while-revalidate window (the 2026-10-19 outage). Parsing Golemio's
+// peak-hour payload (~2,100 vehicles, ~2.5 MB) costs ~17 ms of CPU, above the
+// free plan's 10 ms per invocation. Cloudflare tolerates occasional overruns but
+// kills some of them with error 1102 — and a kill on the request that was doing
+// the refresh used to be a 503 for that client. So a snapshot younger than this
+// is served at once and refreshed in the background: a killed refresh happens
+// after the response is already out, and the next one that survives updates the
+// cache. Beyond the window we wait for upstream as before, so a dead feed still
+// surfaces as 502 rather than as frozen vehicles. Well inside the apps' 180 s
+// freshness filter.
+const STALE_MAX_MS = 60_000;
+
 async function loadUpstream(env, timeoutMs) {
   const upstream = await fetch(GOLEMIO, {
     headers: { "X-Access-Token": env.GOLEMIO_TOKEN },
@@ -84,34 +96,44 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    if (cached && Date.now() - cached.at < TTL * 1000) return body(cached.body);
+    const age = cached ? Date.now() - cached.at : Infinity;
+    if (age < TTL * 1000) return body(cached.body);
 
     const timeoutMs = Number(env.UPSTREAM_TIMEOUT_MS) || UPSTREAM_TIMEOUT_MS;
+    const refresh = ensureRefresh(env, ctx, timeoutMs);
 
-    // Only a success updates `cached`, so a failed fetch is retried next request
-    // rather than being served as an empty payload for the rest of the window.
-    if (!inFlight || Date.now() - inFlight.at > timeoutMs) {
-      const entry = { at: Date.now() };
-      entry.promise = loadUpstream(env, timeoutMs)
-        .then((fresh) => {
-          cached = { at: Date.now(), body: fresh };
-          return fresh;
-        })
-        .finally(() => {
-          if (inFlight === entry) inFlight = null;   // a replacement may own the slot now
-        });
-      inFlight = entry;
-      // Lets the fetch finish for the other waiters if this client leaves first.
-      ctx?.waitUntil?.(entry.promise.catch(() => {}));
-    }
+    if (age < STALE_MAX_MS) return body(cached.body);   // revalidating in the background
 
     try {
-      return body(await withDeadline(inFlight.promise, timeoutMs));
+      return body(await withDeadline(refresh.promise, timeoutMs));
     } catch {
       return json({ ts: isoSeconds(new Date()), vehicles: [] }, 502);
     }
   },
 };
+
+// Starts an upstream fetch unless a live one is already in flight; returns the
+// in-flight entry. Only a success updates `cached`, so a failed fetch is retried
+// on the next request rather than served as an empty payload for the rest of
+// the window.
+function ensureRefresh(env, ctx, timeoutMs) {
+  if (!inFlight || Date.now() - inFlight.at > timeoutMs) {
+    const entry = { at: Date.now() };
+    entry.promise = loadUpstream(env, timeoutMs)
+      .then((fresh) => {
+        cached = { at: Date.now(), body: fresh };
+        return fresh;
+      })
+      .finally(() => {
+        if (inFlight === entry) inFlight = null;   // a replacement may own the slot now
+      });
+    inFlight = entry;
+    // Lets the fetch finish after this response is sent — for the other waiters
+    // if this client leaves first, and for the background revalidation.
+    ctx?.waitUntil?.(entry.promise.catch(() => {}));
+  }
+  return inFlight;
+}
 
 function body(serialized) {
   return new Response(serialized, {
