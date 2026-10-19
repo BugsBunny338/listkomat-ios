@@ -107,6 +107,11 @@ export default {
     try {
       return body(await withDeadline(refresh.promise, timeoutMs));
     } catch {
+      // The waiter that gave up releases the slot. Leaving it to the age check
+      // in ensureRefresh raced the clock: a request arriving on the same
+      // millisecond the deadline fired found the fetch not yet "older than the
+      // timeout" and inherited it, only to time out on it again.
+      if (inFlight === refresh) inFlight = null;
       return json({ ts: isoSeconds(new Date()), vehicles: [] }, 502);
     }
   },
@@ -115,9 +120,11 @@ export default {
 // Starts an upstream fetch unless a live one is already in flight; returns the
 // in-flight entry. Only a success updates `cached`, so a failed fetch is retried
 // on the next request rather than served as an empty payload for the rest of
-// the window.
+// the window. The age check only matters for a fetch nobody is waiting on (a
+// background revalidation that hung): a waiter that timed out has already
+// released the slot itself.
 function ensureRefresh(env, ctx, timeoutMs) {
-  if (!inFlight || Date.now() - inFlight.at > timeoutMs) {
+  if (!inFlight || Date.now() - inFlight.at >= timeoutMs) {
     const entry = { at: Date.now() };
     entry.promise = loadUpstream(env, timeoutMs)
       .then((fresh) => {
