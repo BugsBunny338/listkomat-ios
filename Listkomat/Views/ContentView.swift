@@ -130,7 +130,11 @@ struct ContentView: View {
             .onChange(of: scenePhase) { phase in
                 // Foregrounding is the same cold case as launch: the central
                 // background close drops every socket behind us.
-                if phase == .active { prefetchLiveSource() }
+                if phase == .active {
+                    prefetchLiveSource()
+                    // A ticket may have expired while we were suspended.
+                    liveActivity.refresh()
+                }
             }
             .task { await store.refresh() }
         }
@@ -191,11 +195,14 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Active ticket banner (manual end)
+    // MARK: - Active ticket banner (countdown + manual end)
 
-    private func activeTicketBanner(_ active: LiveActivityController.ActiveTicket) -> some View {
-        // TimelineView so the banner flips from pending → active on its own at
-        // validFrom while the app is open (no push needed in-app).
+    /// The in-app twin of the Live Activity, driven by the stored ticket so it
+    /// works with Live Activities off: pending (countdown to validity + Potvrdit
+    /// nyní) → valid (time left + "Platí do") → expired (Ukončit dismisses it).
+    private func activeTicketBanner(_ active: ActiveTicket) -> some View {
+        // TimelineView so the banner changes phase on its own at validFrom and
+        // endDate while the app is open (no push needed in-app).
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
             // `ctx.date` is the current *schedule entry*, which lags real time by up to
             // a tick. `confirmNow()` re-anchors validFrom to the tap instant, so
@@ -203,18 +210,45 @@ struct ContentView: View {
             // a second after a successful tap — inviting the second tap that #19 is
             // about, which would re-anchor the ticket's window again. Take whichever
             // clock is further along.
-            let pending = active.isPending(at: max(ctx.date, .now))
+            let timeline = active.timeline
+            let phase = timeline.phase(at: max(ctx.date, .now))
+            let pending = phase == .pending
             HStack(spacing: 12) {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(theme.textAccent)
+                    .foregroundStyle(phase == .expired ? AnyShapeStyle(.secondary) : AnyShapeStyle(theme.textAccent))
                 VStack(alignment: .leading, spacing: 1) {
-                    (pending ? Text("Čeká na potvrzovací SMS") : Text("Aktivní lístek"))
-                        .font(.caption2)
-                        .foregroundStyle(pending ? .orange : .secondary)
-                    Text("\(active.cityName) · \(active.ticketLabel)")
+                    Group {
+                        switch phase {
+                        case .pending: Text("Čeká na potvrzovací SMS").foregroundStyle(.orange)
+                        case .valid: Text("Aktivní lístek").foregroundStyle(.secondary)
+                        case .expired: Text("Jízdenka vypršela").foregroundStyle(.secondary)
+                        }
+                    }
+                    .font(.caption2)
+                    Text("\(bannerCityName(active)) · \(active.ticketLabel)")
                         .font(.brandBold(15, relativeTo: .subheadline))
+                    switch phase {
+                    case .pending:
+                        // Same countdown to validity as the Live Activity.
+                        Text("platí za \(Text(timerInterval: timeline.sentAt...timeline.validFrom, countsDown: true))")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    case .valid:
+                        Text("Platí do \(timeline.endDate, style: .time)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    case .expired:
+                        EmptyView()
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 4)
+                if phase == .valid {
+                    Text(timerInterval: timeline.validFrom...timeline.endDate, countsDown: true)
+                        .font(.title3.weight(.semibold))
+                        .monospacedDigit()
+                        .multilineTextAlignment(.trailing)
+                }
                 if pending {
                     Button { liveActivity.confirmNow() } label: {
                         Text("Potvrdit nyní").foregroundStyle(theme.textAccent)
@@ -230,8 +264,14 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(theme.accent.opacity(0.12))
+            .background(phase == .expired ? Color(.tertiarySystemFill) : theme.accent.opacity(0.12))
         }
+    }
+
+    /// The city in the current app language when the ticket knows its key
+    /// (the stored name is from purchase time).
+    private func bannerCityName(_ active: ActiveTicket) -> String {
+        active.cityKey.flatMap { store.city(forKey: $0)?.localizedName } ?? active.cityName
     }
 
     // MARK: - Empty state (no city to show)

@@ -6,6 +6,7 @@ struct ListkomatApp: App {
 
     init() {
         Brand.configureNavigationBar()
+        TicketNotifications.shared.install()
     }
 
     var body: some Scene {
