@@ -62,12 +62,24 @@ struct TicketListView: View {
         )
     }
 
-    private var formattedDate: String {
-        let parts = updatedAt.split(separator: "-")
-        guard parts.count == 3, let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else {
-            return updatedAt
-        }
-        return "\(d). \(m). \(y)"
+    @Environment(\.locale) private var locale
+
+    private var formattedDate: String { Self.priceListDate(updatedAt, locale: locale) }
+
+    /// The catalog's `updatedAt` ("2026-08-30") as a numeric date in `locale`:
+    /// "30. 8. 2026" in Czech, "8/30/2026" in US English. Anything that isn't a
+    /// plain `yyyy-MM-dd` is shown verbatim. Parsed and formatted in UTC, so the
+    /// day never shifts with the device's time zone.
+    static func priceListDate(_ updatedAt: String, locale: Locale) -> String {
+        let utc = TimeZone(identifier: "UTC")!
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = utc
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: updatedAt) else { return updatedAt }
+        var style = Date.FormatStyle(date: .numeric, time: .omitted, locale: locale)
+        style.timeZone = utc
+        return date.formatted(style)
     }
 
     var body: some View {
