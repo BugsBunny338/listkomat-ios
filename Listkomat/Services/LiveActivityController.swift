@@ -36,8 +36,14 @@ final class LiveActivityController: ObservableObject {
     }
 
     func start(city: City, ticket: Ticket, accent: Color) {
-        let timeline = TicketTimeline.make(sentAt: Date(),
-                                           durationSeconds: Double(ticket.durationMinutes) * 60)
+        var minutes = ticket.durationMinutes
+        #if targetEnvironment(simulator)
+        // `-simTicketMinutes 1` as a launch argument shortens every ticket, so
+        // expiry can be watched on the simulator without waiting half an hour.
+        let simMinutes = UserDefaults.standard.integer(forKey: "simTicketMinutes")
+        if simMinutes > 0 { minutes = simMinutes }
+        #endif
+        let timeline = TicketTimeline.make(sentAt: Date(), durationSeconds: Double(minutes) * 60)
         let new = ActiveTicket(cityKey: city.key, cityName: city.localizedName,
                                ticketLabel: ticket.localizedDuration, ticketCode: ticket.code,
                                priceKc: ticket.priceKc, accentHex: accent.rgbHex, timeline: timeline)

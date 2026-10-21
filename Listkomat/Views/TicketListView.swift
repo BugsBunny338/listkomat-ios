@@ -263,6 +263,15 @@ struct TicketListView: View {
     private func tap(_ ticket: Ticket) {
         // Aimed at the list that was here a moment ago (the city just changed).
         guard Date().timeIntervalSince(shownAt) >= CitySelection.tapGuard else { return }
+        #if targetEnvironment(simulator)
+        // Recent simulators can't compose SMS at all, so the compose result
+        // below never arrives there: treat the tap as a sent purchase so the
+        // countdown, expiry and Live Activity can be exercised.
+        if !MessageComposeView.canSendText {
+            liveActivity.start(city: city, ticket: ticket, accent: accent)
+            return
+        }
+        #endif
         if MessageComposeView.canSendText {
             pending = ticket
         } else {
