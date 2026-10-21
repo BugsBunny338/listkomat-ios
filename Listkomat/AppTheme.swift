@@ -48,28 +48,57 @@ struct AppTheme: Identifiable, Hashable {
     /// systemOrange). Tints use the opacities the views draw with.
     static func textSurfaces(accent: RGB, dark: Bool) -> [RGB] {
         func system(_ color: UIColor, elevated: Bool = false) -> RGB {
-            let traits = UITraitCollection(traitsFrom: [
-                UITraitCollection(userInterfaceStyle: dark ? .dark : .light),
-                UITraitCollection(userInterfaceLevel: elevated ? .elevated : .base),
-            ])
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            color.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
-            return RGB(r: max(0, min(1, r)), g: max(0, min(1, g)), b: max(0, min(1, b)))
+            resolved(color, dark: dark, elevated: elevated)
         }
         let page = system(.systemGroupedBackground)
         let card = system(.secondarySystemGroupedBackground)              // list rows; sheets (elevated systemBackground)
         let sheetRow = system(.secondarySystemGroupedBackground, elevated: true)   // list rows in a sheet
-        let orange = system(.systemOrange)
         let banner = accent.over(page, alpha: 0.12)            // active-ticket banner
         return [
             page, card, sheetRow,
-            orange.over(page, alpha: 0.12),                    // foreign-SIM notice
+            noticeTint(dark: dark),                            // foreign-SIM notice
             banner,
             accent.over(page, alpha: borderedFillAlpha),       // bordered button on the page ("Živá mapa")
             accent.over(banner, alpha: borderedFillAlpha),     // bordered button on the banner ("Potvrdit nyní")
             accent.over(card, alpha: 0.12),                    // unselected city-picker tile
         ]
     }
+
+    /// A system colour resolved for a scheme (and interface level) as opaque sRGB.
+    static func resolved(_ color: UIColor, dark: Bool, elevated: Bool = false) -> RGB {
+        let traits = UITraitCollection(traitsFrom: [
+            UITraitCollection(userInterfaceStyle: dark ? .dark : .light),
+            UITraitCollection(userInterfaceLevel: elevated ? .elevated : .base),
+        ])
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return RGB(r: max(0, min(1, r)), g: max(0, min(1, g)), b: max(0, min(1, b)))
+    }
+
+    /// The foreign-SIM notice's background: system orange at 12 % on the page.
+    static let noticeTintAlpha = 0.12
+
+    static func noticeTint(dark: Bool) -> RGB {
+        resolved(.systemOrange, dark: dark).over(resolved(.systemGroupedBackground, dark: dark), alpha: noticeTintAlpha)
+    }
+
+    /// The notice's warning glyph: system orange, shaded by the same rule as
+    /// `textAccent` until it reads at `TextContrast.minRatio` on the notice tint.
+    /// Light mode darkens it to a deep orange (raw orange is ~2:1 there); dark
+    /// mode's orange already reads and is left alone. Android uses the same rule.
+    static func noticeGlyphShades() -> (light: UInt32, dark: UInt32) {
+        func shade(dark: Bool) -> UInt32 {
+            TextContrast.readable(resolved(.systemOrange, dark: dark), on: [noticeTint(dark: dark)]).hex
+        }
+        return (shade(dark: false), shade(dark: true))
+    }
+
+    static let noticeGlyph: Color = {
+        let shades = noticeGlyphShades()
+        return Color(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? shades.dark : shades.light))
+        })
+    }()
 
     /// `.bordered` buttons fill their capsule with the tint at about this
     /// opacity (measured on the iOS 26 simulator). Those buttons are tinted

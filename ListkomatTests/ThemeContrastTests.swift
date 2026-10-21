@@ -91,6 +91,23 @@ final class ThemeContrastTests: XCTestCase {
         }
     }
 
+    /// Brief I: the foreign-SIM notice's orange warning glyph reads on the
+    /// notice's own orange tint in both schemes, and stays orange.
+    func testNoticeGlyphReadsOnItsTint() {
+        let shades = AppTheme.noticeGlyphShades()
+        for (dark, hex) in [(false, shades.light), (true, shades.dark)] {
+            let ratio = TextContrast.ratio(RGB(hex: hex), AppTheme.noticeTint(dark: dark))
+            XCTAssertGreaterThanOrEqual(ratio, TextContrast.minRatio,
+                "\(dark ? "dark" : "light") \(String(hex, radix: 16)): \(ratio)")
+            let orange = AppTheme.resolved(.systemOrange, dark: dark)
+            let dh = abs(TextContrast.hsl(RGB(hex: hex)).h - TextContrast.hsl(orange).h)
+            XCTAssertLessThan(min(dh, 1 - dh), 0.01, "\(dark ? "dark" : "light") hue drifted")
+        }
+        // Dark mode's system orange already reads on its tint: left alone.
+        XCTAssertEqual(shades.dark, AppTheme.resolved(.systemOrange, dark: true).hex)
+        print(String(format: "I notice glyph light %06X dark %06X", shades.light, shades.dark))
+    }
+
     /// Prints the table for the report (light → dark per theme).
     func testPrintShadeTable() {
         for theme in AppTheme.presets {
