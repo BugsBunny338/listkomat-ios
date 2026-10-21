@@ -5,7 +5,16 @@ struct ContentView: View {
     @StateObject private var location: LocationManager
     @StateObject private var liveActivity = LiveActivityController()
 
-    @State private var selectedCityKey: String?
+    /// The manual pick as a session override of GPS (`CitySelection`); set
+    /// again from the persisted pick on a return within the grace window.
+    @State private var manualCityKey: String?
+    /// True while this process's first fix may still beat the fallback.
+    @State private var awaitingFirstFix = false
+    /// Lets only the latest hold end `awaitingFirstFix`.
+    @State private var holdGeneration = 0
+    /// A return to the app is `.active` after `.background`, not after a brief
+    /// `.inactive` (Control Center, a system alert).
+    @State private var wasInBackground = false
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
@@ -18,6 +27,12 @@ struct ContentView: View {
     /// decides what's on screen, so a user who has moved cities loses one
     /// speculative burst, not a correct city screen.
     @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
+    /// The last manual pick, persisted only as the fallback for when GPS can't
+    /// deliver ("" = none).
+    @AppStorage("fallbackCityKey") private var fallbackCityKey = ""
+    /// When the manual override was last on screen: the pick, then every
+    /// departure from the app while it still overrode GPS (0 = never).
+    @AppStorage("overrideSeenAt") private var overrideSeenAt: Double = 0
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -35,14 +50,14 @@ struct ContentView: View {
         _location = StateObject(wrappedValue: LocationManager(cities: store.cities))
     }
 
-    /// Manual selection wins; otherwise the GPS-nearest city, but only if it's
-    /// close enough to plausibly be where the user actually is.
+    /// This session's manual pick, else the GPS-nearest city within reach,
+    /// else the last pick — see `CitySelection`.
     private var currentCity: City? {
-        if let key = selectedCityKey { return store.city(forKey: key) }
-        guard let key = location.nearestCityKey,
-              let dist = location.nearestDistanceKm,
-              dist <= LocationManager.maxDefaultDistanceKm else { return nil }
-        return store.city(forKey: key)
+        let key = CitySelection.cityKey(manual: manualCityKey,
+                                        location: location.state,
+                                        fallback: fallbackCityKey.isEmpty ? nil : fallbackCityKey,
+                                        awaitingFirstFix: awaitingFirstFix)
+        return key.flatMap(store.city(forKey:))
     }
 
     var body: some View {
@@ -53,6 +68,9 @@ struct ContentView: View {
                     activeTicketBanner(active)
                 }
                 if let city = currentCity {
+                    // A city that changes by itself (a late fix) fades in, and
+                    // its rows ignore taps for a moment (TicketListView): a tap
+                    // aimed at the previous list must not buy a ticket here.
                     TicketListView(
                         city: city,
                         updatedAt: store.catalog.updatedAt,
@@ -61,10 +79,13 @@ struct ContentView: View {
                         accent: theme.accent,
                         textAccent: theme.textAccent
                     )
+                    .id(city.key)
+                    .transition(.opacity)
                 } else {
                     emptyState
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: currentCity?.key)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("")
@@ -108,7 +129,9 @@ struct ContentView: View {
                     accent: theme.accent,
                     textAccent: theme.textAccent
                 ) { city in
-                    selectedCityKey = city.key
+                    fallbackCityKey = city.key
+                    manualCityKey = city.key
+                    overrideSeenAt = Date().timeIntervalSince1970
                 }
             }
             .sheet(isPresented: $showingPrimer) {
@@ -122,18 +145,32 @@ struct ContentView: View {
                 )
             }
             .onAppear(perform: handleAppear)
-            .onChange(of: location.authorization) { status in
-                if status == .authorizedWhenInUse || status == .authorizedAlways {
-                    location.start()
-                }
+            .onChange(of: location.authorization) { _ in
+                // Granted from the primer: locate now, holding the fallback as at launch.
+                locate()
+            }
+            .onChange(of: location.isLocating) { locating in
+                // After the fix lands (or the attempt ends), so the fallback
+                // never flashes in between.
+                if !locating { awaitingFirstFix = false }
             }
             .onChange(of: scenePhase) { phase in
-                // Foregrounding is the same cold case as launch: the central
-                // background close drops every socket behind us.
-                if phase == .active {
+                switch phase {
+                case .active:
+                    // Foregrounding is the same cold case as launch: the central
+                    // background close drops every socket behind us.
                     prefetchLiveSource()
                     // A ticket may have expired while we were suspended.
                     liveActivity.refresh()
+                    if wasInBackground {
+                        wasInBackground = false
+                        appStarted()
+                    }
+                case .background:
+                    wasInBackground = true
+                    appStopped()
+                default:
+                    break
                 }
             }
             .task { await store.refresh() }
@@ -185,14 +222,50 @@ struct ContentView: View {
         // onAppear rather than only scenePhase: the scene is already .active at
         // launch, so onChange never fires for it.
         prefetchLiveSource()
-        switch location.authorization {
-        case .notDetermined:
+        appStarted()
+        // The primer is for first runs with nothing to show; a remembered pick
+        // shows without asking.
+        if location.authorization == .notDetermined && currentCity == nil {
             showingPrimer = true
-        case .authorizedWhenInUse, .authorizedAlways:
-            location.start()
-        default:
-            break
         }
+    }
+
+    // MARK: - City rule (CitySelection)
+
+    /// Launch and every return from the background: an old manual pick stops
+    /// overriding GPS and, with permission, one new fix is taken. The city
+    /// changes only here, never mid-use.
+    private func appStarted() {
+        manualCityKey = CitySelection.overrideAfterStart(
+            fallback: fallbackCityKey.isEmpty ? nil : fallbackCityKey,
+            lastSeenAt: overrideSeenAt > 0 ? Date(timeIntervalSince1970: overrideSeenAt) : nil,
+            now: Date())
+        locate()
+    }
+
+    /// The grace counts from leaving, not from the pick: browsing for ten
+    /// minutes and then sending the ticket SMS must not flip the city.
+    private func appStopped() {
+        guard manualCityKey != nil else { return }
+        overrideSeenAt = Date().timeIntervalSince1970
+    }
+
+    private func locate() {
+        guard location.isAuthorized, !location.isLocating else { return }
+        // A fix from earlier in this process stays on screen while the new one
+        // comes in. Without one, hold the fallback back briefly: the fix usually
+        // takes about a second, and a list that swaps cities under the thumb can
+        // sell the wrong ticket.
+        if location.nearestCityKey == nil {
+            awaitingFirstFix = true
+            holdGeneration += 1
+            let generation = holdGeneration
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(CitySelection.firstFixHold * 1_000_000_000))
+                if generation == holdGeneration { awaitingFirstFix = false }
+            }
+        }
+        location.requestFix()
     }
 
     // MARK: - Active ticket banner (countdown + manual end)

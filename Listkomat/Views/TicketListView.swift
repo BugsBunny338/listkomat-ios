@@ -43,6 +43,9 @@ struct TicketListView: View {
         }
     }
 
+    /// When this city's list appeared; ContentView gives each city its own
+    /// identity, so a city change resets it and starts the tap guard.
+    @State private var shownAt = Date()
     @State private var pending: Ticket?
     @State private var activeAlert: PurchaseAlert?
     /// Dismissal clears `activeAlert`, but the title argument re-evaluates during
@@ -258,6 +261,8 @@ struct TicketListView: View {
     }
 
     private func tap(_ ticket: Ticket) {
+        // Aimed at the list that was here a moment ago (the city just changed).
+        guard Date().timeIntervalSince(shownAt) >= CitySelection.tapGuard else { return }
         if MessageComposeView.canSendText {
             pending = ticket
         } else {
