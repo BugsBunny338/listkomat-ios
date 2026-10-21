@@ -26,8 +26,8 @@ struct ContentView: View {
     /// Forced page appearance from the Režim toggle (nil = follow the system).
     private var contentScheme: ColorScheme? { AppearanceMode.from(appearanceMode).colorScheme }
 
-    /// Bar buttons: contrast color on a colored band, the accent on the plain bar.
-    private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.accent }
+    /// Bar buttons: contrast color on a colored band, the text accent on the plain bar.
+    private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.textAccent }
 
     init() {
         let store = CatalogStore()
@@ -58,7 +58,8 @@ struct ContentView: View {
                         updatedAt: store.catalog.updatedAt,
                         isOffline: store.refreshFailed,
                         liveActivity: liveActivity,
-                        accent: theme.accent
+                        accent: theme.accent,
+                        textAccent: theme.textAccent
                     )
                 } else {
                     emptyState
@@ -68,7 +69,9 @@ struct ContentView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("")
             .modifier(ThemedBar(theme: theme, contentScheme: contentScheme))
-            .tint(theme.accent)
+            // The tint mostly colours text (button labels, links), so it takes
+            // the text shade; fills that want the band set it themselves.
+            .tint(theme.textAccent)
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -102,7 +105,8 @@ struct ContentView: View {
                 CityPickerView(
                     cities: store.cities,
                     selectedKey: currentCity?.key,
-                    accent: theme.accent
+                    accent: theme.accent,
+                    textAccent: theme.textAccent
                 ) { city in
                     selectedCityKey = city.key
                 }
@@ -110,6 +114,7 @@ struct ContentView: View {
             .sheet(isPresented: $showingPrimer) {
                 LocationPrimerView(
                     accent: theme.accent,
+                    textAccent: theme.textAccent,
                     onContinue: {
                         showingPrimer = false
                         location.requestPermission()
@@ -201,7 +206,7 @@ struct ContentView: View {
             let pending = active.isPending(at: max(ctx.date, .now))
             HStack(spacing: 12) {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(theme.accent)
+                    .foregroundStyle(theme.textAccent)
                 VStack(alignment: .leading, spacing: 1) {
                     (pending ? Text("Čeká na potvrzovací SMS") : Text("Aktivní lístek"))
                         .font(.caption2)
@@ -211,10 +216,12 @@ struct ContentView: View {
                 }
                 Spacer()
                 if pending {
-                    Button("Potvrdit nyní") { liveActivity.confirmNow() }
-                        .font(.subheadline.weight(.semibold))
-                        .buttonStyle(.bordered)
-                        .tint(theme.accent)
+                    Button { liveActivity.confirmNow() } label: {
+                        Text("Potvrdit nyní").foregroundStyle(theme.textAccent)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .tint(theme.accent)   // band-tinted capsule (a fill), text-accent label
                 }
                 Button("Ukončit") { liveActivity.stop() }
                     .font(.subheadline.weight(.semibold))
@@ -246,6 +253,7 @@ struct ContentView: View {
             }
             Button("Vybrat město") { showingPicker = true }
                 .buttonStyle(.borderedProminent)
+                .tint(theme.accent)   // a fill: keeps the band colour
         }
         .frame(maxHeight: .infinity)
         .padding(32)

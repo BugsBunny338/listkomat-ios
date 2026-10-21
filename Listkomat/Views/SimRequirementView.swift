@@ -7,7 +7,7 @@ import SwiftUI
 /// an SMS actually fails to send. Keeping the copy in one place means the three
 /// never drift apart.
 struct SimRequirementView: View {
-    var accent: Color = .brandTeal
+    var accent: Color = .brandTeal   // the theme's text accent (only tints text here)
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

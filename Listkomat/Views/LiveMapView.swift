@@ -24,6 +24,8 @@ struct LiveMapView: View {
 
     /// Follow the user's chosen theme accent (not a fixed teal).
     private var accent: Color { AppTheme.resolve(themeId).accent }
+    /// Glyphs on surfaces (recenter button, spinner, sheet) use the text shade.
+    private var textAccent: Color { AppTheme.resolve(themeId).textAccent }
 
     var body: some View {
         TransitMapView(vehicles: vm.vehicles, stops: vm.stops,
@@ -39,7 +41,7 @@ struct LiveMapView: View {
                         .padding(12)
                         .background(.regularMaterial, in: Circle())
                 }
-                .tint(accent)
+                .tint(textAccent)
                 .padding(.trailing, 16)
                 .padding(.bottom, selected == nil ? 28 : 104)   // lift above the card
                 .animation(.spring(response: 0.3), value: selected?.id)
@@ -79,7 +81,7 @@ struct LiveMapView: View {
                         .accessibilityLabel("Zdroje dat")
                 }
             }
-            .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno", accent: accent) }
+            .sheet(isPresented: $showingSources) { DataSourcesView(brno: city.key == "brno", accent: textAccent, ringAccent: accent) }
             .onAppear {
                 vm.start()
                 lastLiveCityKey = city.key
@@ -116,7 +118,7 @@ struct LiveMapView: View {
     /// hence the Brno-only hint.
     private var connectingCard: some View {
         VStack(spacing: 10) {
-            ProgressView().tint(accent)
+            ProgressView().tint(textAccent)
             Text("Připojuji se k živým datům…")
                 .font(.footnote)
                 .foregroundStyle(.secondary)

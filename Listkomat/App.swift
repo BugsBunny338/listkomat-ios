@@ -13,7 +13,7 @@ struct ListkomatApp: App {
             ContentView()
                 // App-wide default accent so detached surfaces (alerts, system
                 // sheets) follow the theme instead of falling back to fixed teal.
-                .tint(AppTheme.resolve(themeId).accent)
+                .tint(AppTheme.resolve(themeId).textAccent)
         }
     }
 }

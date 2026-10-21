@@ -3,7 +3,8 @@ import SwiftUI
 /// Attribution for the live map (CC-BY 4.0 obligation).
 struct DataSourcesView: View {
     var brno: Bool = false
-    var accent: Color = .brandTeal
+    var accent: Color = .brandTeal       // text accent (sheet tint)
+    var ringAccent: Color = .brandTeal   // the map's stop ring, a fill: the band colour
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -21,7 +22,7 @@ struct DataSourcesView: View {
                         }
                     }
                     HStack(spacing: 12) {
-                        Circle().stroke(accent, lineWidth: 3.5)
+                        Circle().stroke(ringAccent, lineWidth: 3.5)
                             .background(Circle().fill(.white)).frame(width: 16, height: 16)
                         Text("Zastávka")
                         Spacer()

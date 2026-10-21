@@ -5,7 +5,8 @@ import SwiftUI
 struct CityPickerView: View {
     let cities: [City]
     let selectedKey: String?
-    let accent: Color
+    let accent: Color        // tile fills (band colour)
+    let textAccent: Color    // glyphs on the unselected tiles, the "Zavřít" label
     let onSelect: (City) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -30,7 +31,7 @@ struct CityPickerView: View {
                 }
             }
         }
-        .tint(accent)   // sheets present in a fresh environment — re-apply the accent
+        .tint(textAccent)   // sheets present in a fresh environment — re-apply the accent
     }
 
     @ViewBuilder
@@ -45,7 +46,7 @@ struct CityPickerView: View {
                     .resizable()
                     .scaledToFit()
                     .padding(18)
-                    .foregroundStyle(selected ? Color.white : accent)
+                    .foregroundStyle(selected ? Color.white : textAccent)
             }
             .aspectRatio(1, contentMode: .fit)
             Text(city.localizedName)

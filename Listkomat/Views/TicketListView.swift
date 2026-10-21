@@ -9,7 +9,10 @@ struct TicketListView: View {
     let updatedAt: String
     let isOffline: Bool
     let liveActivity: LiveActivityController
+    /// The band colour: fills (the "Živá mapa" capsule) and the Live Activity.
     let accent: Color
+    /// Prices, links, the city icon and button labels on the page.
+    let textAccent: Color
 
     /// Both of the screen's alerts go through one `.alert` modifier: SwiftUI
     /// drops the second of two attached to the same view.
@@ -91,9 +94,10 @@ struct TicketListView: View {
                 } label: {
                     Label("Živá mapa", systemImage: "map")
                         .font(.brandBold(15, relativeTo: .subheadline))
+                        .foregroundStyle(textAccent)
                 }
                 .buttonStyle(.bordered)
-                .tint(accent)
+                .tint(accent)   // the capsule is a fill: band tint; the label reads in textAccent
                 .padding(.bottom, 12)
                 // Eager connect (#12): Brno's stream accumulates vehicles only
                 // as each one reports, so start it while the user is still on
@@ -121,7 +125,7 @@ struct TicketListView: View {
                                 + Text(verbatim: " ")
                                 // Only the link is tinted — the sentence keeps the
                                 // footer's secondary treatment.
-                                + Text("Více").underline().foregroundColor(accent)
+                                + Text("Více").underline().foregroundColor(textAccent)
                         }
                         .buttonStyle(.plain)
                         if isOffline {
@@ -174,7 +178,7 @@ struct TicketListView: View {
             Text(kind.message)
         }
         .sheet(isPresented: $showingSimInfo) {
-            SimRequirementView(accent: accent)
+            SimRequirementView(accent: textAccent)
         }
     }
 
@@ -214,7 +218,7 @@ struct TicketListView: View {
                     .foregroundStyle(.secondary)
                 Button("Více informací") { showingSimInfo = true }
                     .font(.footnote.weight(.semibold))
-                    .tint(accent)
+                    .tint(textAccent)
             }
             Spacer(minLength: 0)
             Button {
@@ -242,7 +246,7 @@ struct TicketListView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 92)
-                .foregroundStyle(accent)
+                .foregroundStyle(textAccent)
             Text(city.localizedName)
                 .font(.brandBold(22, relativeTo: .title2))
         }
@@ -270,7 +274,7 @@ struct TicketListView: View {
                 Spacer()
                 Text("\(ticket.priceKc) Kč")
                     .font(.brandBold(18, relativeTo: .headline))
-                    .foregroundStyle(accent)
+                    .foregroundStyle(textAccent)
             }
             if let note = ticket.localizedNote {
                 Text(note)
