@@ -13,6 +13,9 @@ struct TicketListView: View {
     let accent: Color
     /// Prices, links, the city icon and button labels on the page.
     let textAccent: Color
+    /// Told when the SMS composer opens and closes, so ContentView holds this
+    /// city on screen meanwhile (a city change would dismiss the composer).
+    var onPurchaseSheet: (Bool) -> Void = { _ in }
 
     /// Both of the screen's alerts go through one `.alert` modifier: SwiftUI
     /// drops the second of two attached to the same view.
@@ -172,6 +175,8 @@ struct TicketListView: View {
                 #endif
             }
         }
+        // Released in the sheet's onDismiss, once the composer is really gone.
+        .onChange(of: pending?.id) { if $0 != nil { onPurchaseSheet(true) } }
         .alert(lastAlert.title, isPresented: alertIsPresented, presenting: activeAlert) { kind in
             if kind == .sendFailed {
                 Button("Více informací") { showSimInfoAfterAlert() }
@@ -196,6 +201,7 @@ struct TicketListView: View {
 
     /// Show the send-failure alert once the compose sheet is actually gone.
     private func presentSendFailureIfNeeded() {
+        onPurchaseSheet(false)
         guard sendFailedAwaitingDismiss else { return }
         sendFailedAwaitingDismiss = false
         present(.sendFailed)

@@ -15,6 +15,12 @@ struct ContentView: View {
     /// A return to the app is `.active` after `.background`, not after a brief
     /// `.inactive` (Control Center, a system alert).
     @State private var wasInBackground = false
+    /// The launch work runs once: the root's onAppear fires again on every
+    /// pop back from the live map, which must not count as a return.
+    @State private var didLaunch = false
+    /// The city on screen while its SMS composer is up: a fix landing then
+    /// must not swap the list (and with it the composer) away.
+    @State private var purchasingCityKey: String?
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
@@ -47,12 +53,25 @@ struct ContentView: View {
     init() {
         let store = CatalogStore()
         _store = StateObject(wrappedValue: store)
-        _location = StateObject(wrappedValue: LocationManager(cities: store.cities))
+        let location = LocationManager(cities: store.cities)
+        _location = StateObject(wrappedValue: location)
+        // Decided before the first frame (Android does it in the view model's
+        // init): otherwise the fallback list renders once before onAppear
+        // starts the first-fix hold, and then swaps away.
+        let defaults = UserDefaults.standard
+        let fallback = defaults.string(forKey: "fallbackCityKey").flatMap { $0.isEmpty ? nil : $0 }
+        let seenAt = defaults.double(forKey: "overrideSeenAt")
+        _manualCityKey = State(initialValue: CitySelection.overrideAfterStart(
+            fallback: fallback,
+            lastSeenAt: seenAt > 0 ? Date(timeIntervalSince1970: seenAt) : nil,
+            now: Date()))
+        _awaitingFirstFix = State(initialValue: location.isAuthorized)
     }
 
     /// This session's manual pick, else the GPS-nearest city within reach,
     /// else the last pick — see `CitySelection`.
     private var currentCity: City? {
+        if let key = purchasingCityKey { return store.city(forKey: key) }
         let key = CitySelection.cityKey(manual: manualCityKey,
                                         location: location.state,
                                         fallback: fallbackCityKey.isEmpty ? nil : fallbackCityKey,
@@ -67,25 +86,30 @@ struct ContentView: View {
                 if let active = liveActivity.active {
                     activeTicketBanner(active)
                 }
-                if let city = currentCity {
-                    // A city that changes by itself (a late fix) fades in, and
-                    // its rows ignore taps for a moment (TicketListView): a tap
-                    // aimed at the previous list must not buy a ticket here.
-                    TicketListView(
-                        city: city,
-                        updatedAt: store.catalog.updatedAt,
-                        isOffline: store.refreshFailed,
-                        liveActivity: liveActivity,
-                        accent: theme.accent,
-                        textAccent: theme.textAccent
-                    )
-                    .id(city.key)
-                    .transition(.opacity)
-                } else {
-                    emptyState
+                // A city that changes by itself (a late fix) cross-fades in
+                // place — a ZStack, so old and new never share the height —
+                // and its rows ignore taps for a moment (TicketListView): a tap
+                // aimed at the previous list must not buy a ticket here.
+                ZStack {
+                    if let city = currentCity {
+                        TicketListView(
+                            city: city,
+                            updatedAt: store.catalog.updatedAt,
+                            isOffline: store.refreshFailed,
+                            liveActivity: liveActivity,
+                            accent: theme.accent,
+                            textAccent: theme.textAccent,
+                            onPurchaseSheet: { open in purchasingCityKey = open ? city.key : nil }
+                        )
+                        .id(city.key)
+                        .transition(.opacity)
+                    } else {
+                        emptyState
+                            .transition(.opacity)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.3), value: currentCity?.key)
             }
-            .animation(.easeInOut(duration: 0.3), value: currentCity?.key)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("")
@@ -222,6 +246,8 @@ struct ContentView: View {
         // onAppear rather than only scenePhase: the scene is already .active at
         // launch, so onChange never fires for it.
         prefetchLiveSource()
+        guard !didLaunch else { return }
+        didLaunch = true
         appStarted()
         // The primer is for first runs with nothing to show; a remembered pick
         // shows without asking.

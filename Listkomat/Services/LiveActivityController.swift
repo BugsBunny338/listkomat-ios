@@ -109,14 +109,34 @@ final class LiveActivityController: ObservableObject {
     /// Launch: load the stored ticket. A 2.5 build kept the ticket only in its
     /// Live Activity, so on the first 2.6 launch a running activity is adopted.
     private func restore() {
-        let stored = store.load() ?? liveActivity.map(Self.adopted)
+        let fromStore = store.load()
+        let stored = fromStore ?? liveActivity.map(Self.adopted)
         guard let ticket = ActiveTicket.restored(stored, now: Date()) else {
             store.clear()
             endAllActivitiesNow()
             return
         }
         save(ticket)
-        armExpiryTimer(for: ticket, now: Date())
+        if fromStore == nil {
+            // Adopted: 2.5 never scheduled the expiry notification.
+            scheduleExpiry(for: ticket)
+        } else {
+            syncActivity(with: ticket)
+            armExpiryTimer(for: ticket, now: Date())
+        }
+    }
+
+    /// The store is written before the activity update in `confirmNow()`; if
+    /// the process died in between, the activity still has the old timeline.
+    private func syncActivity(with ticket: ActiveTicket) {
+        guard let activity = liveActivity, !ticket.timeline.isExpired(at: Date()) else { return }
+        let s = activity.content.state
+        let running = TicketTimeline(sentAt: s.sentAt, validFrom: s.validFrom, endDate: s.endDate)
+        guard running != ticket.timeline else { return }
+        let now = Date()
+        // Same staleDate rule as start()/confirmNow(): stale = valid.
+        let staleDate = ticket.timeline.isPending(at: now) ? ticket.timeline.validFrom : now
+        Task { await activity.update(ActivityContent(state: Self.state(ticket.timeline), staleDate: staleDate)) }
     }
 
     private static func adopted(_ activity: Activity<TicketActivityAttributes>) -> ActiveTicket {
