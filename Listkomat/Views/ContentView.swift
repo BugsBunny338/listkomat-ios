@@ -5,7 +5,22 @@ struct ContentView: View {
     @StateObject private var location: LocationManager
     @StateObject private var liveActivity = LiveActivityController()
 
-    @State private var selectedCityKey: String?
+    /// The manual pick as a session override of GPS (`CitySelection`); set
+    /// again from the persisted pick on a return within the grace window.
+    @State private var manualCityKey: String?
+    /// True while this process's first fix may still beat the fallback.
+    @State private var awaitingFirstFix = false
+    /// Lets only the latest hold end `awaitingFirstFix`.
+    @State private var holdGeneration = 0
+    /// A return to the app is `.active` after `.background`, not after a brief
+    /// `.inactive` (Control Center, a system alert).
+    @State private var wasInBackground = false
+    /// The launch work runs once: the root's onAppear fires again on every
+    /// pop back from the live map, which must not count as a return.
+    @State private var didLaunch = false
+    /// The city on screen while its SMS composer is up: a fix landing then
+    /// must not swap the list (and with it the composer) away.
+    @State private var purchasingCityKey: String?
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
@@ -18,6 +33,12 @@ struct ContentView: View {
     /// decides what's on screen, so a user who has moved cities loses one
     /// speculative burst, not a correct city screen.
     @AppStorage("lastLiveCityKey") private var lastLiveCityKey = ""
+    /// The last manual pick, persisted only as the fallback for when GPS can't
+    /// deliver ("" = none).
+    @AppStorage("fallbackCityKey") private var fallbackCityKey = ""
+    /// When the manual override was last on screen: the pick, then every
+    /// departure from the app while it still overrode GPS (0 = never).
+    @AppStorage("overrideSeenAt") private var overrideSeenAt: Double = 0
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -26,23 +47,36 @@ struct ContentView: View {
     /// Forced page appearance from the Režim toggle (nil = follow the system).
     private var contentScheme: ColorScheme? { AppearanceMode.from(appearanceMode).colorScheme }
 
-    /// Bar buttons: contrast color on a colored band, the accent on the plain bar.
-    private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.accent }
+    /// Bar buttons: contrast color on a colored band, the text accent on the plain bar.
+    private var barItemColor: Color { theme.hasBand ? theme.onBand : theme.textAccent }
 
     init() {
         let store = CatalogStore()
         _store = StateObject(wrappedValue: store)
-        _location = StateObject(wrappedValue: LocationManager(cities: store.cities))
+        let location = LocationManager(cities: store.cities)
+        _location = StateObject(wrappedValue: location)
+        // Decided before the first frame (Android does it in the view model's
+        // init): otherwise the fallback list renders once before onAppear
+        // starts the first-fix hold, and then swaps away.
+        let defaults = UserDefaults.standard
+        let fallback = defaults.string(forKey: "fallbackCityKey").flatMap { $0.isEmpty ? nil : $0 }
+        let seenAt = defaults.double(forKey: "overrideSeenAt")
+        _manualCityKey = State(initialValue: CitySelection.overrideAfterStart(
+            fallback: fallback,
+            lastSeenAt: seenAt > 0 ? Date(timeIntervalSince1970: seenAt) : nil,
+            now: Date()))
+        _awaitingFirstFix = State(initialValue: location.isAuthorized)
     }
 
-    /// Manual selection wins; otherwise the GPS-nearest city, but only if it's
-    /// close enough to plausibly be where the user actually is.
+    /// This session's manual pick, else the GPS-nearest city within reach,
+    /// else the last pick — see `CitySelection`.
     private var currentCity: City? {
-        if let key = selectedCityKey { return store.city(forKey: key) }
-        guard let key = location.nearestCityKey,
-              let dist = location.nearestDistanceKm,
-              dist <= LocationManager.maxDefaultDistanceKm else { return nil }
-        return store.city(forKey: key)
+        if let key = purchasingCityKey { return store.city(forKey: key) }
+        let key = CitySelection.cityKey(manual: manualCityKey,
+                                        location: location.state,
+                                        fallback: fallbackCityKey.isEmpty ? nil : fallbackCityKey,
+                                        awaitingFirstFix: awaitingFirstFix)
+        return key.flatMap(store.city(forKey:))
     }
 
     var body: some View {
@@ -52,23 +86,37 @@ struct ContentView: View {
                 if let active = liveActivity.active {
                     activeTicketBanner(active)
                 }
-                if let city = currentCity {
-                    TicketListView(
-                        city: city,
-                        updatedAt: store.catalog.updatedAt,
-                        isOffline: store.refreshFailed,
-                        liveActivity: liveActivity,
-                        accent: theme.accent
-                    )
-                } else {
-                    emptyState
+                // A city that changes by itself (a late fix) cross-fades in
+                // place — a ZStack, so old and new never share the height —
+                // and its rows ignore taps for a moment (TicketListView): a tap
+                // aimed at the previous list must not buy a ticket here.
+                ZStack {
+                    if let city = currentCity {
+                        TicketListView(
+                            city: city,
+                            updatedAt: store.catalog.updatedAt,
+                            isOffline: store.refreshFailed,
+                            liveActivity: liveActivity,
+                            accent: theme.accent,
+                            textAccent: theme.textAccent,
+                            onPurchaseSheet: { open in purchasingCityKey = open ? city.key : nil }
+                        )
+                        .id(city.key)
+                        .transition(.opacity)
+                    } else {
+                        emptyState
+                            .transition(.opacity)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.3), value: currentCity?.key)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("")
             .modifier(ThemedBar(theme: theme, contentScheme: contentScheme))
-            .tint(theme.accent)
+            // The tint mostly colours text (button labels, links), so it takes
+            // the text shade; fills that want the band set it themselves.
+            .tint(theme.textAccent)
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -102,14 +150,18 @@ struct ContentView: View {
                 CityPickerView(
                     cities: store.cities,
                     selectedKey: currentCity?.key,
-                    accent: theme.accent
+                    accent: theme.accent,
+                    textAccent: theme.textAccent
                 ) { city in
-                    selectedCityKey = city.key
+                    fallbackCityKey = city.key
+                    manualCityKey = city.key
+                    overrideSeenAt = Date().timeIntervalSince1970
                 }
             }
             .sheet(isPresented: $showingPrimer) {
                 LocationPrimerView(
                     accent: theme.accent,
+                    textAccent: theme.textAccent,
                     onContinue: {
                         showingPrimer = false
                         location.requestPermission()
@@ -117,15 +169,33 @@ struct ContentView: View {
                 )
             }
             .onAppear(perform: handleAppear)
-            .onChange(of: location.authorization) { status in
-                if status == .authorizedWhenInUse || status == .authorizedAlways {
-                    location.start()
-                }
+            .onChange(of: location.authorization) { _ in
+                // Granted from the primer: locate now, holding the fallback as at launch.
+                locate()
+            }
+            .onChange(of: location.isLocating) { locating in
+                // After the fix lands (or the attempt ends), so the fallback
+                // never flashes in between.
+                if !locating { awaitingFirstFix = false }
             }
             .onChange(of: scenePhase) { phase in
-                // Foregrounding is the same cold case as launch: the central
-                // background close drops every socket behind us.
-                if phase == .active { prefetchLiveSource() }
+                switch phase {
+                case .active:
+                    // Foregrounding is the same cold case as launch: the central
+                    // background close drops every socket behind us.
+                    prefetchLiveSource()
+                    // A ticket may have expired while we were suspended.
+                    liveActivity.refresh()
+                    if wasInBackground {
+                        wasInBackground = false
+                        appStarted()
+                    }
+                case .background:
+                    wasInBackground = true
+                    appStopped()
+                default:
+                    break
+                }
             }
             .task { await store.refresh() }
         }
@@ -176,21 +246,62 @@ struct ContentView: View {
         // onAppear rather than only scenePhase: the scene is already .active at
         // launch, so onChange never fires for it.
         prefetchLiveSource()
-        switch location.authorization {
-        case .notDetermined:
+        guard !didLaunch else { return }
+        didLaunch = true
+        appStarted()
+        // The primer is for first runs with nothing to show; a remembered pick
+        // shows without asking.
+        if location.authorization == .notDetermined && currentCity == nil {
             showingPrimer = true
-        case .authorizedWhenInUse, .authorizedAlways:
-            location.start()
-        default:
-            break
         }
     }
 
-    // MARK: - Active ticket banner (manual end)
+    // MARK: - City rule (CitySelection)
 
-    private func activeTicketBanner(_ active: LiveActivityController.ActiveTicket) -> some View {
-        // TimelineView so the banner flips from pending → active on its own at
-        // validFrom while the app is open (no push needed in-app).
+    /// Launch and every return from the background: an old manual pick stops
+    /// overriding GPS and, with permission, one new fix is taken. The city
+    /// changes only here, never mid-use.
+    private func appStarted() {
+        manualCityKey = CitySelection.overrideAfterStart(
+            fallback: fallbackCityKey.isEmpty ? nil : fallbackCityKey,
+            lastSeenAt: overrideSeenAt > 0 ? Date(timeIntervalSince1970: overrideSeenAt) : nil,
+            now: Date())
+        locate()
+    }
+
+    /// The grace counts from leaving, not from the pick: browsing for ten
+    /// minutes and then sending the ticket SMS must not flip the city.
+    private func appStopped() {
+        guard manualCityKey != nil else { return }
+        overrideSeenAt = Date().timeIntervalSince1970
+    }
+
+    private func locate() {
+        guard location.isAuthorized, !location.isLocating else { return }
+        // A fix from earlier in this process stays on screen while the new one
+        // comes in. Without one, hold the fallback back briefly: the fix usually
+        // takes about a second, and a list that swaps cities under the thumb can
+        // sell the wrong ticket.
+        if location.nearestCityKey == nil {
+            awaitingFirstFix = true
+            holdGeneration += 1
+            let generation = holdGeneration
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(CitySelection.firstFixHold * 1_000_000_000))
+                if generation == holdGeneration { awaitingFirstFix = false }
+            }
+        }
+        location.requestFix()
+    }
+
+    // MARK: - Active ticket banner (countdown + manual end)
+
+    /// The in-app twin of the Live Activity, driven by the stored ticket so it
+    /// works with Live Activities off: pending (countdown to validity + Potvrdit
+    /// nyní) → valid (time left + "Platí do") → expired (Ukončit dismisses it).
+    private func activeTicketBanner(_ active: ActiveTicket) -> some View {
+        // TimelineView so the banner changes phase on its own at validFrom and
+        // endDate while the app is open (no push needed in-app).
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
             // `ctx.date` is the current *schedule entry*, which lags real time by up to
             // a tick. `confirmNow()` re-anchors validFrom to the tap instant, so
@@ -198,23 +309,52 @@ struct ContentView: View {
             // a second after a successful tap — inviting the second tap that #19 is
             // about, which would re-anchor the ticket's window again. Take whichever
             // clock is further along.
-            let pending = active.isPending(at: max(ctx.date, .now))
+            let timeline = active.timeline
+            let phase = timeline.phase(at: max(ctx.date, .now))
+            let pending = phase == .pending
             HStack(spacing: 12) {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(theme.accent)
+                    .foregroundStyle(phase == .expired ? AnyShapeStyle(.secondary) : AnyShapeStyle(theme.textAccent))
                 VStack(alignment: .leading, spacing: 1) {
-                    (pending ? Text("Čeká na potvrzovací SMS") : Text("Aktivní lístek"))
-                        .font(.caption2)
-                        .foregroundStyle(pending ? .orange : .secondary)
-                    Text("\(active.cityName) · \(active.ticketLabel)")
+                    Group {
+                        switch phase {
+                        case .pending: Text("Čeká na potvrzovací SMS").foregroundStyle(.orange)
+                        case .valid: Text("Aktivní lístek").foregroundStyle(.secondary)
+                        case .expired: Text("Jízdenka vypršela").foregroundStyle(.secondary)
+                        }
+                    }
+                    .font(.caption2)
+                    Text("\(bannerCityName(active)) · \(active.ticketLabel)")
                         .font(.brandBold(15, relativeTo: .subheadline))
+                    switch phase {
+                    case .pending:
+                        // Same countdown to validity as the Live Activity.
+                        Text("platí za \(Text(timerInterval: timeline.sentAt...timeline.validFrom, countsDown: true))")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    case .valid:
+                        Text("Platí do \(timeline.endDate, style: .time)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    case .expired:
+                        EmptyView()
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 4)
+                if phase == .valid {
+                    Text(timerInterval: timeline.validFrom...timeline.endDate, countsDown: true)
+                        .font(.title3.weight(.semibold))
+                        .monospacedDigit()
+                        .multilineTextAlignment(.trailing)
+                }
                 if pending {
-                    Button("Potvrdit nyní") { liveActivity.confirmNow() }
-                        .font(.subheadline.weight(.semibold))
-                        .buttonStyle(.bordered)
-                        .tint(theme.accent)
+                    Button { liveActivity.confirmNow() } label: {
+                        Text("Potvrdit nyní").foregroundStyle(theme.textAccent)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .tint(theme.accent)   // band-tinted capsule (a fill), text-accent label
                 }
                 Button("Ukončit") { liveActivity.stop() }
                     .font(.subheadline.weight(.semibold))
@@ -223,8 +363,14 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(theme.accent.opacity(0.12))
+            .background(phase == .expired ? Color(.tertiarySystemFill) : theme.accent.opacity(0.12))
         }
+    }
+
+    /// The city in the current app language when the ticket knows its key
+    /// (the stored name is from purchase time).
+    private func bannerCityName(_ active: ActiveTicket) -> String {
+        active.cityKey.flatMap { store.city(forKey: $0)?.localizedName } ?? active.cityName
     }
 
     // MARK: - Empty state (no city to show)
@@ -246,6 +392,7 @@ struct ContentView: View {
             }
             Button("Vybrat město") { showingPicker = true }
                 .buttonStyle(.borderedProminent)
+                .tint(theme.accent)   // a fill: keeps the band colour
         }
         .frame(maxHeight: .infinity)
         .padding(32)

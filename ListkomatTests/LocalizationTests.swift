@@ -114,6 +114,24 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    /// The price-list footer date follows the locale; Czech must stay as it
+    /// always read. English used to get the hand-built Czech form too. ICU
+    /// separates the Czech parts with a no-break space (U+202F on iOS 26, which
+    /// also keeps the date from wrapping mid-way); which one varies by ICU
+    /// version, so they are normalised before comparing.
+    func testPriceListDateFollowsLocale() {
+        let cs = TicketListView.priceListDate("2026-08-30", locale: Locale(identifier: "cs_CZ"))
+        XCTAssertEqual(cs.replacingOccurrences(of: "\u{202F}", with: " ")
+                         .replacingOccurrences(of: "\u{A0}", with: " "),
+                       "30. 8. 2026")
+        XCTAssertEqual(TicketListView.priceListDate("2026-08-30", locale: Locale(identifier: "en_US")),
+                       "8/30/2026")
+        XCTAssertEqual(TicketListView.priceListDate("2026-08-30", locale: Locale(identifier: "en_GB")),
+                       "30/08/2026")
+        XCTAssertEqual(TicketListView.priceListDate("srpen 2026", locale: Locale(identifier: "cs_CZ")),
+                       "srpen 2026", "a value that isn't yyyy-MM-dd is shown verbatim")
+    }
+
     func testInfoPlistLocationUsageLocalized() throws {
         let table = try stringsTable(for: "en", table: "InfoPlist")
         XCTAssertNotNil(table["NSLocationWhenInUseUsageDescription"])

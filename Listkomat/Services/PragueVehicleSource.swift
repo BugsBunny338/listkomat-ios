@@ -53,8 +53,9 @@ enum PragueVehicleSource {
                        now: Date = Date()) throws -> [Vehicle] {
         // Two parsers: `ISO8601DateFormatter` rejects fractional seconds unless
         // told to expect them, and rejects their absence once told. Upstream stamps
-        // arrive in both shapes, and a rejected one used to fall back to `now` —
-        // which made the vehicle permanently exempt from the freshness filter.
+        // arrive in both shapes. A stamp neither parses drops the vehicle: falling
+        // back to `now` made it permanently exempt from the freshness filter
+        // (Android drops it the same way).
         let iso = ISO8601DateFormatter()
         let isoFractional = ISO8601DateFormatter()
         isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -63,7 +64,7 @@ enum PragueVehicleSource {
         let payload = try JSONDecoder().decode(Payload.self, from: data)
         return payload.vehicles.compactMap { w -> Vehicle? in
             if let bbox, !bbox.contains(lat: w.lat, lng: w.lng) { return nil }
-            let updated = parse(w.ts) ?? now
+            guard let updated = parse(w.ts) else { return nil }
             if let fresherThan, now.timeIntervalSince(updated) > fresherThan { return nil }
             return Vehicle(
                 id: w.id,

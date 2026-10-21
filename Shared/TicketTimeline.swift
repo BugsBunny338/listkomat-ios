@@ -14,6 +14,16 @@ struct TicketTimeline: Codable, Hashable {
     /// Before this, the ticket shows as "čeká na potvrzení", not counting down.
     func isPending(at now: Date) -> Bool { now < validFrom }
 
+    func isExpired(at now: Date) -> Bool { now >= endDate }
+
+    /// Pending (awaiting the confirmation SMS) → valid → expired.
+    enum Phase { case pending, valid, expired }
+
+    func phase(at now: Date) -> Phase {
+        if isExpired(at: now) { return .expired }
+        return isPending(at: now) ? .pending : .valid
+    }
+
     /// Estimated gap between SMS send and the confirmation SMS.
     static let buffer: TimeInterval = 120
 

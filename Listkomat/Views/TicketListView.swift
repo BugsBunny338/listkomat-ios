@@ -9,7 +9,13 @@ struct TicketListView: View {
     let updatedAt: String
     let isOffline: Bool
     let liveActivity: LiveActivityController
+    /// The band colour: fills (the "Živá mapa" capsule) and the Live Activity.
     let accent: Color
+    /// Prices, links, the city icon and button labels on the page.
+    let textAccent: Color
+    /// Told when the SMS composer opens and closes, so ContentView holds this
+    /// city on screen meanwhile (a city change would dismiss the composer).
+    var onPurchaseSheet: (Bool) -> Void = { _ in }
 
     /// Both of the screen's alerts go through one `.alert` modifier: SwiftUI
     /// drops the second of two attached to the same view.
@@ -40,6 +46,9 @@ struct TicketListView: View {
         }
     }
 
+    /// When this city's list appeared; ContentView gives each city its own
+    /// identity, so a city change resets it and starts the tap guard.
+    @State private var shownAt = Date()
     @State private var pending: Ticket?
     @State private var activeAlert: PurchaseAlert?
     /// Dismissal clears `activeAlert`, but the title argument re-evaluates during
@@ -62,12 +71,24 @@ struct TicketListView: View {
         )
     }
 
-    private var formattedDate: String {
-        let parts = updatedAt.split(separator: "-")
-        guard parts.count == 3, let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else {
-            return updatedAt
-        }
-        return "\(d). \(m). \(y)"
+    @Environment(\.locale) private var locale
+
+    private var formattedDate: String { Self.priceListDate(updatedAt, locale: locale) }
+
+    /// The catalog's `updatedAt` ("2026-08-30") as a numeric date in `locale`:
+    /// "30. 8. 2026" in Czech, "8/30/2026" in US English. Anything that isn't a
+    /// plain `yyyy-MM-dd` is shown verbatim. Parsed and formatted in UTC, so the
+    /// day never shifts with the device's time zone.
+    static func priceListDate(_ updatedAt: String, locale: Locale) -> String {
+        let utc = TimeZone(identifier: "UTC")!
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = utc
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: updatedAt) else { return updatedAt }
+        var style = Date.FormatStyle(date: .numeric, time: .omitted, locale: locale)
+        style.timeZone = utc
+        return date.formatted(style)
     }
 
     var body: some View {
@@ -79,9 +100,10 @@ struct TicketListView: View {
                 } label: {
                     Label("Živá mapa", systemImage: "map")
                         .font(.brandBold(15, relativeTo: .subheadline))
+                        .foregroundStyle(textAccent)
                 }
                 .buttonStyle(.bordered)
-                .tint(accent)
+                .tint(accent)   // the capsule is a fill: band tint; the label reads in textAccent
                 .padding(.bottom, 12)
                 // Eager connect (#12): Brno's stream accumulates vehicles only
                 // as each one reports, so start it while the user is still on
@@ -109,7 +131,7 @@ struct TicketListView: View {
                                 + Text(verbatim: " ")
                                 // Only the link is tinted — the sentence keeps the
                                 // footer's secondary treatment.
-                                + Text("Více").underline().foregroundColor(accent)
+                                + Text("Více").underline().foregroundColor(textAccent)
                         }
                         .buttonStyle(.plain)
                         if isOffline {
@@ -153,6 +175,8 @@ struct TicketListView: View {
                 #endif
             }
         }
+        // Released in the sheet's onDismiss, once the composer is really gone.
+        .onChange(of: pending?.id) { if $0 != nil { onPurchaseSheet(true) } }
         .alert(lastAlert.title, isPresented: alertIsPresented, presenting: activeAlert) { kind in
             if kind == .sendFailed {
                 Button("Více informací") { showSimInfoAfterAlert() }
@@ -162,7 +186,7 @@ struct TicketListView: View {
             Text(kind.message)
         }
         .sheet(isPresented: $showingSimInfo) {
-            SimRequirementView(accent: accent)
+            SimRequirementView(accent: textAccent)
         }
     }
 
@@ -177,6 +201,7 @@ struct TicketListView: View {
 
     /// Show the send-failure alert once the compose sheet is actually gone.
     private func presentSendFailureIfNeeded() {
+        onPurchaseSheet(false)
         guard sendFailedAwaitingDismiss else { return }
         sendFailedAwaitingDismiss = false
         present(.sendFailed)
@@ -202,7 +227,7 @@ struct TicketListView: View {
                     .foregroundStyle(.secondary)
                 Button("Více informací") { showingSimInfo = true }
                     .font(.footnote.weight(.semibold))
-                    .tint(accent)
+                    .tint(textAccent)
             }
             Spacer(minLength: 0)
             Button {
@@ -230,7 +255,7 @@ struct TicketListView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 92)
-                .foregroundStyle(accent)
+                .foregroundStyle(textAccent)
             Text(city.localizedName)
                 .font(.brandBold(22, relativeTo: .title2))
         }
@@ -242,6 +267,17 @@ struct TicketListView: View {
     }
 
     private func tap(_ ticket: Ticket) {
+        // Aimed at the list that was here a moment ago (the city just changed).
+        guard Date().timeIntervalSince(shownAt) >= CitySelection.tapGuard else { return }
+        #if targetEnvironment(simulator)
+        // Recent simulators can't compose SMS at all, so the compose result
+        // below never arrives there: treat the tap as a sent purchase so the
+        // countdown, expiry and Live Activity can be exercised.
+        if !MessageComposeView.canSendText {
+            liveActivity.start(city: city, ticket: ticket, accent: accent)
+            return
+        }
+        #endif
         if MessageComposeView.canSendText {
             pending = ticket
         } else {
@@ -258,7 +294,7 @@ struct TicketListView: View {
                 Spacer()
                 Text("\(ticket.priceKc) Kč")
                     .font(.brandBold(18, relativeTo: .headline))
-                    .foregroundStyle(accent)
+                    .foregroundStyle(textAccent)
             }
             if let note = ticket.localizedNote {
                 Text(note)

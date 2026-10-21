@@ -103,6 +103,21 @@ final class PragueVehicleSourceTests: XCTestCase {
         XCTAssertTrue(vs.isEmpty, "an hour-old vehicle must not survive the freshness filter")
     }
 
+    // A stamp that doesn't parse used to fall back to `now`, so the vehicle
+    // passed every freshness check forever. It must be dropped instead.
+    func testUnparseableTimestampDropsVehicle() throws {
+        let json = #"""
+        {"ts":"2026-07-13T20:10:20Z","vehicles":[
+          {"id":"bad","lat":50.09,"lng":14.43,"brng":10,"line":"9","rt":0,"ts":"not-a-date","dest":null},
+          {"id":"good","lat":50.09,"lng":14.43,"brng":10,"line":"9","rt":0,"ts":"2026-07-13T20:10:15Z","dest":null}
+        ]}
+        """#
+        let all = try PragueVehicleSource.decode(Data(json.utf8), now: fixtureNow)
+        XCTAssertEqual(all.map(\.id), ["good"])
+        let fresh = try PragueVehicleSource.decode(Data(json.utf8), fresherThan: 180, now: fixtureNow)
+        XCTAssertEqual(fresh.map(\.id), ["good"])
+    }
+
     func testFreshnessDropsStale() throws {
         // 60 s window vs fixture timestamps ~10–34 s before `now` keeps all;
         // a `now` far in the future drops all.

@@ -839,6 +839,36 @@
           }
         }
       }
+    },
+    "Jízdenka vypršela" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticket expired"
+          }
+        }
+      }
+    },
+    "Platnost jízdenky skončila." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your ticket is no longer valid."
+          }
+        }
+      }
+    },
+    "Platí do %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valid until %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

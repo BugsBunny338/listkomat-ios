@@ -9,12 +9,16 @@ struct TicketActivityAttributes: ActivityAttributes {
         var sentAt: Date
         var validFrom: Date
         var endDate: Date
+        /// Set only on the final content the app ends the activity with, so the
+        /// lock screen says the ticket expired instead of sitting at 0:00.
+        var expired = false
 
-        init(sentAt: Date, validFrom: Date, endDate: Date) {
+        init(sentAt: Date, validFrom: Date, endDate: Date, expired: Bool = false) {
             self.sentAt = sentAt; self.validFrom = validFrom; self.endDate = endDate
+            self.expired = expired
         }
 
-        private enum CodingKeys: String, CodingKey { case sentAt, validFrom, endDate, startDate }
+        private enum CodingKeys: String, CodingKey { case sentAt, validFrom, endDate, startDate, expired }
 
         /// Backward-compatible decode: a 2.0 activity still in flight when the user
         /// updates persisted the old `{startDate, endDate}` shape. Map its
@@ -31,6 +35,7 @@ struct TicketActivityAttributes: ActivityAttributes {
                 sentAt = legacy
                 validFrom = legacy
             }
+            expired = try c.decodeIfPresent(Bool.self, forKey: .expired) ?? false
         }
 
         func encode(to encoder: Encoder) throws {
@@ -38,6 +43,7 @@ struct TicketActivityAttributes: ActivityAttributes {
             try c.encode(sentAt, forKey: .sentAt)
             try c.encode(validFrom, forKey: .validFrom)
             try c.encode(endDate, forKey: .endDate)
+            if expired { try c.encode(expired, forKey: .expired) }
         }
     }
 

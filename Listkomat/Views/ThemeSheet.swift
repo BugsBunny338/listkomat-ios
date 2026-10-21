@@ -7,8 +7,9 @@ struct ThemeSheet: View {
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
     @Environment(\.dismiss) private var dismiss
 
-    /// Live accent for the current selection (the sheet has its own environment).
-    private var accent: Color { AppTheme.resolve(themeId).accent }
+    /// Live accent for the current selection (the sheet has its own environment),
+    /// in its text shade: it tints the "Hotovo" label and the checkmark.
+    private var accent: Color { AppTheme.resolve(themeId).textAccent }
 
     var body: some View {
         NavigationStack {
@@ -66,8 +67,10 @@ struct ThemeSheet: View {
                 if let mascot = theme.mascot {
                     Text(mascot).font(.system(size: 18))
                 } else {
-                    // Clean / Černá: preview the accent color with "Aa".
-                    Text("Aa").font(.caption.bold()).foregroundStyle(theme.accent)
+                    // Clean / Černá: preview the accent color with "Aa" — as the
+                    // app draws text with it (Čistý's plain swatch is a page surface).
+                    Text("Aa").font(.caption.bold())
+                        .foregroundStyle(theme.band == nil ? theme.textAccent : theme.accent)
                 }
             }
             .frame(width: 56, height: 34)

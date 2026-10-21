@@ -21,6 +21,63 @@ struct AppTheme: Identifiable, Hashable {
     /// dull); Čistý has no band, so it falls back to teal — the original look.
     var accent: Color { accentOverride ?? band ?? .brandTeal }
 
+    /// The accent as text and icon glyphs on the page, sheets and tinted
+    /// surfaces (prices, links, bordered-button labels, the city icon): shaded
+    /// per scheme until it reads at `TextContrast.minRatio` on every surface it
+    /// sits on. Fills (the band, the selected city tile, map stop rings,
+    /// prominent buttons, tinted backgrounds) keep `accent`.
+    var textAccent: Color {
+        let shades = Self.presetShades[id] ?? Self.textAccentShades(for: accent.rgbHex)
+        return Color(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? shades.dark : shades.light))
+        })
+    }
+
+    static func textAccentShades(for accentHex: UInt32) -> (light: UInt32, dark: UInt32) {
+        let accent = RGB(hex: accentHex)
+        return (TextContrast.readable(accent, on: textSurfaces(accent: accent, dark: false)).hex,
+                TextContrast.readable(accent, on: textSurfaces(accent: accent, dark: true)).hex)
+    }
+
+    /// Computed once per preset rather than on every view update.
+    private static let presetShades: [String: (light: UInt32, dark: UInt32)] =
+        Dictionary(uniqueKeysWithValues: presets.map { ($0.id, textAccentShades(for: $0.accent.rgbHex)) })
+
+    /// Every surface accent text is drawn on, per scheme, with system colours
+    /// resolved from UIKit (they shift between iOS releases: iOS 26 has a new
+    /// systemOrange). Tints use the opacities the views draw with.
+    static func textSurfaces(accent: RGB, dark: Bool) -> [RGB] {
+        func system(_ color: UIColor, elevated: Bool = false) -> RGB {
+            let traits = UITraitCollection(traitsFrom: [
+                UITraitCollection(userInterfaceStyle: dark ? .dark : .light),
+                UITraitCollection(userInterfaceLevel: elevated ? .elevated : .base),
+            ])
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            color.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return RGB(r: max(0, min(1, r)), g: max(0, min(1, g)), b: max(0, min(1, b)))
+        }
+        let page = system(.systemGroupedBackground)
+        let card = system(.secondarySystemGroupedBackground)              // list rows; sheets (elevated systemBackground)
+        let sheetRow = system(.secondarySystemGroupedBackground, elevated: true)   // list rows in a sheet
+        let orange = system(.systemOrange)
+        let banner = accent.over(page, alpha: 0.12)            // active-ticket banner
+        return [
+            page, card, sheetRow,
+            orange.over(page, alpha: 0.12),                    // foreign-SIM notice
+            banner,
+            accent.over(page, alpha: borderedFillAlpha),       // bordered button on the page ("Živá mapa")
+            accent.over(banner, alpha: borderedFillAlpha),     // bordered button on the banner ("Potvrdit nyní")
+            accent.over(card, alpha: 0.12),                    // unselected city-picker tile
+        ]
+    }
+
+    /// `.bordered` buttons fill their capsule with the tint at about this
+    /// opacity (measured on the iOS 26 simulator). Those buttons are tinted
+    /// with the band and only their label takes `textAccent`, like Android's
+    /// tonal container: a capsule tinted with the text shade itself would
+    /// darken along with it and force every shade far darker than Android's.
+    static let borderedFillAlpha = 0.18
+
     /// Whether this theme paints a solid color band (vs. the plain system bar).
     var hasBand: Bool { band != nil }
 

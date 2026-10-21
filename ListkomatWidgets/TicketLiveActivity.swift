@@ -18,7 +18,7 @@ struct TicketLiveActivity: Widget {
                 .activitySystemActionForegroundColor(accent(context))
         } dynamicIsland: { context in
             let tint = accent(context)
-            let pending = !context.isStale
+            let pending = !context.isStale && !context.state.expired
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Label(context.attributes.cityName, systemImage: "tram.fill")
@@ -72,7 +72,11 @@ private struct LockScreenView: View {
     let context: ActivityViewContext<TicketActivityAttributes>
 
     private var tint: Color { accent(context) }
-    private var pending: Bool { !context.isStale }   // valid once the activity goes stale at validFrom
+    /// The final content the app ends the activity with at expiry.
+    private var expired: Bool { context.state.expired }
+    /// Valid once the activity goes stale at validFrom. The expired content has
+    /// no staleDate, so it must not read as pending.
+    private var pending: Bool { !context.isStale && !expired }
 
     var body: some View {
         // City name + the big countdown use the default (primary) colour so they
@@ -98,24 +102,35 @@ private struct LockScreenView: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 1) {
-                if pending {
-                    // Buffer countdown to validity — self-ticks; gone once valid.
-                    // Single format key so translators control the word order.
-                    Text("platí za \(Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))")
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-                Text("zbývá")
-                    .font(.caption2)
+            if expired {
+                Text("Jízdenka vypršela")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
-                    .font(.title2.weight(.semibold))
-                    .monospacedDigit()
                     .multilineTextAlignment(.trailing)
-                    .frame(minWidth: 74, alignment: .trailing)
+            } else {
+                countdown
             }
+        }
+    }
+
+    private var countdown: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            if pending {
+                // Buffer countdown to validity — self-ticks; gone once valid.
+                // Single format key so translators control the word order.
+                Text("platí za \(Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))")
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            Text("zbývá")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
+                .font(.title2.weight(.semibold))
+                .monospacedDigit()
+                .multilineTextAlignment(.trailing)
+                .frame(minWidth: 74, alignment: .trailing)
         }
     }
 }
