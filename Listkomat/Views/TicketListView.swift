@@ -94,31 +94,14 @@ struct TicketListView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if city.showsLiveMap {
-                NavigationLink {
-                    LiveMapView(city: city)
-                } label: {
-                    Label("Živá mapa", systemImage: "map")
-                        .font(.brandBold(15, relativeTo: .subheadline))
-                        .foregroundStyle(textAccent)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)   // the capsule is a fill: band tint; the label reads in textAccent
-                .padding(.bottom, 12)
-                // Eager connect (#12): Brno's stream accumulates vehicles only
-                // as each one reports, so start it while the user is still on
-                // the ticket list and the map opens already populated. The task
-                // is cancelled when the screen leaves, releasing the socket
-                // after the grace period.
-                .task(id: city.key) { await LiveSources.keepWarm(cityKey: city.key) }
-            }
-            if showsForeignSimNotice { foreignSimNotice }
             List {
                 Section {
                     ForEach(city.tickets) { ticket in
                         Button { tap(ticket) } label: { row(ticket) }
                             .buttonStyle(.plain)
                     }
+                } header: {
+                    listHeader
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Po klepnutí se otevře předvyplněná SMS na číslo \(city.smsNumber). Lístek koupíte jejím odesláním.")
@@ -143,8 +126,20 @@ struct TicketListView: View {
                     }
                 }
             }
+            // The List owns every gap below the city header (see `listHeader`):
+            // no minimum header height, so an empty header adds nothing.
+            .environment(\.defaultMinListHeaderHeight, 0)
         }
         .background(Color(.systemGroupedBackground))
+        // Eager connect (#12): Brno's stream accumulates vehicles only as each
+        // one reports, so start it while the user is still on the ticket list
+        // and the map opens already populated. The task is cancelled when the
+        // screen leaves, releasing the socket after the grace period. On the
+        // screen, not the button: a List header can be torn down when it
+        // scrolls away, which would cancel it.
+        .task(id: city.key) {
+            if city.showsLiveMap { await LiveSources.keepWarm(cityKey: city.key) }
+        }
         // Storefront is the second half of the "probably foreign" heuristic. It
         // needs no IAP setup or permission, and it only ever adds a note.
         .task {
@@ -213,18 +208,55 @@ struct TicketListView: View {
         Task { @MainActor in showingSimInfo = true }
     }
 
+    /// The Live-map button and the foreign-SIM notice, as the ticket section's
+    /// header, so the List lays out all three gaps (button ↔ notice ↔ first
+    /// row) at `Self.gap` — outside it, the List's own top inset made the gap
+    /// under the notice about three times the one above it (listkomat-ios#34).
+    @ViewBuilder
+    private var listHeader: some View {
+        if city.showsLiveMap || showsForeignSimNotice {
+            VStack(spacing: Self.gap) {
+                if city.showsLiveMap { liveMapButton }
+                if showsForeignSimNotice { foreignSimNotice }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, Self.gap)
+            .listRowInsets(EdgeInsets())   // no header padding of the List's own
+            .textCase(nil)
+        }
+    }
+
+    /// Button ↔ notice ↔ first ticket row.
+    private static let gap: CGFloat = 12
+
+    private var liveMapButton: some View {
+        NavigationLink {
+            LiveMapView(city: city)
+        } label: {
+            Label("Živá mapa", systemImage: "map")
+                .font(.brandBold(15, relativeTo: .subheadline))
+                .foregroundStyle(textAccent)
+        }
+        .buttonStyle(.bordered)
+        .tint(accent)   // the capsule is a fill: band tint; the label reads in textAccent
+    }
+
     /// One-time, dismissible note for users the heuristic flags as probably
     /// foreign. Never blocks: the buttons below stay fully usable.
     private var foreignSimNotice: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.bubble")
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppTheme.noticeGlyph)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Nákup vyžaduje SIM kartu českého operátora")
                     .font(.brandBold(14, relativeTo: .footnote))
+                    // Explicit label colours: a section header's foreground
+                    // is secondary, and `.primary` / `.secondary` would resolve
+                    // relative to it (greyed title, faint body).
+                    .foregroundStyle(Color(.label))
                 Text("Lístky se kupují prémiovou SMS. Ze zahraniční SIM v roamingu nedorazí.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
                 Button("Více informací") { showingSimInfo = true }
                     .font(.footnote.weight(.semibold))
                     .tint(textAccent)
@@ -235,7 +267,7 @@ struct TicketListView: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
                     // The glyph alone is ~13pt; pad it out to a tappable target.
                     .padding(10)
                     .contentShape(Rectangle())
@@ -243,10 +275,20 @@ struct TicketListView: View {
             .padding(-10)   // keep the visual inset, grow only the hit region
             .accessibilityLabel("Zavřít upozornění")
         }
-        .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color.orange.opacity(0.12))
+        // A section header is laid out inside the list's side margins, so the
+        // content lines up with the ticket cards and only the tint runs out to
+        // the screen edges: the strip stays edge to edge, as it always was.
+        // Anything beyond the screen is clipped by the list.
+        .background {
+            Color.orange.opacity(AppTheme.noticeTintAlpha)
+                .padding(.horizontal, -Self.stripBleed)
+        }
     }
+
+    /// Comfortably more than an inset-grouped list's side margin on any
+    /// iPhone (16–20 pt; the app is portrait-only).
+    private static let stripBleed: CGFloat = 100
 
     private var header: some View {
         VStack(spacing: 6) {
