@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "updatedAt": "2026-08-30",
   "cities": [
     {
@@ -26,11 +26,11 @@
       "tickets": [
         { "code": "DPO70", "duration": "70 min", "durationMinutes": 70, "priceKc": 38, "note": "o víkendu a svátcích 90 min",
           "i18n": { "en": { "note": "90 min on weekends and public holidays" } } },
-        { "code": "DPO70Z", "duration": "70 min", "durationMinutes": 70, "priceKc": 19, "note": "zlevněný",
-          "i18n": { "en": { "note": "reduced fare" } } },
+        { "code": "DPO70Z", "duration": "70 min", "durationMinutes": 70, "priceKc": 19, "note": "zlevněný (6–15 let, psi a zavazadla)",
+          "i18n": { "en": { "note": "reduced fare (ages 6–15, dogs and luggage)" } } },
         { "code": "DPO24", "duration": "24 h", "durationMinutes": 1440, "priceKc": 100 },
-        { "code": "DPO24Z", "duration": "24 h", "durationMinutes": 1440, "priceKc": 50, "note": "zlevněný",
-          "i18n": { "en": { "note": "reduced fare" } } }
+        { "code": "DPO24Z", "duration": "24 h", "durationMinutes": 1440, "priceKc": 50, "note": "zlevněný (6–15 let, psi a zavazadla)",
+          "i18n": { "en": { "note": "reduced fare (ages 6–15, dogs and luggage)" } } }
       ]
     },
     {

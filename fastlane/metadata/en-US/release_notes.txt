@@ -1,3 +1,3 @@
-• The live map opens faster — vehicle positions load ahead of time, and coming back to the map shows the last known ones straight away.
-• City names, ticket notes and validity times are now in English too.
-• A bolder app icon that fills its tile better.
+• Your ticket keeps track of itself: the app counts down its validity and notifies you when it expires. Works even with Live Activities off.
+• When you return to the app, the city follows your location again; a manual pick stays as the fallback.
+• More readable colours in every theme and a clearer notice for foreign SIMs.
