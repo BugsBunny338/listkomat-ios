@@ -114,9 +114,6 @@ struct ContentView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("")
             .modifier(ThemedBar(theme: theme, contentScheme: contentScheme))
-            // The tint mostly colours text (button labels, links), so it takes
-            // the text shade; fills that want the band set it themselves.
-            .tint(theme.textAccent)
             .toolbar {
                 if let mascot = theme.mascot {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -199,6 +196,13 @@ struct ContentView: View {
             }
             .task { await store.refresh() }
         }
+        // The tint mostly colours text (button labels, links), so it takes
+        // the text shade; fills that want the band set it themselves. Set on
+        // the stack, not its root: a pushed screen's bar items (the live
+        // map's info button) take their tint from outside the stack, and on
+        // iOS 27 the app-level `.tint` stops following theme switches after
+        // the first one (#47).
+        .tint(theme.textAccent)
         .overlay(RainLayer(trigger: rainNonce))
         .modifier(ForcedScheme(scheme: contentScheme))
     }
