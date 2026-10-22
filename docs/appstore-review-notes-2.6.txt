@@ -1,0 +1,42 @@
+Lístkomat 2.6 — what changed in this update:
+• Active ticket countdown and expiry: after a purchase, the in-app banner counts
+  down to validity ("platí za m:ss" / "valid in m:ss"), then shows the time left
+  and "Platí do HH:MM" / "Valid until HH:MM". At expiry the banner turns grey
+  ("Jízdenka vypršela" / "Ticket expired"), a local notification announces it,
+  and the Live Activity ends showing the expired state. The ticket state is now
+  stored by the app itself, so the banner works even with Live Activities turned
+  off.
+• Location-based city with a manual fallback: the nearest supported city is
+  selected from the device location whenever it is available. A city picked by
+  hand applies to the current session and is remembered only as the fallback
+  for when location is denied or unavailable.
+• Readable theme colours: prices and links use a per-theme text colour with at
+  least 4.5:1 contrast in every theme, in light and dark mode.
+• Unified foreign-SIM notice: the same wording as our Android app, with a
+  warning tint and a close (X) button that keeps it dismissed.
+• iOS 27 fix: the live map's toolbar buttons now follow theme changes.
+
+Purchase mechanism is UNCHANGED from previous approved versions: a ticket is
+bought by sending a carrier-billed premium SMS (price = ticket price), which
+requires a Czech SIM. A reviewer on a foreign SIM or without a SIM cannot
+complete a purchase — this is expected and not a bug. No in-app purchase applies
+(this is a real-world public-transport ticket billed by the carrier).
+
+The live map uses open, CC-BY-licensed public transit data (Prague: Operátor ICT /
+Golemio PID; Brno: data.Brno / KORDIS JMK), fetched via a small caching proxy that
+holds the data key. The map needs no account, no purchase, and no SIM — a reviewer
+can open any city's "Živá mapa" to see it working.
+
+Two things a reviewer will or will not see, both intended:
+• The notification permission prompt appears only after a first ticket purchase
+  (it is used solely for the expiry notification). Since a purchase cannot be
+  completed in review, the prompt will not appear during review.
+• Outside Czechia or with a non-Czech device language, an orange "Nákup vyžaduje
+  SIM kartu českého operátora" / "Buying requires a Czech operator's SIM" notice
+  sits at the top of the ticket list. That is intended; the X dismisses it.
+
+The quickest way to see this release's visible changes: open "Vzhled"
+(Appearance, the paintbrush) and switch themes — prices and links stay readable
+in each. Open "Vybrat město" (Choose city) — with location allowed, the nearest
+city is preselected. "Živá mapa" (Live map) works for Praha and Brno from
+anywhere, with no SIM or account.
