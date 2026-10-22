@@ -5,8 +5,8 @@ vehicle map. Personal/portfolio project — not a money-maker. The user-facing
 overview, repo family table and doc links live in [README.md](README.md); this
 file is the working context that isn't obvious from the code.
 
-**Start sessions from the apps hub** (`~/prj/mobile-apps`) — this repo lives one
-level down, at `~/prj/mobile-apps/listkomat-ios`, next to the Android, catalog and
+**Start sessions from the apps hub** (`~/prj/mobile-apps-hub`) — this repo lives one
+level down, at `~/prj/mobile-apps-hub/listkomat-ios`, next to the Android, catalog and
 web siblings. The hub CLAUDE.md carries the cross-app rules,
 [`../docs/listkomat.md`](../docs/listkomat.md) the Lístkomat family rules, and
 [`../docs/app-store-connect.md`](../docs/app-store-connect.md) the store lessons;
