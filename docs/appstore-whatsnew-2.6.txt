@@ -1,0 +1,17 @@
+App Store "What's New" — Lístkomat 2.6
+(written fresh for this release, not carried over from 2.5)
+
+Headline: the active ticket now counts down in the app and announces its expiry
+with a notification (works with Live Activities off too); the city follows your
+location again when you come back, with a manual pick as the fallback; readable
+colours in every theme and a clearer foreign-SIM notice.
+
+--- Czech (primary) ---
+• Lístek si hlídá platnost sám: v aplikaci běží odpočet, po vypršení přijde upozornění. Funguje i bez živých aktivit.
+• Při návratu do aplikace se město znovu řídí vaší polohou; ruční výběr zůstává jako záloha.
+• Lépe čitelné barvy ve všech motivech a přehlednější upozornění pro zahraniční SIM.
+
+--- English ---
+• Your ticket keeps track of itself: the app counts down its validity and notifies you when it expires. Works even with Live Activities off.
+• When you return to the app, the city follows your location again; a manual pick stays as the fallback.
+• More readable colours in every theme and a clearer notice for foreign SIMs.
