@@ -31,9 +31,10 @@ Two things a reviewer will or will not see, both intended:
 • The notification permission prompt appears only after a first ticket purchase
   (it is used solely for the expiry notification). Since a purchase cannot be
   completed in review, the prompt will not appear during review.
-• Outside Czechia or with a non-Czech device language, an orange "Nákup vyžaduje
-  SIM kartu českého operátora" / "Buying requires a Czech operator's SIM" notice
-  sits at the top of the ticket list. That is intended; the X dismisses it.
+• With a non-Czech device language or an App Store account outside Czechia, an
+  orange "Nákup vyžaduje SIM kartu českého operátora" / "Buying requires a Czech
+  operator's SIM" notice sits at the top of the ticket list. That is intended;
+  the X dismisses it.
 
 The quickest way to see this release's visible changes: open "Vzhled"
 (Appearance, the paintbrush) and switch themes — prices and links stay readable
