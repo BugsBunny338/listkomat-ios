@@ -1,1 +1,1 @@
-jízdenka,mhd,lístek,jízdné,doprava,tramvaj,šalina,autobus,trolejbus,metro,praha,brno,ostrava,plzeň
+jízdenka,mhd,lístek,jízdné,doprava,tramvaj,šalina,autobus,listkomat,metro,praha,brno,ostrava,plzeň
