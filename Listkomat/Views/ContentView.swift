@@ -324,7 +324,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Group {
                         switch phase {
-                        case .pending: Text("Čeká na potvrzovací SMS").foregroundStyle(.orange)
+                        case .pending: Text("Čeká na potvrzovací SMS").foregroundStyle(AppTheme.pendingCaption)
                         case .valid: Text("Aktivní lístek").foregroundStyle(.secondary)
                         case .expired: Text("Jízdenka vypršela").foregroundStyle(.secondary)
                         }
@@ -362,10 +362,12 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                     .tint(theme.accent)   // band-tinted capsule (a fill), text-accent label
                 }
-                Button("Ukončit") { liveActivity.stop() }
-                    .font(.subheadline.weight(.semibold))
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                Button { liveActivity.stop() } label: {
+                    Text("Ukončit").foregroundStyle(AppTheme.endLabel)
+                }
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.bordered)
+                .tint(.red)   // red capsule (a fill); the label is red shaded to read on it
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)

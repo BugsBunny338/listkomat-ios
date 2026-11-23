@@ -131,6 +131,28 @@ final class ThemeContrastTests: XCTestCase {
         XCTAssertEqual(AppTheme.resolve("usa").onAccent.rgbHex, 0xFFFFFF)
     }
 
+    /// P1 2b: the banner's orange pending caption and red "Ukončit" read at AA
+    /// on every theme's banner, in both schemes, and keep their hue.
+    func testBannerCaptionsRead() {
+        let cases: [(String, UIColor, (light: UInt32, dark: UInt32), (Bool) -> [RGB])] = [
+            ("pending", .systemOrange, AppTheme.pendingCaptionShades(), { AppTheme.bannerTints(dark: $0) }),
+            ("Ukončit", .systemRed, AppTheme.endLabelShades(), { AppTheme.endButtonSurfaces(dark: $0) }),
+        ]
+        for (name, system, shades, surfaces) in cases {
+            for (dark, hex) in [(false, shades.light), (true, shades.dark)] {
+                let raw = AppTheme.resolved(system, dark: dark)
+                let before = surfaces(dark).map { TextContrast.ratio(raw, $0) }.min()!
+                let after = surfaces(dark).map { TextContrast.ratio(RGB(hex: hex), $0) }.min()!
+                XCTAssertGreaterThanOrEqual(after, TextContrast.minRatio, "\(name) \(dark ? "dark" : "light")")
+                let dh = abs(TextContrast.hsl(RGB(hex: hex)).h - TextContrast.hsl(raw).h)
+                XCTAssertLessThan(min(dh, 1 - dh), 0.01, "\(name) hue drifted")
+                if before >= TextContrast.minRatio { XCTAssertEqual(hex, raw.hex, "\(name) already read") }
+                print(String(format: "P1 2b %@ %@ system %06X worst %.2f -> %06X worst %.2f", name,
+                             dark ? "dark" : "light", raw.hex, before, hex, after))
+            }
+        }
+    }
+
     /// Prints the table for the report (light → dark per theme).
     func testPrintShadeTable() {
         for theme in AppTheme.presets {

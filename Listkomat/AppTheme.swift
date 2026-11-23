@@ -113,6 +113,63 @@ struct AppTheme: Identifiable, Hashable {
         })
     }()
 
+    // MARK: Active-ticket banner captions (P1 2b)
+
+    /// The banner's background while the ticket is pending or valid, for every
+    /// preset: the band at 12 % on the page.
+    static func bannerTints(dark: Bool) -> [RGB] {
+        let page = resolved(.systemGroupedBackground, dark: dark)
+        return presets.map { RGB(hex: $0.accent.rgbHex).over(page, alpha: 0.12) }
+    }
+
+    /// The expired banner's background: tertiary system fill on the page.
+    static func expiredBannerTint(dark: Bool) -> RGB {
+        resolved(.tertiarySystemFill, over: resolved(.systemGroupedBackground, dark: dark), dark: dark)
+    }
+
+    /// Every surface "Ukončit"'s label sits on: its red `.bordered` capsule on
+    /// each banner, the expired one included.
+    static func endButtonSurfaces(dark: Bool) -> [RGB] {
+        let red = resolved(.systemRed, dark: dark)
+        return (bannerTints(dark: dark) + [expiredBannerTint(dark: dark)])
+            .map { red.over($0, alpha: borderedFillAlpha) }
+    }
+
+    /// "Čeká na potvrzovací SMS": system orange, shaded by the `textAccent`
+    /// rule until it reads on every theme's banner. Raw orange is ~2:1 on the
+    /// light banners; dark mode's already reads and is left alone.
+    static func pendingCaptionShades() -> (light: UInt32, dark: UInt32) {
+        func shade(dark: Bool) -> UInt32 {
+            TextContrast.readable(resolved(.systemOrange, dark: dark), on: bannerTints(dark: dark)).hex
+        }
+        return (shade(dark: false), shade(dark: true))
+    }
+
+    /// "Ukončit": system red, shaded the same way on its own red capsule.
+    static func endLabelShades() -> (light: UInt32, dark: UInt32) {
+        func shade(dark: Bool) -> UInt32 {
+            TextContrast.readable(resolved(.systemRed, dark: dark), on: endButtonSurfaces(dark: dark)).hex
+        }
+        return (shade(dark: false), shade(dark: true))
+    }
+
+    static let pendingCaption: Color = dynamic(pendingCaptionShades())
+    static let endLabel: Color = dynamic(endLabelShades())
+
+    private static func dynamic(_ shades: (light: UInt32, dark: UInt32)) -> Color {
+        Color(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? shades.dark : shades.light))
+        })
+    }
+
+    /// A translucent system colour (a fill) composited over `base`.
+    static func resolved(_ color: UIColor, over base: RGB, dark: Bool) -> RGB {
+        let traits = UITraitCollection(userInterfaceStyle: dark ? .dark : .light)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return RGB(r: max(0, min(1, r)), g: max(0, min(1, g)), b: max(0, min(1, b))).over(base, alpha: Double(a))
+    }
+
     /// `.bordered` buttons fill their capsule with the tint at about this
     /// opacity (measured on the iOS 26 simulator). Those buttons are tinted
     /// with the band and only their label takes `textAccent`, like Android's
