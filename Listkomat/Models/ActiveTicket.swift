@@ -29,9 +29,6 @@ struct ActiveTicket: Codable, Equatable {
     /// `endDate`; older ones are dropped at launch (Android: EXPIRED_KEEP_MS).
     static let expiredKeep: TimeInterval = 60 * 60
 
-    /// What a relaunch keeps: the stored ticket, unless it expired more than
-    /// `expiredKeep` ago. A freshly expired one stays, so its expired state is
-    /// seen rather than the banner silently vanishing.
     /// Whole minutes of validity. From the timeline, which keeps its duration
     /// through "Potvrdit nyní", so a ticket adopted from a 2.5 activity has it too.
     var durationMinutes: Int { Int((timeline.duration / 60).rounded()) }
@@ -43,6 +40,9 @@ struct ActiveTicket: Codable, Equatable {
         "\(cityName) · \(TicketDuration.label(minutes: durationMinutes, bundle: bundle, locale: locale))"
     }
 
+    /// What a relaunch keeps: the stored ticket, unless it expired more than
+    /// `expiredKeep` ago. A freshly expired one stays, so its expired state is
+    /// seen rather than the banner silently vanishing.
     static func restored(_ stored: ActiveTicket?, now: Date) -> ActiveTicket? {
         guard let stored, now < stored.timeline.endDate.addingTimeInterval(expiredKeep) else { return nil }
         return stored

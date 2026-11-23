@@ -101,9 +101,10 @@ struct RainLayer: View {
             if rain.drops.isEmpty {
                 Color.clear   // no animation timer while idle
             } else {
-                // 60 fps is plenty for a falling emoji and halves the work on
-                // ProMotion (120 Hz).
-                TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
+                // No minimumInterval: without CADisableMinimumFrameDurationOnPhone
+                // in Info.plist the app already animates at ≤ 60 fps on ProMotion,
+                // and a 1/60 floor can drop the odd frame on a 60 Hz display.
+                TimelineView(.animation) { timeline in
                     let drops = rain.drops
                     // The glyph is a Canvas symbol: laid out and rendered once,
                     // then drawn per drop. Resolving a Text per drop per frame was
