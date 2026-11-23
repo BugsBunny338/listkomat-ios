@@ -5,6 +5,7 @@ import SwiftUI
 /// to the system permission request — no neutral wording, no escape button.
 struct LocationPrimerView: View {
     var accent: Color = .brandTeal       // the prominent button's fill (band colour)
+    var onAccent: Color = .black         // its label: black or white, whichever reads on the fill
     var textAccent: Color = .brandTeal   // the icon on the sheet
     let onContinue: () -> Void
 
@@ -24,6 +25,7 @@ struct LocationPrimerView: View {
 
             Button(action: onContinue) {
                 Text("Pokračovat")
+                    .foregroundStyle(onAccent)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

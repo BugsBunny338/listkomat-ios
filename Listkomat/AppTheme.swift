@@ -33,6 +33,19 @@ struct AppTheme: Identifiable, Hashable {
         })
     }
 
+    /// Labels and glyphs drawn ON a band fill (the prominent "Vybrat město" and
+    /// "Pokračovat" buttons, the selected city tile): black or white, whichever
+    /// contrasts more with the band, as Android's `onPrimary`. White on the light
+    /// bands read ~2:1. The fill is the same in both schemes, so is this.
+    var onAccent: Color { Color(hex: Self.onFillHex(for: accent.rgbHex)) }
+
+    static func onFillHex(for fillHex: UInt32) -> UInt32 {
+        let fill = RGB(hex: fillHex)
+        let white = TextContrast.ratio(RGB(hex: 0xFFFFFF), fill)
+        let black = TextContrast.ratio(RGB(hex: 0x000000), fill)
+        return white >= black ? 0xFFFFFF : 0x000000
+    }
+
     static func textAccentShades(for accentHex: UInt32) -> (light: UInt32, dark: UInt32) {
         let accent = RGB(hex: accentHex)
         return (TextContrast.readable(accent, on: textSurfaces(accent: accent, dark: false)).hex,

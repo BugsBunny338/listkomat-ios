@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// Manual city override — a grid of the original 2016 city landmark icons
-/// (white line art, tinted to the brand teal; white on teal when selected).
+/// (line art in the text accent; black or white on the band when selected).
 struct CityPickerView: View {
     let cities: [City]
     let selectedKey: String?
     let accent: Color        // tile fills (band colour)
+    let onAccent: Color      // the glyph on the selected (band-filled) tile
     let textAccent: Color    // glyphs on the unselected tiles, the "Zavřít" label
     let onSelect: (City) -> Void
 
@@ -46,7 +47,7 @@ struct CityPickerView: View {
                     .resizable()
                     .scaledToFit()
                     .padding(18)
-                    .foregroundStyle(selected ? Color.white : textAccent)
+                    .foregroundStyle(selected ? onAccent : textAccent)
             }
             .aspectRatio(1, contentMode: .fit)
             Text(city.localizedName)

@@ -148,6 +148,7 @@ struct ContentView: View {
                     cities: store.cities,
                     selectedKey: currentCity?.key,
                     accent: theme.accent,
+                    onAccent: theme.onAccent,
                     textAccent: theme.textAccent
                 ) { city in
                     fallbackCityKey = city.key
@@ -158,6 +159,7 @@ struct ContentView: View {
             .sheet(isPresented: $showingPrimer) {
                 LocationPrimerView(
                     accent: theme.accent,
+                    onAccent: theme.onAccent,
                     textAccent: theme.textAccent,
                     onContinue: {
                         showingPrimer = false
@@ -394,9 +396,11 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            Button("Vybrat město") { showingPicker = true }
-                .buttonStyle(.borderedProminent)
-                .tint(theme.accent)   // a fill: keeps the band colour
+            Button { showingPicker = true } label: {
+                Text("Vybrat město").foregroundStyle(theme.onAccent)   // black or white, whichever reads on the band
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(theme.accent)   // a fill: keeps the band colour
         }
         .frame(maxHeight: .infinity)
         .padding(32)

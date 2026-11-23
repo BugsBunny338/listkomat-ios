@@ -108,6 +108,29 @@ final class ThemeContrastTests: XCTestCase {
         print(String(format: "I notice glyph light %06X dark %06X", shades.light, shades.dark))
     }
 
+    /// P1 2a: labels on band-filled buttons (and the selected city tile's
+    /// glyph) read at WCAG AA on every theme. The fill is the band in both
+    /// schemes, so one sweep covers light and dark.
+    func testOnAccentReadsOnEveryBandFill() {
+        for theme in AppTheme.presets {
+            let fill = RGB(hex: theme.accent.rgbHex)
+            let on = AppTheme.onFillHex(for: fill.hex)
+            XCTAssertTrue(on == 0x000000 || on == 0xFFFFFF)
+            XCTAssertEqual(theme.onAccent.rgbHex, on)
+            let ratio = TextContrast.ratio(RGB(hex: on), fill)
+            let other = TextContrast.ratio(RGB(hex: on == 0 ? 0xFFFFFF : 0x000000), fill)
+            XCTAssertGreaterThanOrEqual(ratio, 4.5, "\(theme.id): \(ratio)")
+            XCTAssertGreaterThanOrEqual(ratio, other, "\(theme.id): the other one reads better")
+            print(String(format: "P1 2a %@ band %06X white %.2f -> %@ %.2f", theme.id, fill.hex,
+                         TextContrast.ratio(RGB(hex: 0xFFFFFF), fill), on == 0 ? "black" : "white", ratio))
+        }
+        // Light bands get black, dark ones white.
+        XCTAssertEqual(AppTheme.resolve("pink").onAccent.rgbHex, 0x000000)
+        XCTAssertEqual(AppTheme.resolve("clean").onAccent.rgbHex, 0x000000)
+        XCTAssertEqual(AppTheme.resolve("brno").onAccent.rgbHex, 0xFFFFFF)
+        XCTAssertEqual(AppTheme.resolve("usa").onAccent.rgbHex, 0xFFFFFF)
+    }
+
     /// Prints the table for the report (light → dark per theme).
     func testPrintShadeTable() {
         for theme in AppTheme.presets {
