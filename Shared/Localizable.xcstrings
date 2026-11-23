@@ -537,6 +537,16 @@
         }
       }
     },
+    "Pro toto město zatím živou mapu nemáme." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No live map for this city yet."
+          }
+        }
+      }
+    },
     "Připojuji se k živým datům…" : {
       "localizations" : {
         "en" : {

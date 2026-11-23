@@ -96,4 +96,36 @@ final class CatalogTests: XCTestCase {
         let catalog = try JSONDecoder().decode(TicketCatalog.self, from: Data(json.utf8))
         XCTAssertTrue(try XCTUnwrap(catalog.cities.first).showsLiveMap)
     }
+
+    /// P1 item 3: the footer's "no live map" line shows exactly where the
+    /// "Živá mapa" button doesn't: map-less cities and kill-switched ones.
+    func testNoLiveMapNoteFollowsTheMap() throws {
+        let json = #"""
+        {"version":1,"updatedAt":"2026-11-23","cities":[
+          {"key":"praha","name":"Praha","lat":50.07,"lng":14.43,"smsNumber":"90206","tickets":[]},
+          {"key":"brno","name":"Brno","lat":49.19,"lng":16.6,"smsNumber":"90206",
+           "hasLiveMap":true,"tickets":[]},
+          {"key":"ostrava","name":"Ostrava","lat":49.82,"lng":18.26,"smsNumber":"90206","tickets":[]},
+          {"key":"hradec","name":"Hradec Králové","lat":50.21,"lng":15.83,"smsNumber":"90206",
+           "hasLiveMap":false,"tickets":[]},
+          {"key":"brno2","name":"Brno","lat":49.19,"lng":16.6,"smsNumber":"90206",
+           "hasLiveMap":true,"liveMapDisabled":true,"tickets":[]},
+          {"key":"praha2","name":"Praha","lat":50.07,"lng":14.43,"smsNumber":"90206",
+           "liveMapDisabled":true,"tickets":[]}
+        ]}
+        """#
+        let cities = try JSONDecoder().decode(TicketCatalog.self, from: Data(json.utf8)).cities
+        let notes = Dictionary(uniqueKeysWithValues: cities.map { ($0.key, $0.showsNoLiveMapNote) })
+        XCTAssertEqual(notes, ["praha": false, "brno": false, "ostrava": true, "hradec": true,
+                               "brno2": true, "praha2": true])
+        for city in cities { XCTAssertNotEqual(city.showsNoLiveMapNote, city.showsLiveMap) }
+    }
+
+    /// The bundled catalog: every city but Praha and Brno gets the line.
+    func testBundledCatalogNoLiveMapCities() throws {
+        let url = try XCTUnwrap(Bundle(for: CatalogStore.self).url(forResource: "tickets", withExtension: "json"))
+        let cities = try JSONDecoder().decode(TicketCatalog.self, from: Data(contentsOf: url)).cities
+        XCTAssertEqual(Set(cities.filter { !$0.showsNoLiveMapNote }.map(\.key)), ["praha", "brno"])
+        XCTAssertGreaterThan(cities.filter(\.showsNoLiveMapNote).count, 0)
+    }
 }

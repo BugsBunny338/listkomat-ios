@@ -123,6 +123,9 @@ struct TicketListView: View {
                         } else {
                             Text("Ceník platný k \(formattedDate)")
                         }
+                        if city.showsNoLiveMapNote {
+                            Text("Pro toto město zatím živou mapu nemáme.")
+                        }
                     }
                 }
             }

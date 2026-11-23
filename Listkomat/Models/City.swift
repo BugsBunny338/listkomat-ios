@@ -33,6 +33,11 @@ struct City: Identifiable, Codable, Hashable {
         return hasLiveMap == true
     }
 
+    /// The ticket list's footer says there is no live map here (yet): a quiet
+    /// line in the footer, never the header, so it can't push the ticket rows
+    /// down under a thumb. Follows `showsLiveMap`, kill switch included.
+    var showsNoLiveMapNote: Bool { !showsLiveMap }
+
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }

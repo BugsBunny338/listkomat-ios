@@ -87,6 +87,7 @@ final class LocalizationTests: XCTestCase {
         // Pins vehicle-name translations locale-independently (VehicleModelTests
         // can't — localizedName resolves per the test host's language).
         XCTAssertEqual(en["Tramvaj"], "Tram")
+        XCTAssertEqual(en["Pro toto město zatím živou mapu nemáme."], "No live map for this city yet.")
         // Cold-start card: the hint explains a ~30 s wait, so it has to read as
         // a sentence in both languages, not a truncated label.
         XCTAssertEqual(en["Připojuji se k živým datům…"], "Connecting to live data…")
