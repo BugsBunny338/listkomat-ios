@@ -1,9 +1,6 @@
 {
   "sourceLanguage" : "cs",
   "strings" : {
-    "%@ · %@" : {
-      "shouldTranslate" : false
-    },
     "%lld hodin" : {
       "localizations" : {
         "cs" : {

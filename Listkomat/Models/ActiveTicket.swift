@@ -14,7 +14,10 @@ struct ActiveTicket: Codable, Equatable {
     var cityKey: String?
     /// Localized at purchase; the banner re-resolves it from `cityKey` when it can.
     var cityName: String
-    var ticketLabel: String
+    // No stored duration label: 2.6 stored `ticketLabel` localized at purchase,
+    // so a language switch left "Praha · 30 minut" in an English UI. The title
+    // is built at render time (`title`); a 2.6 ticket's `ticketLabel` key is
+    // simply ignored when it decodes.
     /// The SMS body that bought it. nil for an adopted 2.5 ticket.
     var ticketCode: String?
     var priceKc: Int
@@ -29,6 +32,17 @@ struct ActiveTicket: Codable, Equatable {
     /// What a relaunch keeps: the stored ticket, unless it expired more than
     /// `expiredKeep` ago. A freshly expired one stays, so its expired state is
     /// seen rather than the banner silently vanishing.
+    /// Whole minutes of validity. From the timeline, which keeps its duration
+    /// through "Potvrdit nyní", so a ticket adopted from a 2.5 activity has it too.
+    var durationMinutes: Int { Int((timeline.duration / 60).rounded()) }
+
+    /// "Praha · 30 minut" in the current language, built on every render
+    /// (Android's `ActiveTicket.title`). `cityName` is the city re-resolved
+    /// from `cityKey` by the caller; `bundle`/`locale` pin a language in tests.
+    func title(cityName: String, bundle: Bundle = .main, locale: Locale = .current) -> String {
+        "\(cityName) · \(TicketDuration.label(minutes: durationMinutes, bundle: bundle, locale: locale))"
+    }
+
     static func restored(_ stored: ActiveTicket?, now: Date) -> ActiveTicket? {
         guard let stored, now < stored.timeline.endDate.addingTimeInterval(expiredKeep) else { return nil }
         return stored

@@ -48,9 +48,20 @@ struct TicketActivityAttributes: ActivityAttributes {
     }
 
     var cityName: String
-    var ticketLabel: String   // e.g. "30 min"
+    /// The duration as words in the app's language at start ("30 minut"). Only
+    /// the fallback for an activity started by 2.6 or older; see `durationLabel`.
+    var ticketLabel: String
     var priceKc: Int
     /// Theme accent as 0xRRGGBB, so the Live Activity matches the in-app accent.
     /// Optional → a legacy 2.0 activity (no accent) decodes fine and falls back to teal.
     var accentHex: UInt32?
+    /// Minutes of validity (2.7+). Optional → older activities decode without it.
+    var durationMinutes: Int? = nil
+
+    /// The duration for "Lístek na …", worded where the sentence is localized
+    /// (the widget), so the two can't end up in different languages
+    /// ("Ticket for 30 minut").
+    var durationLabel: String {
+        durationMinutes.map { TicketDuration.label(minutes: $0) } ?? ticketLabel
+    }
 }

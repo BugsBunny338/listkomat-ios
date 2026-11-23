@@ -20,7 +20,7 @@ final class ActiveTicketTests: XCTestCase {
     }
 
     private func ticket(cityKey: String? = "praha") -> ActiveTicket {
-        ActiveTicket(cityKey: cityKey, cityName: "Praha", ticketLabel: "30 minut", ticketCode: "DPT31",
+        ActiveTicket(cityKey: cityKey, cityName: "Praha", ticketCode: "DPT31",
                      priceKc: 42, accentHex: 0x56C4CF,
                      timeline: TicketTimeline.make(sentAt: t0, durationSeconds: 1800))
     }
@@ -113,5 +113,103 @@ final class ActiveTicketTests: XCTestCase {
                                             from: JSONEncoder().encode(state))
         XCTAssertTrue(back.expired)
         XCTAssertEqual(back.endDate, decoded.endDate)
+    }
+
+    // MARK: - Title at render time (P1 2d)
+
+    /// The compiled table of one language, so a test can pin it.
+    private func lproj(_ language: String) throws -> Bundle {
+        let app = Bundle(for: CatalogStore.self)
+        let path = try XCTUnwrap(app.path(forResource: language, ofType: "lproj"), "\(language).lproj")
+        return try XCTUnwrap(Bundle(path: path))
+    }
+
+    func testTitleIsBuiltInTheCurrentLanguage() throws {
+        let cs = try lproj("cs"), en = try lproj("en")
+        let csLocale = Locale(identifier: "cs_CZ"), enLocale = Locale(identifier: "en_US")
+        XCTAssertEqual(ticket().title(cityName: "Praha", bundle: cs, locale: csLocale), "Praha · 30 minut")
+        XCTAssertEqual(ticket().title(cityName: "Prague", bundle: en, locale: enLocale), "Prague · 30 minutes")
+        func title(_ minutes: Int, _ bundle: Bundle, _ locale: Locale) -> String {
+            var t = ticket()
+            t.timeline = TicketTimeline.make(sentAt: t0, durationSeconds: Double(minutes) * 60)
+            return t.title(cityName: "X", bundle: bundle, locale: locale)
+        }
+        XCTAssertEqual(title(1, cs, csLocale), "X · 1 minutu")
+        XCTAssertEqual(title(1, en, enLocale), "X · 1 minute")
+        XCTAssertEqual(title(60, cs, csLocale), "X · 60 minut")
+        XCTAssertEqual(title(120, cs, csLocale), "X · 2 hodiny")
+        XCTAssertEqual(title(120, en, enLocale), "X · 2 hours")
+        XCTAssertEqual(title(1440, cs, csLocale), "X · 24 hodin")
+        XCTAssertEqual(title(1440, en, enLocale), "X · 24 hours")
+    }
+
+    /// No Czech fragment in an English title, whatever language the ticket was
+    /// bought in: nothing about the duration is stored as words any more.
+    func testEnglishTitleHasNoCzechFragment() throws {
+        let title = ticket().title(cityName: "Prague", bundle: try lproj("en"), locale: Locale(identifier: "en_US"))
+        XCTAssertFalse(title.contains("minut "))
+        XCTAssertFalse(title.hasSuffix("minut"))
+    }
+
+    /// "Potvrdit nyní" re-anchors the window but keeps its length, so the
+    /// title's duration doesn't drift.
+    func testDurationSurvivesConfirmNow() {
+        var t = ticket()
+        XCTAssertEqual(t.durationMinutes, 30)
+        t.timeline = t.timeline.confirmed(at: t0.addingTimeInterval(37))
+        XCTAssertEqual(t.durationMinutes, 30)
+    }
+
+    /// A ticket persisted by 2.6 carries a `ticketLabel` localized at purchase.
+    /// It must still decode (the key is ignored) after the upgrade.
+    func testTicketStoredBy26StillDecodes() throws {
+        // JSONEncoder's default dates: seconds since 2001-01-01.
+        let sent = t0.timeIntervalSinceReferenceDate
+        let json = """
+        {"cityKey":"praha","cityName":"Praha","ticketLabel":"30 minut","ticketCode":"DPT31",\
+        "priceKc":42,"accentHex":5686479,\
+        "timeline":{"sentAt":\(sent),"validFrom":\(sent + 120),"endDate":\(sent + 1920)}}
+        """
+        defaults.set(Data(json.utf8), forKey: ActiveTicketStore.key)
+        let loaded = try XCTUnwrap(ActiveTicketStore(defaults: defaults).load())
+        XCTAssertEqual(loaded, ticket())
+        XCTAssertEqual(loaded.durationMinutes, 30)
+        XCTAssertEqual(loaded.title(cityName: "Prague", bundle: try lproj("en"), locale: Locale(identifier: "en_US")),
+                       "Prague · 30 minutes")
+    }
+
+    /// The 2.6 shape of a ticket adopted from a 2.5 Live Activity (no key, no code).
+    func testAdoptedTicketStoredBy26StillDecodes() throws {
+        let sent = t0.timeIntervalSinceReferenceDate
+        let json = """
+        {"cityName":"Brno","ticketLabel":"90 minut","priceKc":30,\
+        "timeline":{"sentAt":\(sent),"validFrom":\(sent + 120),"endDate":\(sent + 5520)}}
+        """
+        defaults.set(Data(json.utf8), forKey: ActiveTicketStore.key)
+        let loaded = try XCTUnwrap(ActiveTicketStore(defaults: defaults).load())
+        XCTAssertNil(loaded.cityKey)
+        XCTAssertNil(loaded.ticketCode)
+        XCTAssertEqual(loaded.durationMinutes, 90)
+    }
+
+    func testNewTicketsStoreNoLabel() throws {
+        let data = try JSONEncoder().encode(ticket())
+        let keys = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any]).keys
+        XCTAssertFalse(keys.contains("ticketLabel"))
+    }
+
+    /// The Live Activity words the duration itself (same language as its
+    /// sentence); an activity started by 2.6 falls back to its stored label.
+    func testActivityAttributesDurationLabel() throws {
+        let old = TicketActivityAttributes(cityName: "Praha", ticketLabel: "30 minut", priceKc: 42, accentHex: nil)
+        XCTAssertEqual(old.durationLabel, "30 minut")
+        let new = TicketActivityAttributes(cityName: "Praha", ticketLabel: "30 minut", priceKc: 42,
+                                           accentHex: nil, durationMinutes: 30)
+        XCTAssertEqual(new.durationLabel, TicketDuration.label(minutes: 30))
+        // A 2.6 activity's attributes (no durationMinutes) decode.
+        let json = #"{"cityName":"Praha","ticketLabel":"30 minut","priceKc":42}"#
+        let decoded = try JSONDecoder().decode(TicketActivityAttributes.self, from: Data(json.utf8))
+        XCTAssertNil(decoded.durationMinutes)
+        XCTAssertEqual(decoded.durationLabel, "30 minut")
     }
 }

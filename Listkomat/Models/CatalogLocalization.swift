@@ -48,33 +48,14 @@ extension Ticket {
         i18n?[language]?.note.nonEmpty ?? note.nonEmpty
     }
 
-    /// Whole hours read better than three-digit minutes, but only past the point
-    /// where operators stop selling in minutes: a 60-minute ticket is sold as
-    /// sixty minutes, a 1440-minute one as a day pass.
-    enum DurationUnit: Hashable {
-        case minutes(Int)
-        case hours(Int)
-    }
+    typealias DurationUnit = TicketDuration.Unit
 
-    var durationUnit: DurationUnit {
-        if durationMinutes >= 120, durationMinutes % 60 == 0 {
-            return .hours(durationMinutes / 60)
-        }
-        return .minutes(durationMinutes)
-    }
+    var durationUnit: DurationUnit { TicketDuration.unit(minutes: durationMinutes) }
 
     /// Duration in the user's language, formatted from `durationMinutes` rather
-    /// than taken from the catalog's Czech `duration` label.
-    ///
-    /// Always rendered right after "Lístek na …" / "Ticket for …", so the Czech
-    /// forms are accusative ("na 1 hodinu", not "na 1 hodina") — which is why
-    /// this uses hand-written plural variations instead of a generic
-    /// `DateComponentsFormatter`, whose nominative output would be wrong there.
+    /// than taken from the catalog's Czech `duration` label (see `TicketDuration`).
     var localizedDuration: String {
         guard durationMinutes > 0 else { return duration }   // malformed catalog row
-        switch durationUnit {
-        case .minutes(let count): return String(localized: "\(count) minut")
-        case .hours(let count):   return String(localized: "\(count) hodin")
-        }
+        return TicketDuration.label(minutes: durationMinutes)
     }
 }

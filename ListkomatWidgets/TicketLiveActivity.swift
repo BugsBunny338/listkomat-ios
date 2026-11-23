@@ -34,7 +34,7 @@ struct TicketLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(spacing: 2) {
-                        Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
+                        Text("Lístek na \(context.attributes.durationLabel) · \(context.attributes.priceKc) Kč")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if pending {
@@ -93,7 +93,7 @@ private struct LockScreenView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.cityName)
                     .font(.headline)
-                Text("Lístek na \(context.attributes.ticketLabel) · \(context.attributes.priceKc) Kč")
+                Text("Lístek na \(context.attributes.durationLabel) · \(context.attributes.priceKc) Kč")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if pending {

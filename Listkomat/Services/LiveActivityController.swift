@@ -45,7 +45,7 @@ final class LiveActivityController: ObservableObject {
         #endif
         let timeline = TicketTimeline.make(sentAt: Date(), durationSeconds: Double(minutes) * 60)
         let new = ActiveTicket(cityKey: city.key, cityName: city.localizedName,
-                               ticketLabel: ticket.localizedDuration, ticketCode: ticket.code,
+                               ticketCode: ticket.code,
                                priceKc: ticket.priceKc, accentHex: accent.rgbHex, timeline: timeline)
         generation += 1
         save(new)
@@ -142,7 +142,7 @@ final class LiveActivityController: ObservableObject {
     private static func adopted(_ activity: Activity<TicketActivityAttributes>) -> ActiveTicket {
         let s = activity.content.state
         return ActiveTicket(cityKey: nil, cityName: activity.attributes.cityName,
-                            ticketLabel: activity.attributes.ticketLabel, ticketCode: nil,
+                            ticketCode: nil,
                             priceKc: activity.attributes.priceKc,
                             accentHex: activity.attributes.accentHex,
                             timeline: TicketTimeline(sentAt: s.sentAt, validFrom: s.validFrom, endDate: s.endDate))
@@ -189,11 +189,16 @@ final class LiveActivityController: ObservableObject {
 
     private func requestActivity(for ticket: ActiveTicket) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        // Fixed for the activity's life. The city is in the app's language now
+        // (the ticket was just bought). The duration goes as minutes, and the
+        // widget words it in the same language as its "Lístek na …" sentence;
+        // `ticketLabel` stays for the attributes' shape (2.6 activities).
         let attributes = TicketActivityAttributes(
             cityName: ticket.cityName,
-            ticketLabel: ticket.ticketLabel,
+            ticketLabel: TicketDuration.label(minutes: ticket.durationMinutes),
             priceKc: ticket.priceKc,
-            accentHex: ticket.accentHex
+            accentHex: ticket.accentHex,
+            durationMinutes: ticket.durationMinutes
         )
         // staleDate = validFrom DELIBERATELY repurposes `isStale` as a phase flag:
         // the system re-renders the widget when staleDate passes, which is the only

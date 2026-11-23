@@ -331,7 +331,7 @@ struct ContentView: View {
                         }
                     }
                     .font(.caption2)
-                    Text("\(bannerCityName(active)) · \(active.ticketLabel)")
+                    Text(verbatim: active.title(cityName: bannerCityName(active)))
                         .font(.brandBold(15, relativeTo: .subheadline))
                     switch phase {
                     case .pending:
