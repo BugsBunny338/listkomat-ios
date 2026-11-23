@@ -50,14 +50,17 @@ struct TicketLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: "tram.fill")
                     .foregroundStyle(tint)
+                    .accessibilityHidden(true)   // decorative; the timer beside it is the content
             } compactTrailing: {
                 Text(timerInterval: context.state.validFrom...context.state.endDate, countsDown: true)
                     .monospacedDigit()
                     .frame(width: 46)
                     .foregroundStyle(tint)
             } minimal: {
+                // The icon is all there is here: read the city, not "Train".
                 Image(systemName: "tram.fill")
                     .foregroundStyle(tint)
+                    .accessibilityLabel(Text(verbatim: context.attributes.cityName))
             }
         }
     }
@@ -85,6 +88,7 @@ private struct LockScreenView: View {
             Image(systemName: "tram.fill")
                 .font(.title3)
                 .foregroundStyle(tint)
+                .accessibilityHidden(true)   // decorative: VoiceOver read it as "Train"
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.cityName)

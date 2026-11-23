@@ -321,6 +321,7 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 Image(systemName: "tram.fill")
                     .foregroundStyle(phase == .expired ? AnyShapeStyle(.secondary) : AnyShapeStyle(theme.textAccent))
+                    .accessibilityHidden(true)   // decorative: VoiceOver read it as "Train"
                 VStack(alignment: .leading, spacing: 1) {
                     Group {
                         switch phase {
