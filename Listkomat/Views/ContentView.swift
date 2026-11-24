@@ -24,7 +24,10 @@ struct ContentView: View {
     @State private var showingPicker = false
     @State private var showingPrimer = false
     @State private var showingTheme = false
-    @State private var rainNonce = 0
+    /// Held, not observed: a mascot tap must not re-run this whole screen's body
+    /// (the list, the banner) — only `RainLayer` observes it. A @State Int here
+    /// made every tap re-render the screen, a visible hitch in falling rain.
+    @State private var rainTrigger = RainTrigger()
 
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
@@ -205,7 +208,7 @@ struct ContentView: View {
         // iOS 27 the app-level `.tint` stops following theme switches after
         // the first one (#47).
         .tint(theme.textAccent)
-        .overlay(RainLayer(trigger: rainNonce))
+        .overlay(RainLayer(trigger: rainTrigger))
         .modifier(ForcedScheme(scheme: contentScheme))
     }
 
@@ -225,7 +228,7 @@ struct ContentView: View {
     /// burst time, so even if this toolbar button's closure is stale the right
     /// mascot rains. Rapid repeat taps pile up for a heavier downpour (in RainLayer).
     private func rain() {
-        rainNonce += 1
+        rainTrigger.nonce += 1
     }
 
     /// Start filling the live snapshot as early as the app can (#31).

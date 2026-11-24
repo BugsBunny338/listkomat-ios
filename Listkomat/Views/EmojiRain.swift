@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// One falling emoji. Its position is derived from `start` + elapsed time inside
 /// a Canvas, so spawning more drops never interrupts the ones already falling.
@@ -36,7 +37,10 @@ struct RainState {
     private(set) var recent = 0
 
     /// Live drops never exceed this, however fast the mascot is tapped: without
-    /// it, ten taps in two seconds kept 300+ drops in flight.
+    /// it, ten taps in two seconds kept 300+ drops in flight. At the cap a tap only
+    /// adds what fits; drops already falling are never removed (evicting the
+    /// oldest wiped out the visible rain and left only drops still above the top
+    /// edge while the mascot was being tapped).
     static let maxDrops = 100
     static let maxBurst = 60
     /// Low Power Mode keeps the egg but makes it a drizzle (Android: power save).
@@ -58,8 +62,8 @@ struct RainState {
         recent += 1
         var count = Self.burstSize(recent: recent)
         if lowPower { count = min(count, Self.lowPowerBurst) }
+        count = min(count, max(0, Self.maxDrops - drops.count))
         drops.append(contentsOf: RainDrop.burst(emoji, count: count, now: now))
-        if drops.count > Self.maxDrops { drops.removeFirst(drops.count - Self.maxDrops) }
         return true
     }
 
@@ -81,14 +85,39 @@ struct RainState {
     }
 }
 
-/// Bump `trigger` (an incrementing nonce) to drop a burst. The emoji is resolved
+/// The mascot button bumps `nonce`; only `RainLayer` observes it, so a tap
+/// re-renders the rain and nothing else.
+final class RainTrigger: ObservableObject {
+    @Published var nonce = 0
+}
+
+/// Each emoji pre-rendered once to a bitmap (Android's GlyphCache), at the
+/// largest drop scale so drops only ever shrink. Drawing an image needs no text
+/// layout, so neither a frame nor a tap lays out an emoji again.
+enum RainGlyphs {
+    static let rasterScale: CGFloat = 1.3
+    private static var cache: [String: Image] = [:]
+
+    static func image(_ emoji: String, size: CGFloat) -> Image {
+        if let hit = cache[emoji] { return hit }
+        let font = UIFont.systemFont(ofSize: size * rasterScale)
+        let text = NSAttributedString(string: emoji, attributes: [.font: font])
+        let bounds = text.size()
+        let image = UIGraphicsImageRenderer(size: bounds).image { _ in text.draw(at: .zero) }
+        let result = Image(uiImage: image)
+        cache[emoji] = result
+        return result
+    }
+}
+
+/// Bump `trigger.nonce` to drop a burst. The emoji is resolved
 /// here from the live `themeId` at burst time, so it's always the *current*
 /// mascot — even if the toolbar button that bumped the nonce captured a stale
 /// value. Drops live in this layer's own state and are drawn in a Canvas, so a
 /// new tap never re-runs the parent view's body or interrupts drops already in
 /// flight. Rapid taps pile up for a heavier downpour, capped (`RainState`).
 struct RainLayer: View {
-    let trigger: Int
+    @ObservedObject var trigger: RainTrigger
     @AppStorage("themeId") private var themeId = AppTheme.default.id
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rain = RainState()
@@ -106,29 +135,30 @@ struct RainLayer: View {
                 // and a 1/60 floor can drop the odd frame on a 60 Hz display.
                 TimelineView(.animation) { timeline in
                     let drops = rain.drops
-                    // The glyph is a Canvas symbol: laid out and rendered once,
-                    // then drawn per drop. Resolving a Text per drop per frame was
-                    // the stutter (listkomat-ios#35).
-                    Canvas(rendersAsynchronously: true) { context, size in
+                    // Each glyph is a cached bitmap, resolved once per frame and
+                    // drawn per drop. Resolving a Text per drop per frame was the
+                    // stutter (listkomat-ios#35).
+                    let glyphs = Dictionary(uniqueKeysWithValues: rain.emojis.map {
+                        ($0, RainGlyphs.image($0, size: Self.glyphSize))
+                    })
+                    Canvas { context, size in
                         let now = timeline.date
-                        var symbols: [String: GraphicsContext.ResolvedSymbol] = [:]
+                        var resolved: [String: GraphicsContext.ResolvedImage] = [:]
+                        let shrink = 1 / RainGlyphs.rasterScale
                         for drop in drops {
                             let p = now.timeIntervalSince(drop.start) / drop.duration
                             guard p >= 0, p <= 1 else { continue }
-                            guard let symbol = symbols[drop.emoji] ?? context.resolveSymbol(id: drop.emoji)
+                            guard let image = resolved[drop.emoji]
+                                ?? glyphs[drop.emoji].map({ context.resolve($0) })
                             else { continue }
-                            symbols[drop.emoji] = symbol
+                            resolved[drop.emoji] = image
                             let eased = p * p   // gentle gravity-like acceleration
                             let y = -60 + (size.height + 120) * eased
                             var ctx = context
                             ctx.translateBy(x: drop.x * size.width, y: y)
                             ctx.rotate(by: .degrees(drop.spin * p))
-                            ctx.scaleBy(x: drop.scale, y: drop.scale)
-                            ctx.draw(symbol, at: .zero)
-                        }
-                    } symbols: {
-                        ForEach(rain.emojis, id: \.self) { emoji in
-                            Text(emoji).font(.system(size: Self.glyphSize)).tag(emoji)
+                            ctx.scaleBy(x: drop.scale * shrink, y: drop.scale * shrink)
+                            ctx.draw(image, at: .zero)   // centred, like the Text was
                         }
                     }
                 }
@@ -137,7 +167,7 @@ struct RainLayer: View {
         .ignoresSafeArea()   // fall from the very top, above the Dynamic Island
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .onChange(of: trigger) { _ in addBurst() }
+        .onChange(of: trigger.nonce) { _ in addBurst() }
     }
 
     private func addBurst() {
