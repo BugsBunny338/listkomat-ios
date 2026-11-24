@@ -41,11 +41,14 @@ final class RainStateTests: XCTestCase {
     func testLiveDropsAreCappedAtOneHundred() {
         var rain = RainState()
         // Ten taps within half a second: 16 + 22 + … well past 300 uncapped.
-        for i in 0..<10 { rain.burst("💣", now: t0.addingTimeInterval(Double(i) * 0.05)) }
+        var atCap: [Date] = []
+        for i in 0..<10 {
+            rain.burst("💣", now: t0.addingTimeInterval(Double(i) * 0.05))
+            if i == 3 { atCap = rain.drops.map(\.start) }   // 16+22+28+34 = 100
+        }
         XCTAssertEqual(rain.drops.count, RainState.maxDrops)
-        // The cap never evicts drops already falling: the first burst (16) is all
-        // still there, and the taps past the cap added nothing.
-        XCTAssertEqual(rain.drops.prefix(16).filter { $0.start < t0.addingTimeInterval(0.5) }.count, 16)
+        // The cap never evicts drops already falling: taps 5–10 changed nothing.
+        XCTAssertEqual(rain.drops.map(\.start), atCap)
     }
 
     func testPastTheCapATapAddsAndRemovesNothing() {
@@ -58,16 +61,19 @@ final class RainStateTests: XCTestCase {
 
     func testAtTheCapATapOnlyFillsTheRoomLeft() {
         var rain = RainState()
-        rain.burst("💣", now: t0)                              // 16
-        for i in 1..<4 { rain.burst("💣", now: t0.addingTimeInterval(Double(i) * 0.1)) } // +22 +28 +34 = 100
+        rain.burst("💣", now: t0)                                       // 16, all landed by +3.3 s
+        for _ in 0..<3 { rain.burst("💣", now: t0.addingTimeInterval(1.5)) } // +22 +28 +34 = 100
         XCTAssertEqual(rain.drops.count, 100)
-        // Once the first burst has landed, a tap refills only what it left.
-        rain.burst("🐸", now: t0.addingTimeInterval(3.5))
-        let room = 100 - rain.drops.filter { $0.emoji == "💣" }.count
-        XCTAssertEqual(rain.drops.filter { $0.emoji == "🐸" }.count,
-                       min(RainState.burstSize(recent: rain.recent), room))
-        XCTAssertLessThanOrEqual(rain.drops.count, RainState.maxDrops)
-        XCTAssertGreaterThan(rain.drops.filter { $0.emoji == "🐸" }.count, 0)
+        // At +3.35 s the first burst has landed and nearly all of the other 84
+        // are still falling (they end at +3.1 s at the earliest), so the room
+        // left (~16–20) is smaller than this tap's burst of 40: the tap fills
+        // exactly that room. Evicting the oldest instead would add all 40.
+        rain.burst("🐸", now: t0.addingTimeInterval(3.35))
+        let frogs = rain.drops.filter { $0.emoji == "🐸" }.count
+        XCTAssertEqual(rain.drops.count, RainState.maxDrops)
+        XCTAssertEqual(frogs, 100 - rain.drops.filter { $0.emoji == "💣" }.count)
+        XCTAssertLessThan(frogs, RainState.burstSize(recent: rain.recent))
+        XCTAssertGreaterThan(frogs, 0)
     }
 
     func testFinishedDropsArePruned() {

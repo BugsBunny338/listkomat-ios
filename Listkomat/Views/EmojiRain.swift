@@ -93,19 +93,27 @@ final class RainTrigger: ObservableObject {
 
 /// Each emoji pre-rendered once to a bitmap (Android's GlyphCache), at the
 /// largest drop scale so drops only ever shrink. Drawing an image needs no text
-/// layout, so neither a frame nor a tap lays out an emoji again.
+/// layout once an emoji is cached (the tap warms it). Main thread only.
 enum RainGlyphs {
     static let rasterScale: CGFloat = 1.3
     private static var cache: [String: Image] = [:]
 
     static func image(_ emoji: String, size: CGFloat) -> Image {
-        if let hit = cache[emoji] { return hit }
+        let key = "\(emoji)@\(size)"
+        if let hit = cache[key] { return hit }
         let font = UIFont.systemFont(ofSize: size * rasterScale)
         let text = NSAttributedString(string: emoji, attributes: [.font: font])
         let bounds = text.size()
-        let image = UIGraphicsImageRenderer(size: bounds).image { _ in text.draw(at: .zero) }
+        // Whole points plus a 2 pt margin, so artwork that touches its line box
+        // keeps a soft edge when rotated (Android pads its bitmap the same way).
+        let pad: CGFloat = 2
+        let canvas = CGSize(width: ceil(bounds.width) + 2 * pad, height: ceil(bounds.height) + 2 * pad)
+        let image = UIGraphicsImageRenderer(size: canvas).image { _ in
+            text.draw(at: CGPoint(x: (canvas.width - bounds.width) / 2,
+                                  y: (canvas.height - bounds.height) / 2))
+        }
         let result = Image(uiImage: image)
-        cache[emoji] = result
+        cache[key] = result
         return result
     }
 }
@@ -171,10 +179,11 @@ struct RainLayer: View {
     }
 
     private func addBurst() {
-        // No `trigger > 0` guard: onChange only fires on a real change (a tap), and
-        // the closure captures a one-step-stale `trigger`, so guarding on it ate the
-        // very first tap. Resolve the current mascot from @AppStorage instead.
+        // onChange only fires on a real change (a tap). Resolve the current mascot
+        // from @AppStorage, never from whatever the toolbar button captured.
         guard let mascot = AppTheme.resolve(themeId).mascot else { return }
+        // Rasterise the glyph now (once per emoji), not inside the next frame.
+        _ = RainGlyphs.image(mascot, size: Self.glyphSize)
         // Read once per tap, never per frame.
         guard rain.burst(mascot, now: Date(), reduceMotion: reduceMotion,
                          lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled)
