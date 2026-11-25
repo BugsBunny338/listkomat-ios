@@ -1,3 +1,4 @@
-• Lístek si hlídá platnost sám: v aplikaci běží odpočet, po vypršení přijde upozornění. Funguje i bez živých aktivit.
-• Při návratu do aplikace se město znovu řídí vaší polohou; ruční výběr zůstává jako záloha.
-• Lépe čitelné barvy ve všech motivech a přehlednější upozornění pro zahraniční SIM.
+• U měst bez živé mapy to aplikace nově řekne rovnou pod seznamem lístků.
+• Název lístku se vždy ukazuje v jazyce aplikace, i po jeho přepnutí.
+• Čitelnější tlačítka a texty v pruhu s lístkem i na zamčené obrazovce; lepší podpora VoiceOveru.
+• Plynulejší déšť maskotů. Při omezeném pohybu se nespustí.

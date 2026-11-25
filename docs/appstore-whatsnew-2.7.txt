@@ -1,0 +1,19 @@
+App Store "What's New" — Lístkomat 2.7
+(written fresh for this release, not carried over from 2.6; approved by Jiri 2026-11-25)
+
+Headline: P1 polish — a "no live map" line for map-less cities, the ticket name in
+the app language, readable button labels and captions (banner + Lock Screen),
+VoiceOver no longer reads the tram icon, a smoother mascot rain that respects
+Reduce Motion.
+
+--- Czech (primary) ---
+• U měst bez živé mapy to aplikace nově řekne rovnou pod seznamem lístků.
+• Název lístku se vždy ukazuje v jazyce aplikace, i po jeho přepnutí.
+• Čitelnější tlačítka a texty v pruhu s lístkem i na zamčené obrazovce; lepší podpora VoiceOveru.
+• Plynulejší déšť maskotů. Při omezeném pohybu se nespustí.
+
+--- English ---
+• Cities without a live map now say so right under the ticket list.
+• The ticket name always follows the app's language, even after you switch it.
+• More readable buttons and text in the ticket banner and on the Lock Screen; better VoiceOver support.
+• A smoother mascot rain, which stays off when Reduce Motion is on.

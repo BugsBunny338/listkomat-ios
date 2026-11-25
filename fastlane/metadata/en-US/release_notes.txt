@@ -1,3 +1,4 @@
-• Your ticket keeps track of itself: the app counts down its validity and notifies you when it expires. Works even with Live Activities off.
-• When you return to the app, the city follows your location again; a manual pick stays as the fallback.
-• More readable colours in every theme and a clearer notice for foreign SIMs.
+• Cities without a live map now say so right under the ticket list.
+• The ticket name always follows the app's language, even after you switch it.
+• More readable buttons and text in the ticket banner and on the Lock Screen; better VoiceOver support.
+• A smoother mascot rain, which stays off when Reduce Motion is on.
