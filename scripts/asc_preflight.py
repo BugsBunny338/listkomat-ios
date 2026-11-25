@@ -27,11 +27,15 @@ THE CHECKS (each one a release that stumbled, 2026-11-25 Lístkomat 2.7)
                the value it already has (PATCH ageRatingDeclarations/<id>), to an
                editable appInfo or else the live one, never one with Apple.
                Nothing changes; that PATCH is the only write this script makes.
+               Apple refuses it on the live appInfo (409 STATE_ERROR, not
+               editable), so before asc_new_version has created the version the
+               result is only a warning ("inconclusive").
 - age rating   Apple adds age-rating questions (2026: socialMedia,
                datingAndRelationships, sharedLocation) and the submission then
                fails with 409 ENTITY_ERROR.ATTRIBUTE.REQUIRED. Every appInfo's
                declaration is read and any unanswered (null) question that is not
-               optional is fatal. This script never answers them: Jiri does, in
+               optional is fatal (only a warning on the live appInfo while a newer
+               one replaces it). This script never answers them: Jiri does, in
                App Store Connect -> App Information -> Age Rating.
 - signing key  The export cloud-signs with the Admin API key (Xcode's Apple ID
                session expires, and there is no local distribution certificate);
@@ -290,27 +294,32 @@ def null_answers(attributes):
 
 
 def age_ratings(rep, infos):
-    """[(appInfo, declaration)] for every current appInfo; reports unanswered questions."""
-    found, all_ok = [], True
-    for info in infos:
+    """[(appInfo, declaration)] for every current appInfo; one line per appInfo.
+
+    Unanswered questions are fatal, except on the live appInfo while a newer one (editable or with
+    Apple) exists: that one replaces it when it ships, and the answers given there are what count.
+    Seen 2026-11-25: Lístkomat's live appInfo kept the nulls Jiri had answered on 2.7's."""
+    current = [i for i in infos if info_state(i) not in INFO_RETIRED]
+    superseded = any(info_state(i) in INFO_EDITABLE | INFO_WITH_APPLE for i in current)
+    found = []
+    for info in current:
         state = info_state(info)
-        if state in INFO_RETIRED:
-            continue
         s, r = asc.call("GET", f"/v1/appInfos/{info['id']}/ageRatingDeclaration")
         decl = r.get("data") if s == 200 else None
         if not decl:
-            rep.fatal("age rating", f"could not read the age rating of appInfo {info['id']} ({state}): "
+            rep.fatal("age rating", f"could not read the age rating of the {state} appInfo {info['id']}: "
                                     f"{s} {_error(r)}")
-            all_ok = False
             continue
         found.append((info, decl))
         nulls = null_answers(decl.get("attributes") or {})
-        if nulls:
-            all_ok = False
-            rep.fatal("age rating", f"appInfo {state}: unanswered {', '.join(nulls)}: answer these in "
+        if not nulls:
+            rep.ok("age rating", f"{state} appInfo: every question answered")
+        elif superseded and state not in INFO_EDITABLE | INFO_WITH_APPLE:
+            rep.warn("age rating", f"{state} appInfo: unanswered {', '.join(nulls)}; ignored, a newer "
+                                   "appInfo replaces it when its version ships")
+        else:
+            rep.fatal("age rating", f"{state} appInfo: unanswered {', '.join(nulls)}: answer these in "
                                     "App Store Connect -> App Information -> Age Rating")
-    if all_ok and found:
-        rep.ok("age rating", "all questions answered (" + ", ".join(info_state(i) or "?" for i, _ in found) + ")")
     return found
 
 
@@ -342,8 +351,12 @@ def check_agreements(rep, declarations):
     elif s == 403 and AGREEMENT_CODE in _codes(r):
         rep.fatal("agreements", f"403 {AGREEMENT_CODE}: {AGREEMENT_FIX}")
     elif s == 409 and state not in INFO_EDITABLE:
-        rep.warn("agreements", f"inconclusive: the {state} appInfo refused the write ({s} {_error(r)}), "
-                               "which is past the agreement gate but proves nothing more")
+        # Seen 2026-11-25 on the live appInfo: "409 STATE_ERROR: This age rating declaration is not
+        # editable". Until asc_new_version creates the version there is no editable appInfo, so a
+        # missing agreement can only show up there, at release.sh's first write, still before the build.
+        rep.warn("agreements", f"inconclusive: no editable appInfo yet, and the {state} one refused the "
+                               f"write ({s} {_error(r)}); release.sh's next write (asc_new_version) "
+                               "would still stop on a missing agreement before anything is built")
     else:
         rep.fatal("agreements", f"the probe write failed: {s} {_error(r)}")
 

@@ -476,12 +476,31 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("App Information -> Age Rating", line)
         self.assertTrue(all(b["data"]["attributes"] == {"advertising": False} for m, p, b in fake.writes))
 
-    def test_every_appinfo_is_checked(self):
-        fake = FakePreflightASC(infos=[("info-new", "PREPARE_FOR_SUBMISSION", dict(ANSWERED)),
-                                       ("info-live", "READY_FOR_DISTRIBUTION", dict(ANSWERED, socialMedia=None))])
+    def test_the_live_appinfo_is_fatal_when_it_is_the_only_one(self):
+        fake = FakePreflightASC(infos=[("info-live", "READY_FOR_DISTRIBUTION", dict(ANSWERED, socialMedia=None))])
         code, out = self.run_main(fake)
         self.assertEqual(code, 1)
-        self.assertIn("READY_FOR_DISTRIBUTION", self.line(out, "age rating"))
+        self.assertIn("✗ age rating   READY_FOR_DISTRIBUTION appInfo: unanswered socialMedia", out)
+
+    def test_stale_nulls_on_a_superseded_live_appinfo_are_only_a_warning(self):
+        """Lístkomat, 2026-11-25: answered on 2.7's appInfo (in review), still null on the live one."""
+        for newer in ("PREPARE_FOR_SUBMISSION", "WAITING_FOR_REVIEW"):
+            with self.subTest(newer=newer):
+                fake = FakePreflightASC(infos=[("info-new", newer, dict(ANSWERED)),
+                                               ("info-live", "READY_FOR_DISTRIBUTION",
+                                                dict(ANSWERED, socialMedia=None, sharedLocation=None))])
+                code, out = self.run_main(fake)
+                self.assertEqual(code, 0, out)
+                self.assertIn(f"✓ age rating   {newer} appInfo: every question answered", out)
+                self.assertIn("! age rating   READY_FOR_DISTRIBUTION appInfo: unanswered sharedLocation, socialMedia",
+                              out)
+
+    def test_nulls_on_the_newer_appinfo_are_fatal_in_review_too(self):
+        fake = FakePreflightASC(infos=[("info-review", "WAITING_FOR_REVIEW", dict(ANSWERED, socialMedia=None)),
+                                       ("info-live", "READY_FOR_DISTRIBUTION", dict(ANSWERED))])
+        code, out = self.run_main(fake)
+        self.assertEqual(code, 1)
+        self.assertIn("✗ age rating   WAITING_FOR_REVIEW appInfo: unanswered socialMedia", out)
 
     def test_optional_nulls_are_ignored(self):
         fake = FakePreflightASC()           # ANSWERED carries every optional attribute as null
