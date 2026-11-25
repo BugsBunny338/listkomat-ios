@@ -43,7 +43,9 @@ struct TicketLiveActivity: Widget {
                             Text("čeká na potvrzovací SMS · platí za \(Text(timerInterval: context.state.sentAt...context.state.validFrom, countsDown: true))")
                                 .font(.caption2)
                                 .monospacedDigit()
-                                .foregroundStyle(.orange)
+                                // The island is always black: the dark shade.
+                                .foregroundStyle(LiveActivityText.pendingCaption(
+                                    accentHex: accentHex(context), dark: true))
                         }
                     }
                 }
@@ -68,11 +70,17 @@ struct TicketLiveActivity: Widget {
 
 /// Theme accent carried in the attributes; falls back to teal for legacy activities.
 private func accent(_ context: ActivityViewContext<TicketActivityAttributes>) -> Color {
-    context.attributes.accentHex.map(Color.init(hex:)) ?? .brandTeal
+    Color(hex: accentHex(context))
+}
+
+/// The accent as hex (brand teal #56C4CF for legacy activities without one).
+private func accentHex(_ context: ActivityViewContext<TicketActivityAttributes>) -> UInt32 {
+    context.attributes.accentHex ?? 0x56C4CF
 }
 
 private struct LockScreenView: View {
     let context: ActivityViewContext<TicketActivityAttributes>
+    @Environment(\.colorScheme) private var colorScheme
 
     private var tint: Color { accent(context) }
     /// The final content the app ends the activity with at expiry.
@@ -100,7 +108,9 @@ private struct LockScreenView: View {
                     // Validity begins at the operator's confirmation SMS; hidden once valid.
                     Text("čeká na potvrzovací SMS")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        // Plain .orange measured ~1.7:1 on the light lock screen.
+                        .foregroundStyle(LiveActivityText.pendingCaption(
+                            accentHex: accentHex(context), dark: colorScheme == .dark))
                 }
             }
 
