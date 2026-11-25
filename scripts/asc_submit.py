@@ -239,7 +239,9 @@ def main():
     needs_resubmit = ver_state in VERSION_IN_REVIEW or bool(with_apple)
 
     if dry:
-        if needs_resubmit and not resubmit:
+        if ver_state not in EDITABLE:
+            print(f"\n(a real run would refuse: version state {ver_state!r} is not editable)")
+        elif needs_resubmit and not resubmit:
             print("\n(a real run would refuse: a build is with Apple; --resubmit pulls it out of review)")
         print("\n(dry run — no changes made)")
         return

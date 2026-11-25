@@ -250,7 +250,8 @@ def check_version(rep, marketing, versions):
             rep.ok("version", f"{marketing} exists on App Store Connect, {state} (editable)")
         else:
             rep.fatal("version", f"{marketing} is already {state} on App Store Connect: bump "
-                                 "MARKETING_VERSION in project.yml (and CURRENT_PROJECT_VERSION)")
+                                 "MARKETING_VERSION in project.yml"
+                                 + (" (and CURRENT_PROJECT_VERSION)" if BUILD_FROM_PROJECT else ""))
         return
     if not versions:
         rep.ok("version", f"{marketing} will be created (no App Store version yet)")

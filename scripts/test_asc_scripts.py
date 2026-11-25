@@ -203,6 +203,12 @@ class SubmitTests(unittest.TestCase):
         self.assertEqual(fake.writes, [])
         self.assertIn("dry run", out)
 
+    def test_dry_run_says_a_live_version_would_be_refused(self):
+        fake = FakeSubmitASC(ver_state="READY_FOR_SALE")
+        out = self.run_main(fake, "--dry-run")
+        self.assertEqual(fake.writes, [])
+        self.assertIn("not editable", out)
+
     def test_builds_are_looked_up_within_the_version(self):
         sub = self.sub
         seen = []
