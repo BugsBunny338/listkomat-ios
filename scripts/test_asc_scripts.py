@@ -20,7 +20,7 @@ def _no_network(*args, **kwargs):
 
 urllib.request.urlopen = _no_network   # second guard: even a call made with a key never leaves the machine
 
-VERSION, BUILD, OLD_VERSION, OLD_BUILD, NEXT_VERSION = "2.7", "15", "2.6", "14", "2.8"
+VERSION, BUILD, OLD_VERSION, OLD_BUILD, NEXT_VERSION, OLDER_VERSION = "2.7", "15", "2.6", "14", "2.8", "2.5"
 
 
 def load(name):
@@ -217,12 +217,12 @@ class SubmitTests(unittest.TestCase):
         self.assertIn(f"filter[version]={BUILD}", seen[0])
 
     def test_an_older_versions_build_is_never_attached(self):
-        """2.7 on 2026-11-25: the newest VALID build of ANY version (2.6's 14) was attached, and Apple said 409."""
+        """Lístkomat 2.7, 2026-11-25: the newest VALID build of ANY version (2.6's 14) was attached; Apple said 409."""
         sub = self.sub
 
         def fake(method, path, body=None):
             if f"filter[preReleaseVersion.version]={VERSION}" in path:
-                return 200, {"data": []}            # 2.7 has no processed build yet
+                return 200, {"data": []}            # this version has no processed build yet
             return 200, {"data": [{"id": "old", "attributes": {"version": OLD_BUILD, "processingState": "VALID"}}]}
 
         sub.call = fake
@@ -508,6 +508,16 @@ class PreflightTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("AuthKey_OTHERKEY01.p8", self.line(out, "signing key"))
 
+    def test_signing_without_the_key_is_only_a_warning(self):
+        if not self.pf.SIGNING_OPT_OUT:
+            self.skipTest("this app's release.sh always signs with the key")
+        os.remove(os.path.join(self.pf.KEY_DIR, "AuthKey_FNJQ483TF7.p8"))
+        var, value = self.pf.SIGNING_OPT_OUT
+        os.environ[var] = value
+        code, out = self.run_main(FakePreflightASC())
+        self.assertEqual(code, 0, out)
+        self.assertIn("!", self.line(out, "signing key"))
+
     def test_a_missing_api_key_is_fatal_and_nothing_is_called(self):
         os.remove(self.pf.asc.KEY_PATH)
         fake = FakePreflightASC()
@@ -541,7 +551,7 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("will be created", self.line(out, "version"))
 
     def test_a_version_older_than_the_live_one_is_fatal(self):
-        self.project("2.5", "1")
+        self.project(OLDER_VERSION, "1")
         fake = FakePreflightASC(versions=[(VERSION, "READY_FOR_SALE")])
         code, out = self.run_main(fake)
         self.assertEqual(code, 1)

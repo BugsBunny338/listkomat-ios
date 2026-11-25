@@ -251,7 +251,7 @@ def check_version(rep, marketing, versions):
     if not versions:
         rep.ok("version", f"{marketing} will be created (no App Store version yet)")
         return
-    newest = versions[0]["attributes"]
+    newest = max(versions, key=lambda v: version_key(v["attributes"].get("versionString", "0")))["attributes"]
     newest_v, newest_state = newest.get("versionString"), asc.version_state(newest)
     if newest_state not in RELEASED:
         rep.fatal("version", f"{newest_v} is {newest_state}: App Store Connect allows one version in "
