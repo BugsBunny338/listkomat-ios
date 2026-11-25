@@ -6,6 +6,12 @@ the human judgement that wraps them.
 
 ## Before submitting
 
+- **Run `scripts/release.sh --check` first** (`scripts/asc_preflight.py`). It lists
+  every known blocker in seconds: an Apple agreement to accept (App Store Connect →
+  Business), new age-rating questions to answer (App Information → Age Rating), a
+  missing signing key, a version/build not bumped, empty What's New. release.sh
+  runs it anyway and stops on any ✗.
+
 - **Bump versions in `project.yml`** — `CURRENT_PROJECT_VERSION` +1 (unique per
   upload), `MARKETING_VERSION` for a new user-facing version.
 - **Write fresh "What's New."** Don't carry the previous release's notes over —

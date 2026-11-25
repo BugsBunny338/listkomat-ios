@@ -65,8 +65,16 @@ these two, and both cost far more time to diagnose than to avoid:
 
 ## Release
 
-`scripts/release.sh` does version record + What's New → archive → export →
-upload → submit in one shot (`--no-submit` to stop after upload). It needs
+`scripts/release.sh` does preflight → version record + What's New → archive →
+export → upload → submit in one shot (`--no-submit` stops after upload,
+`--dry-run` after export, `--check` runs only the preflight; any other argument
+exits 2). `scripts/asc_preflight.py` reports every known blocker at once before
+anything is built: an unaccepted Apple agreement (GETs can't show it, so it
+re-sends one unchanged age-rating answer, its only write), unanswered age-rating
+questions, a missing signing key, a version or build that wasn't bumped, empty
+What's New. `asc_submit.py` takes `--build <n>` (release.sh passes it), refuses
+unknown arguments, and won't cancel a submission that is with Apple without
+`--resubmit`. Offline tests: `python3 scripts/test_asc_scripts.py`. It needs
 `xcodegen`, Xcode CLT, and an App Store Connect API key in
 `~/.appstoreconnect/private_keys/` (see `scripts/asc_submit.py`).
 `ASC_NOTES=<file-or-text>` attaches reviewer notes.
