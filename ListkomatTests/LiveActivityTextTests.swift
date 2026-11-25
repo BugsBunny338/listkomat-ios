@@ -10,7 +10,9 @@ final class LiveActivityTextTests: XCTestCase {
         AppTheme.presets.map { $0.accent.rgbHex } + [0x56C4CF]   // + legacy activities
     }
 
-    func testPendingCaptionReadsOnTheLockScreenForAllThemes() {
+    /// readable() converges on the modelled lock-screen surfaces, and the shade
+    /// stays an orange (never collapses to black or grey).
+    func testPendingCaptionConvergesOnTheModelledSurfacesForAllThemes() {
         for accent in accents {
             for dark in [false, true] {
                 let caption = RGB(hex: LiveActivityText.pendingCaptionHex(accentHex: accent, dark: dark))
@@ -19,16 +21,25 @@ final class LiveActivityTextTests: XCTestCase {
                         TextContrast.ratio(caption, surface), TextContrast.minRatio,
                         "\(String(accent, radix: 16)) \(dark ? "dark" : "light") on \(String(surface.hex, radix: 16))")
                 }
+                let (hue, sat, _) = TextContrast.hsl(caption)
+                XCTAssertEqual(hue, TextContrast.hsl(LiveActivityText.systemOrange(dark: dark)).h, accuracy: 0.02)
+                XCTAssertGreaterThan(sat, 0.5, "still an orange, not a grey")
             }
         }
     }
 
     func testPlainOrangeFailsInLightAndIsKeptOnBlack() {
         let light = LiveActivityText.surfaces(accentHex: 0x56C4CF, dark: false)
-        XCTAssertLessThan(TextContrast.ratio(LiveActivityText.orangeLight, light[0]), TextContrast.minRatio)
+        let orangeLight = LiveActivityText.systemOrange(dark: false)
+        let orangeDark = LiveActivityText.systemOrange(dark: true)
+        XCTAssertLessThan(TextContrast.ratio(orangeLight, light[0]), TextContrast.minRatio)
         XCTAssertNotEqual(LiveActivityText.pendingCaptionHex(accentHex: 0x56C4CF, dark: false),
-                          LiveActivityText.orangeLight.hex, "light mode must be shaded")
+                          orangeLight.hex, "light mode must be shaded")
         XCTAssertEqual(LiveActivityText.pendingCaptionHex(accentHex: 0x56C4CF, dark: true),
-                       LiveActivityText.orangeDark.hex, "system orange already reads on black")
+                       orangeDark.hex, "system orange already reads on black")
+        // The dark shade is what Always-On / StandBy get: it must read on black.
+        XCTAssertGreaterThanOrEqual(
+            TextContrast.ratio(RGB(hex: LiveActivityText.pendingCaptionHex(accentHex: 0x56C4CF, dark: true)),
+                               RGB(hex: 0x000000)), TextContrast.minRatio)
     }
 }

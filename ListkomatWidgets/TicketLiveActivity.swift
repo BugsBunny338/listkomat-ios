@@ -80,7 +80,6 @@ private func accentHex(_ context: ActivityViewContext<TicketActivityAttributes>)
 
 private struct LockScreenView: View {
     let context: ActivityViewContext<TicketActivityAttributes>
-    @Environment(\.colorScheme) private var colorScheme
 
     private var tint: Color { accent(context) }
     /// The final content the app ends the activity with at expiry.
@@ -106,11 +105,13 @@ private struct LockScreenView: View {
                     .foregroundStyle(.secondary)
                 if pending {
                     // Validity begins at the operator's confirmation SMS; hidden once valid.
-                    Text("čeká na potvrzovací SMS")
-                        .font(.caption2)
-                        // Plain .orange measured ~1.7:1 on the light lock screen.
-                        .foregroundStyle(LiveActivityText.pendingCaption(
-                            accentHex: accentHex(context), dark: colorScheme == .dark))
+                    // Plain .orange measured ~1.7:1 on the light lock screen.
+                    DarkBackdropReader { dark in
+                        Text("čeká na potvrzovací SMS")
+                            .font(.caption2)
+                            .foregroundStyle(LiveActivityText.pendingCaption(
+                                accentHex: accentHex(context), dark: dark))
+                    }
                 }
             }
 
@@ -147,4 +148,31 @@ private struct LockScreenView: View {
                 .frame(minWidth: 74, alignment: .trailing)
         }
     }
+}
+
+/// Whether the activity sits on a dark backdrop, whatever the system appearance:
+/// dark mode, Always-On (luminance reduced; the scheme stays light there) or
+/// StandBy (fullscreen, iOS 17+). A light-mode shade on those reads ~3:1.
+private struct DarkBackdropReader<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.isLuminanceReduced) private var dimmed
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        let dark = colorScheme == .dark || dimmed
+        if #available(iOS 17.0, *) {
+            FullscreenAware(dark: dark, content: content)
+        } else {
+            content(dark)
+        }
+    }
+}
+
+@available(iOS 17.0, *)
+private struct FullscreenAware<Content: View>: View {
+    @Environment(\.isActivityFullscreen) private var fullscreen
+    let dark: Bool
+    let content: (Bool) -> Content
+
+    var body: some View { content(dark || fullscreen) }
 }
