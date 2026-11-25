@@ -51,11 +51,19 @@ BUILD=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion
 echo "    archived $VER ($BUILD)"
 
 echo "==> export ipa"
+# Cloud signing with the Admin API key, not Xcode's Apple ID session: that
+# session keeps expiring ("No Accounts"), and this Mac has no local
+# distribution certificate. The App Manager key (ASC_KEY_ID) can't cloud-sign
+# ("Cloud signing permission error"); an Admin key can. Same key Beer Llama uses.
+SIGNING_KEY_ID="${ASC_SIGNING_KEY_ID:-FNJQ483TF7}"
 xcodebuild -exportArchive \
   -archivePath build/Listkomat.xcarchive \
   -exportPath build/export \
   -exportOptionsPlist scripts/exportOptions.plist \
-  -allowProvisioningUpdates >/dev/null
+  -allowProvisioningUpdates \
+  -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${SIGNING_KEY_ID}.p8" \
+  -authenticationKeyID "$SIGNING_KEY_ID" \
+  -authenticationKeyIssuerID "${ASC_ISSUER_ID:-69a6de8d-d1d6-47e3-e053-5b8c7c11a4d1}" >/dev/null
 
 echo "==> upload to App Store Connect"
 xcrun altool --upload-app -f build/export/Listkomat.ipa -t ios \
