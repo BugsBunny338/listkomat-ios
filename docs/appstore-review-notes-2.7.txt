@@ -1,0 +1,40 @@
+Lístkomat 2.7 — what changed in this update (a polish release):
+• Cities without a live map (e.g. Ostrava, Hradec Králové) now say so with one
+  line under the ticket list: "Pro toto město zatím živou mapu nemáme." /
+  "No live map for this city yet."
+• The active ticket's name ("Praha · 30 minut" / "Prague · 30 minutes") is now
+  worded in the current app language whenever it is shown, also after a
+  language switch.
+• Readability and accessibility: button labels on theme-coloured fills switch to
+  black or white, whichever reads; the banner's "waiting for confirmation SMS"
+  caption, its "Ukončit"/"End" button and the Live Activity caption are shaded
+  to at least 4.5:1 contrast; VoiceOver no longer reads the decorative tram
+  icon.
+• The mascot easter egg (tap the emoji at the top left on any theme with a
+  mascot) rains more smoothly, and is off when Reduce Motion is on.
+
+Purchase mechanism is UNCHANGED from previous approved versions: a ticket is
+bought by sending a carrier-billed premium SMS (price = ticket price), which
+requires a Czech SIM. A reviewer on a foreign SIM or without a SIM cannot
+complete a purchase — this is expected and not a bug. No in-app purchase applies
+(this is a real-world public-transport ticket billed by the carrier).
+
+The live map uses open, CC-BY-licensed public transit data (Prague: Operátor ICT /
+Golemio PID; Brno: data.Brno / KORDIS JMK), fetched via a small caching proxy that
+holds the data key. The map needs no account, no purchase, and no SIM — a reviewer
+can open any city's "Živá mapa" to see it working.
+
+Two things a reviewer will or will not see, both intended:
+• The notification permission prompt appears only after a first ticket purchase
+  (it is used solely for the expiry notification). Since a purchase cannot be
+  completed in review, the prompt will not appear during review.
+• With a non-Czech device language or an App Store account outside Czechia, an
+  orange "Nákup vyžaduje SIM kartu českého operátora" / "Buying requires a Czech
+  operator's SIM" notice sits at the top of the ticket list. That is intended;
+  the X dismisses it.
+
+The quickest way to see this release's visible changes: choose a city without a
+live map in "Vybrat město" (Choose city), e.g. Ostrava — the new line sits under
+the ticket list. Open "Vzhled" (Appearance, the paintbrush), pick a theme with a
+mascot (e.g. "Bomba") and tap the mascot at the top left. "Živá mapa" (Live map)
+works for Praha and Brno from anywhere, with no SIM or account.
